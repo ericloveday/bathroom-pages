@@ -393,10 +393,10 @@
       return targetDate.toISOString().split('T')[0];
     }
 
-    // Set defaults: Start = Today, End = 7 Days from Now
+    // Set defaults: Start = Today, End = 3 Days from Now
     const todayStr = getDateStringOffset(0);
     document.getElementById('ann-start-date').value = todayStr;
-    document.getElementById('ann-end-date').value = getDateStringOffset(7);
+    document.getElementById('ann-end-date').value = getDateStringOffset(3);
 
     // --- Load announcements ---
     onValue(ref(db, 'announcements'), (snapshot) => {
