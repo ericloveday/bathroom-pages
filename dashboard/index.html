@@ -386,10 +386,17 @@
     let announcements = [];
     let editingKey = null;
 
-    // Set today's date as the baseline default
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Helper function to return a future string date offset by days
+    function getDateStringOffset(daysOffset = 0) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + daysOffset);
+      return targetDate.toISOString().split('T')[0];
+    }
+
+    // Set defaults: Start = Today, End = 7 Days from Now
+    const todayStr = getDateStringOffset(0);
     document.getElementById('ann-start-date').value = todayStr;
-    document.getElementById('ann-end-date').value = todayStr;
+    document.getElementById('ann-end-date').value = getDateStringOffset(7);
 
     // --- Load announcements ---
     onValue(ref(db, 'announcements'), (snapshot) => {
@@ -446,12 +453,12 @@
         await push(ref(db, 'announcements'), entry);
         showAlert(startDate > todayStr ? `Announcement scheduled for ${startDate}!` : 'Announcement added!');
         
-        // Reset Form
+        // Reset Form to baseline standards
         document.getElementById('ann-text').value = '';
         document.getElementById('ann-url').value = '';
         document.getElementById('ann-url-label').value = '';
-        document.getElementById('ann-start-date').value = todayStr;
-        document.getElementById('ann-end-date').value = todayStr;
+        document.getElementById('ann-start-date').value = getDateStringOffset(0);
+        document.getElementById('ann-end-date').value = getDateStringOffset(7);
       }
     };
 
@@ -480,8 +487,8 @@
     // --- Cancel edit ---
     window.cancelEdit = function() {
       editingKey = null;
-      document.getElementById('ann-start-date').value = todayStr;
-      document.getElementById('ann-end-date').value = todayStr;
+      document.getElementById('ann-start-date').value = getDateStringOffset(0);
+      document.getElementById('ann-end-date').value = getDateStringOffset(7);
       document.getElementById('ann-text').value = '';
       document.getElementById('ann-url').value = '';
       document.getElementById('ann-url-label').value = '';
@@ -594,41 +601,4 @@
       const today = new Date().toISOString().split('T')[0];
       
       const liveItems = announcements.filter(a => {
-        const start = a.startDate || a.date;
-        const end = a.endDate || start;
-        return today >= start && today <= end;
-      });
-
-      if (!liveItems.length) {
-        container.innerHTML = '<p class="preview-empty">No active announcements to preview.</p>';
-        return;
-      }
-
-      container.innerHTML = '';
-      liveItems.slice(0, 3).forEach(ann => {
-        const start = ann.startDate || ann.date;
-        const d = new Date(start + 'T12:00:00');
-        const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-        
-        const div = document.createElement('div');
-        div.className = 'preview-item';
-        const linkHtml = ann.url ? `<a href="${ann.url}" target="_blank" class="preview-link">${ann.urlLabel || 'Click Here'}</a>` : '';
-        
-        div.innerHTML = `
-          <div class="preview-date">${dateStr}</div>
-          <div class="preview-text">${ann.text}</div>
-          ${linkHtml}`;
-        container.appendChild(div);
-      });
-    }
-
-    function showAlert(msg) {
-      const el = document.getElementById('alert');
-      el.textContent = msg;
-      el.style.display = 'block';
-      clearTimeout(window._alertTimer);
-      window._alertTimer = setTimeout(() => el.style.display = 'none', 3000);
-    }
-  </script>
-</body>
-</html>
+        const start = a.startDate ||
