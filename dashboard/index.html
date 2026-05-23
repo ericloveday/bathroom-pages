@@ -601,4 +601,41 @@
       const today = new Date().toISOString().split('T')[0];
       
       const liveItems = announcements.filter(a => {
-        const start = a.startDate ||
+        const start = a.startDate || a.date;
+        const end = a.endDate || start;
+        return today >= start && today <= end;
+      });
+
+      if (!liveItems.length) {
+        container.innerHTML = '<p class="preview-empty">No active announcements to preview.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      liveItems.slice(0, 3).forEach(ann => {
+        const start = ann.startDate || ann.date;
+        const d = new Date(start + 'T12:00:00');
+        const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        
+        const div = document.createElement('div');
+        div.className = 'preview-item';
+        const linkHtml = ann.url ? `<a href="${ann.url}" target="_blank" class="preview-link">${ann.urlLabel || 'Click Here'}</a>` : '';
+        
+        div.innerHTML = `
+          <div class="preview-date">${dateStr}</div>
+          <div class="preview-text">${ann.text}</div>
+          ${linkHtml}`;
+        container.appendChild(div);
+      });
+    }
+
+    function showAlert(msg) {
+      const el = document.getElementById('alert');
+      el.textContent = msg;
+      el.style.display = 'block';
+      clearTimeout(window._alertTimer);
+      window._alertTimer = setTimeout(() => el.style.display = 'none', 3000);
+    }
+  </script>
+</body>
+</html>
