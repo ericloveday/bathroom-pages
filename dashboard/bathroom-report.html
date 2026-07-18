@@ -486,50 +486,10 @@
     });
   };
 
-  // --- Initial Roster Seed Check & Listener ---
+  // --- Roster Listener (no auto-seed) ---
   onValue(ref(db, 'bathroom/roster'), (snapshot) => {
     const data = snapshot.val();
-    if (!data) {
-      // Seed initial data if Firebase roster node is completely empty
-      const initialSeed = {};
-      const fallbackList = [
-        { name: "Aaliyah H.", gender: "g" }, { name: "Aanya B.", gender: "g" }, { name: "Abby M.", gender: "g" }, { name: "Aiden L.", gender: "b" },
-        { name: "Akira B.", gender: "g" }, { name: "Akshay S.", gender: "b" }, { name: "Alex B.", gender: "g" }, { name: "Alex F.", gender: "g" },
-        { name: "Alyson H.", gender: "g" }, { name: "Amelia R.", gender: "g" }, { name: "Amiyah B.", gender: "g" }, { name: "Ananya M.", gender: "g" },
-        { name: "Aubrey R.", gender: "g" }, { name: "Avery L.", gender: "g" }, { name: "Benjamin R.", gender: "b" }, { name: "Bethany M.", gender: "g" },
-        { name: "Buck R.", gender: "b" }, { name: "Cambrie F.", gender: "g" }, { name: "Camden S.", gender: "b" }, { name: "Camila S.", gender: "g" },
-        { name: "Catalina E.", gender: "g" }, { name: "Charlotte J.", gender: "g" }, { name: "Cole W.", gender: "b" }, { name: "Crews A.", gender: "b" },
-        { name: "Declan B.", gender: "b" }, { name: "Dominick G.", gender: "b" }, { name: "Elliott B.", gender: "g" }, { name: "Emberly D.", gender: "g" },
-        { name: "Emma L.", gender: "g" }, { name: "Emma S.", gender: "g" }, { name: "Eva D.", gender: "g" }, { name: "Everett B.", gender: "b" },
-        { name: "Gabriel D.", gender: "b" }, { name: "Gabriella K.", gender: "g" }, { name: "Grace P.", gender: "g" }, { name: "Grace S.", gender: "g" },
-        { name: "Grayson B.", gender: "b" }, { name: "Hadley P.", gender: "g" }, { name: "Hayden C.", gender: "b" }, { name: "Heather H.", gender: "g" },
-        { name: "Holden L.", gender: "b" }, { name: "Holden W.", gender: "b" }, { name: "Hunter H.", gender: "b" }, { name: "Ishani H.", gender: "g" },
-        { name: "Izzy K.", gender: "g" }, { name: "Jacey P.", gender: "g" }, { name: "Jackson S.", gender: "b" }, { name: "Jacob M.", gender: "b" },
-        { name: "Jacob R.", gender: "b" }, { name: "Jason W.", gender: "b" }, { name: "Jeremiah R.", gender: "b" }, { name: "Jordan S.", gender: "b" },
-        { name: "Joshua S.", gender: "b" }, { name: "Josie R.", gender: "g" }, { name: "Kaden M.", gender: "b" }, { name: "Kaleb B.", gender: "b" },
-        { name: "Kaye M.", gender: "g" }, { name: "Kayla D.", gender: "g" }, { name: "Keegan S.", gender: "b" }, { name: "Kennedy H.", gender: "g" },
-        { name: "Kerslynne M.", gender: "g" }, { name: "Kourtney K.", gender: "g" }, { name: "Lalla A.", gender: "g" }, { name: "Laney M.", gender: "g" },
-        { name: "Leslie C.", gender: "g" }, { name: "Liam A.", gender: "b" }, { name: "Liam M.", gender: "b" }, { name: "Lincoln C.", gender: "b" },
-        { name: "Louise H.", gender: "g" }, { name: "Lucas L.", gender: "b" }, { name: "Lucas M.", gender: "b" }, { name: "Macy K.", gender: "g" },
-        { name: "Maddie S.", gender: "g" }, { name: "Madelyn C.", gender: "g" }, { name: "Madelyn L.", gender: "g" }, { name: "Madelyn R.", gender: "g" },
-        { name: "Madison C.", gender: "g" }, { name: "Malachi B.", gender: "b" }, { name: "Mason E.", gender: "b" }, { name: "Mason H.", gender: "b" },
-        { name: "Mathis S.", gender: "b" }, { name: "McKenzie M.", gender: "g" }, { name: "Mia G.", gender: "g" }, { name: "Morgan B.", gender: "g" },
-        { name: "Nadeline D.", gender: "g" }, { name: "Naomi W.", gender: "g" }, { name: "Nate B.", gender: "b" }, { name: "Nikholaus M.", gender: "b" },
-        { name: "Nolan A.", gender: "b" }, { name: "Nora H.", gender: "g" }, { name: "Oakley B.", gender: "g" }, { name: "Rachel R.", gender: "g" },
-        { name: "Ritesh N.", gender: "b" }, { name: "Saja A.", gender: "g" }, { name: "Sarah M.", gender: "g" }, { name: "Sawyer L.", gender: "b" },
-        { name: "Sean S.", gender: "b" }, { name: "Sebastian E.", gender: "b" }, { name: "Simran M.", gender: "g" }, { name: "Sophia C.", gender: "g" },
-        { name: "Sovereign G.", gender: "g" }, { name: "Stevie S.", gender: "g" }, { name: "Taelynn G.", gender: "g" }, { name: "Truston L.", gender: "b" },
-        { name: "Veer B.", gender: "b" }, { name: "Victoria M.", gender: "g" }, { name: "Will N.", gender: "b" }, { name: "William U.", gender: "b" }
-      ];
-      fallbackList.forEach(s => {
-        const key = s.name.replace(/[.#$/\[\]]/g, "_");
-        initialSeed[key] = { name: s.name, gender: s.gender, limit: 5 };
-      });
-      set(ref(db, 'bathroom/roster'), initialSeed);
-      return;
-    }
-
-    STUDENTS = Object.values(data).sort((a,b) => a.name.localeCompare(b.name));
+    STUDENTS = data ? Object.values(data).sort((a,b) => a.name.localeCompare(b.name)) : [];
     renderReport();
     renderRosterManager();
     renderPassUsage();
