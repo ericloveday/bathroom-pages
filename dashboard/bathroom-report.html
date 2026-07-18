@@ -477,6 +477,15 @@
   let sortCol = 'totalMins';
   let sortAsc = false;
 
+  // --- Built-in first-name → gender list (offline, no external API) ---
+  // Seeded with this class's roster (authoritative for unisex names like Alex/Elliott/Morgan)
+  // plus a broad set of common U.S. names. Add/adjust names here anytime.
+  const GENDER_MAP = {};
+  `aiden akshay benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`
+    .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'b'; });
+  `aaliyah aanya abby akira alex alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`
+    .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'g'; });
+
   // --- Main View Switching Logic ---
   window.switchMainTab = function(view) {
     const views = ['reports', 'management', 'history'];
@@ -591,10 +600,10 @@
         }
 
         let successCount = 0;
-        let genderReadCount = 0;    // gender came straight from the CSV
-        let genderGuessedCount = 0; // gender was guessed by the API (or defaulted)
-        const guessedNames = [];    // names we had to guess so you can spot-check them
-        const genderCache = {};     // avoid re-querying the API for repeated first names
+        let genderReadCount = 0;      // gender came straight from the CSV
+        let genderMatchedCount = 0;   // gender matched from the built-in name list
+        let genderUnknownCount = 0;   // name not recognized — defaulted to Boy, needs review
+        const unknownNames = [];      // names we couldn't determine, so you can fix them
 
         for (let i = 0; i < rawLines.length; i++) {
           setStatus(`Processing ${i + 1} of ${rawLines.length}...`);
@@ -632,7 +641,7 @@
             name = firstName;
           }
 
-          // 2. Handle Gender (read from CSV or guess via API)
+          // 2. Handle Gender: explicit CSV value first, then the built-in name list
           let gender = 'b';
           let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
 
@@ -642,27 +651,13 @@
           } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
             gender = 'b';
             genderReadCount++;
-          } else if (firstName) {
-            // No clear gender provided — ask the API to guess (cached per first name)
-            if (genderCache[firstName]) {
-              gender = genderCache[firstName];
-            } else {
-              try {
-                const response = await fetch(`https://api.genderize.io/?name=${encodeURIComponent(firstName)}`);
-                const data = await response.json();
-                if (data.gender === 'female') gender = 'g';
-                else if (data.gender === 'male') gender = 'b';
-                genderCache[firstName] = gender;
-              } catch (error) {
-                console.error("Failed to guess gender:", error);
-                gender = 'b';
-              }
-            }
-            genderGuessedCount++;
-            guessedNames.push(`${name} → ${gender === 'g' ? 'Girl' : 'Boy'}`);
+          } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
+            gender = GENDER_MAP[firstName.toLowerCase()];
+            genderMatchedCount++;
           } else {
-            genderGuessedCount++;
-            guessedNames.push(`${name} → Boy (defaulted)`);
+            gender = 'b'; // not recognized — default and flag for review
+            genderUnknownCount++;
+            unknownNames.push(name);
           }
 
           // 3. Parse limit, default to 5 if blank or invalid
@@ -680,13 +675,14 @@
         }
 
         // Persistent on-screen status + a summary alert
-        setStatus(`✅ Done. Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} (${genderReadCount} gender read, ${genderGuessedCount} guessed).`, '#1a7a1a');
+        setStatus(`✅ Done. Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} — ${genderReadCount} from file, ${genderMatchedCount} matched, ${genderUnknownCount} need review.`, '#1a7a1a');
 
         let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
         summary += `• Gender read from file: ${genderReadCount}\n`;
-        summary += `• Gender guessed by API: ${genderGuessedCount}\n`;
-        if (guessedNames.length) {
-          summary += `\n⚠️ Please double-check these guessed entries:\n${guessedNames.join('\n')}`;
+        summary += `• Gender matched from name list: ${genderMatchedCount}\n`;
+        summary += `• Not recognized (defaulted to Boy): ${genderUnknownCount}\n`;
+        if (unknownNames.length) {
+          summary += `\n⚠️ These names weren't in the built-in list and were set to Boy — fix any that are wrong with the Edit button:\n${unknownNames.join(', ')}`;
         }
         alert(summary);
 
