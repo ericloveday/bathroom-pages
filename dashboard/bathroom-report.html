@@ -55,7 +55,7 @@
   .control-group { display: flex; flex-direction: column; gap: 5px; }
   .control-group label { font-size: 0.72rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
 
-  select, input[type="date"] {
+  select, input[type="date"], input[type="text"], input[type="number"] {
     padding: 9px 14px;
     border-radius: 8px;
     border: 1px solid #333;
@@ -66,7 +66,7 @@
     cursor: pointer;
   }
 
-  select:focus, input[type="date"]:focus { outline: none; border-color: var(--red); }
+  select:focus, input[type="date"]:focus, input[type="text"]:focus, input[type="number"]:focus { outline: none; border-color: var(--red); }
 
   .btn {
     padding: 10px 20px;
@@ -252,7 +252,7 @@
   /* Print styles */
   @media print {
     body { background: white; padding: 10px; }
-    header, .controls, .tab-btns, .btn { display: none !important; }
+    header, .controls, .tab-btns, .btn, .no-print { display: none !important; }
     .table-card { border: 1px solid #ccc; box-shadow: none; }
     .summary-card { border: 1px solid #ccc; }
   }
@@ -358,13 +358,13 @@
 <!-- Weekly Pass Usage -->
 <div class="table-card" style="border-color: #cc0000; margin-bottom: 24px;">
   <h2>🚫 Weekly Pass Usage — Current Week</h2>
-  <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px;">Students who have used 3 or more of their 5 passes this week.</p>
+  <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px;">Students who are close to or over their allocated weekly bathroom limit.</p>
   <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
 </div>
 
 <!-- Data Management -->
-<div class="table-card" style="border-color: #e6a817; margin-top: 24px;">
-  <h2 style="color: #e6a817;">⚠ Data Management</h2>
+<div class="table-card no-print" style="border-color: #e6a817; margin-top: 24px;">
+  <h2 style="color: #e6a817;">⚠ History Management</h2>
   <p style="font-size:0.82rem; color: var(--muted); margin-bottom: 16px;">Find and delete individual history entries — useful if a student forgot to check back in. Deletions are permanent.</p>
   <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end;">
     <div class="control-group" style="flex:1; min-width:180px;">
@@ -382,9 +382,36 @@
   <div id="dm-container"><p class="no-data">No entries found.</p></div>
 </div>
 
+<!-- Roster Management -->
+<div class="table-card no-print" style="border-color: #1a6fb5; margin-top: 24px;">
+  <h2 style="color: #1a6fb5;">👥 Roster & Pass Limit Management</h2>
+  <p style="font-size:0.82rem; color: var(--muted); margin-bottom: 16px;">Add/remove students, update genders, or set individual special-needs weekly pass limits (default limit is 5).</p>
+  
+  <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:flex-end; background:#111; padding:16px; border-radius:8px;">
+    <div class="control-group" style="flex:2; min-width:180px;">
+      <label style="color:#aaa;">Student Name</label>
+      <input type="text" id="roster-new-name" placeholder="e.g., Jane D.">
+    </div>
+    <div class="control-group" style="flex:1;">
+      <label style="color:#aaa;">Gender Orientation</label>
+      <select id="roster-new-gender">
+        <option value="g">Girl</option>
+        <option value="b">Boy</option>
+      </select>
+    </div>
+    <div class="control-group" style="flex:1;">
+      <label style="color:#aaa;">Weekly Pass Limit</label>
+      <input type="number" id="roster-new-limit" value="5" min="1">
+    </div>
+    <button class="btn" style="background:#1a6fb5;" onclick="saveStudent()">Add / Update Student</button>
+  </div>
+
+  <div id="roster-container"><p class="no-data">Loading student directory...</p></div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, onValue, remove, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBsja7ruNaLkTDTxyga9qd9TZG2Zz5AjHA",
@@ -396,72 +423,65 @@
     appId: "1:385219454253:web:970acbfe28672f73c45fa4"
   };
 
-  const STUDENTS = [
-    { name: "Aaliyah H.", gender: "g" }, { name: "Aanya B.", gender: "g" },
-    { name: "Abby M.", gender: "g" }, { name: "Aiden L.", gender: "b" },
-    { name: "Akira B.", gender: "g" }, { name: "Akshay S.", gender: "b" },
-    { name: "Alex B.", gender: "g" }, { name: "Alex F.", gender: "g" },
-    { name: "Alyson H.", gender: "g" }, { name: "Amelia R.", gender: "g" },
-    { name: "Amiyah B.", gender: "g" }, { name: "Ananya M.", gender: "g" },
-    { name: "Aubrey R.", gender: "g" }, { name: "Avery L.", gender: "g" },
-    { name: "Benjamin R.", gender: "b" }, { name: "Bethany M.", gender: "g" },
-    { name: "Buck R.", gender: "b" }, { name: "Cambrie F.", gender: "g" },
-    { name: "Camden S.", gender: "b" }, { name: "Camila S.", gender: "g" },
-    { name: "Catalina E.", gender: "g" }, { name: "Charlotte J.", gender: "g" },
-    { name: "Cole W.", gender: "b" }, { name: "Crews A.", gender: "b" },
-    { name: "Declan B.", gender: "b" }, { name: "Dominick G.", gender: "b" },
-    { name: "Elliott B.", gender: "g" }, { name: "Emberly D.", gender: "g" },
-    { name: "Emma L.", gender: "g" }, { name: "Emma S.", gender: "g" },
-    { name: "Eva D.", gender: "g" }, { name: "Everett B.", gender: "b" },
-    { name: "Gabriel D.", gender: "b" }, { name: "Gabriella K.", gender: "g" },
-    { name: "Grace P.", gender: "g" }, { name: "Grace S.", gender: "g" },
-    { name: "Grayson B.", gender: "b" }, { name: "Hadley P.", gender: "g" },
-    { name: "Hayden C.", gender: "b" }, { name: "Heather H.", gender: "g" },
-    { name: "Holden L.", gender: "b" }, { name: "Holden W.", gender: "b" },
-    { name: "Hunter H.", gender: "b" }, { name: "Ishani H.", gender: "g" },
-    { name: "Izzy K.", gender: "g" }, { name: "Jacey P.", gender: "g" },
-    { name: "Jackson S.", gender: "b" }, { name: "Jacob M.", gender: "b" },
-    { name: "Jacob R.", gender: "b" }, { name: "Jason W.", gender: "b" },
-    { name: "Jeremiah R.", gender: "b" }, { name: "Jordan S.", gender: "b" },
-    { name: "Joshua S.", gender: "b" }, { name: "Josie R.", gender: "g" },
-    { name: "Kaden M.", gender: "b" }, { name: "Kaleb B.", gender: "b" },
-    { name: "Kaye M.", gender: "g" }, { name: "Kayla D.", gender: "g" },
-    { name: "Keegan S.", gender: "b" }, { name: "Kennedy H.", gender: "g" },
-    { name: "Kerslynne M.", gender: "g" }, { name: "Kourtney K.", gender: "g" },
-    { name: "Lalla A.", gender: "g" }, { name: "Laney M.", gender: "g" },
-    { name: "Leslie C.", gender: "g" }, { name: "Liam A.", gender: "b" },
-    { name: "Liam M.", gender: "b" }, { name: "Lincoln C.", gender: "b" },
-    { name: "Louise H.", gender: "g" }, { name: "Lucas L.", gender: "b" },
-    { name: "Lucas M.", gender: "b" }, { name: "Macy K.", gender: "g" },
-    { name: "Maddie S.", gender: "g" }, { name: "Madelyn C.", gender: "g" },
-    { name: "Madelyn L.", gender: "g" }, { name: "Madelyn R.", gender: "g" },
-    { name: "Madison C.", gender: "g" }, { name: "Malachi B.", gender: "b" },
-    { name: "Mason E.", gender: "b" }, { name: "Mason H.", gender: "b" },
-    { name: "Mathis S.", gender: "b" }, { name: "McKenzie M.", gender: "g" },
-    { name: "Mia G.", gender: "g" }, { name: "Morgan B.", gender: "g" },
-    { name: "Nadeline D.", gender: "g" }, { name: "Naomi W.", gender: "g" },
-    { name: "Nate B.", gender: "b" }, { name: "Nikholaus M.", gender: "b" },
-    { name: "Nolan A.", gender: "b" }, { name: "Nora H.", gender: "g" },
-    { name: "Oakley B.", gender: "g" }, { name: "Rachel R.", gender: "g" },
-    { name: "Ritesh N.", gender: "b" }, { name: "Saja A.", gender: "g" },
-    { name: "Sarah M.", gender: "g" }, { name: "Sawyer L.", gender: "b" },
-    { name: "Sean S.", gender: "b" }, { name: "Sebastian E.", gender: "b" },
-    { name: "Simran M.", gender: "g" }, { name: "Sophia C.", gender: "g" },
-    { name: "Sovereign G.", gender: "g" }, { name: "Stevie S.", gender: "g" },
-    { name: "Taelynn G.", gender: "g" }, { name: "Truston L.", gender: "b" },
-    { name: "Veer B.", gender: "b" }, { name: "Victoria M.", gender: "g" },
-    { name: "Will N.", gender: "b" }, { name: "William U.", gender: "b" },
-  ];
-
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
   let allHistory = [];
+  let STUDENTS = [];
   let currentTab = 'weekly';
   let sortCol = 'totalMins';
   let sortAsc = false;
 
-  // --- Load data ---
+  // --- Initial Roster Seed Check & Listener ---
+  onValue(ref(db, 'bathroom/roster'), (snapshot) => {
+    const data = snapshot.val();
+    if (!data) {
+      // Seed initial data if Firebase roster node is completely empty
+      const initialSeed = {};
+      const fallbackList = [
+        { name: "Aaliyah H.", gender: "g" }, { name: "Aanya B.", gender: "g" }, { name: "Abby M.", gender: "g" }, { name: "Aiden L.", gender: "b" },
+        { name: "Akira B.", gender: "g" }, { name: "Akshay S.", gender: "b" }, { name: "Alex B.", gender: "g" }, { name: "Alex F.", gender: "g" },
+        { name: "Alyson H.", gender: "g" }, { name: "Amelia R.", gender: "g" }, { name: "Amiyah B.", gender: "g" }, { name: "Ananya M.", gender: "g" },
+        { name: "Aubrey R.", gender: "g" }, { name: "Avery L.", gender: "g" }, { name: "Benjamin R.", gender: "b" }, { name: "Bethany M.", gender: "g" },
+        { name: "Buck R.", gender: "b" }, { name: "Cambrie F.", gender: "g" }, { name: "Camden S.", gender: "b" }, { name: "Camila S.", gender: "g" },
+        { name: "Catalina E.", gender: "g" }, { name: "Charlotte J.", gender: "g" }, { name: "Cole W.", gender: "b" }, { name: "Crews A.", gender: "b" },
+        { name: "Declan B.", gender: "b" }, { name: "Dominick G.", gender: "b" }, { name: "Elliott B.", gender: "g" }, { name: "Emberly D.", gender: "g" },
+        { name: "Emma L.", gender: "g" }, { name: "Emma S.", gender: "g" }, { name: "Eva D.", gender: "g" }, { name: "Everett B.", gender: "b" },
+        { name: "Gabriel D.", gender: "b" }, { name: "Gabriella K.", gender: "g" }, { name: "Grace P.", gender: "g" }, { name: "Grace S.", gender: "g" },
+        { name: "Grayson B.", gender: "b" }, { name: "Hadley P.", gender: "g" }, { name: "Hayden C.", gender: "b" }, { name: "Heather H.", gender: "g" },
+        { name: "Holden L.", gender: "b" }, { name: "Holden W.", gender: "b" }, { name: "Hunter H.", gender: "b" }, { name: "Ishani H.", gender: "g" },
+        { name: "Izzy K.", gender: "g" }, { name: "Jacey P.", gender: "g" }, { name: "Jackson S.", gender: "b" }, { name: "Jacob M.", gender: "b" },
+        { name: "Jacob R.", gender: "b" }, { name: "Jason W.", gender: "b" }, { name: "Jeremiah R.", gender: "b" }, { name: "Jordan S.", gender: "b" },
+        { name: "Joshua S.", gender: "b" }, { name: "Josie R.", gender: "g" }, { name: "Kaden M.", gender: "b" }, { name: "Kaleb B.", gender: "b" },
+        { name: "Kaye M.", gender: "g" }, { name: "Kayla D.", gender: "g" }, { name: "Keegan S.", gender: "b" }, { name: "Kennedy H.", gender: "g" },
+        { name: "Kerslynne M.", gender: "g" }, { name: "Kourtney K.", gender: "g" }, { name: "Lalla A.", gender: "g" }, { name: "Laney M.", gender: "g" },
+        { name: "Leslie C.", gender: "g" }, { name: "Liam A.", gender: "b" }, { name: "Liam M.", gender: "b" }, { name: "Lincoln C.", gender: "b" },
+        { name: "Louise H.", gender: "g" }, { name: "Lucas L.", gender: "b" }, { name: "Lucas M.", gender: "b" }, { name: "Macy K.", gender: "g" },
+        { name: "Maddie S.", gender: "g" }, { name: "Madelyn C.", gender: "g" }, { name: "Madelyn L.", gender: "g" }, { name: "Madelyn R.", gender: "g" },
+        { name: "Madison C.", gender: "g" }, { name: "Malachi B.", gender: "b" }, { name: "Mason E.", gender: "b" }, { name: "Mason H.", gender: "b" },
+        { name: "Mathis S.", gender: "b" }, { name: "McKenzie M.", gender: "g" }, { name: "Mia G.", gender: "g" }, { name: "Morgan B.", gender: "g" },
+        { name: "Nadeline D.", gender: "g" }, { name: "Naomi W.", gender: "g" }, { name: "Nate B.", gender: "b" }, { name: "Nikholaus M.", gender: "b" },
+        { name: "Nolan A.", gender: "b" }, { name: "Nora H.", gender: "g" }, { name: "Oakley B.", gender: "g" }, { name: "Rachel R.", gender: "g" },
+        { name: "Ritesh N.", gender: "b" }, { name: "Saja A.", gender: "g" }, { name: "Sarah M.", gender: "g" }, { name: "Sawyer L.", gender: "b" },
+        { name: "Sean S.", gender: "b" }, { name: "Sebastian E.", gender: "b" }, { name: "Simran M.", gender: "g" }, { name: "Sophia C.", gender: "g" },
+        { name: "Sovereign G.", gender: "g" }, { name: "Stevie S.", gender: "g" }, { name: "Taelynn G.", gender: "g" }, { name: "Truston L.", gender: "b" },
+        { name: "Veer B.", gender: "b" }, { name: "Victoria M.", gender: "g" }, { name: "Will N.", gender: "b" }, { name: "William U.", gender: "b" }
+      ];
+      fallbackList.forEach(s => {
+        const key = s.name.replace(/[.#$/\[\]]/g, "_");
+        initialSeed[key] = { name: s.name, gender: s.gender, limit: 5 };
+      });
+      set(ref(db, 'bathroom/roster'), initialSeed);
+      return;
+    }
+    
+    STUDENTS = Object.values(data).sort((a,b) => a.name.localeCompare(b.name));
+    renderReport();
+    renderRosterManager();
+    renderPassUsage();
+  });
+
+  // --- Load history data ---
   onValue(ref(db, 'bathroom/history'), (snapshot) => {
     const data = snapshot.val() || {};
     allHistory = Object.entries(data).map(([k,v]) => ({...v, _key: k})).sort((a,b) => b.checkedOutAt - a.checkedOutAt);
@@ -472,6 +492,81 @@
     renderPassUsage();
     document.getElementById('loading').style.display = 'none';
   });
+
+  // --- Roster Logic Management ---
+  window.saveStudent = async function() {
+    const nameInput = document.getElementById('roster-new-name');
+    const name = nameInput.value.trim();
+    const gender = document.getElementById('roster-new-gender').value;
+    const limit = parseInt(document.getElementById('roster-new-limit').value, 10) || 5;
+
+    if (!name) { alert("Please input a valid student name."); return; }
+    
+    // Create a safe Firebase key configuration
+    const key = name.replace(/[.#$/\[\]]/g, "_");
+    try {
+      await set(ref(db, `bathroom/roster/${key}`), { name, gender, limit });
+      nameInput.value = '';
+      document.getElementById('roster-new-limit').value = '5';
+    } catch(e) {
+      alert("Error adding student properties.");
+    }
+  };
+
+  window.removeStudent = async function(name) {
+    if (!confirm(`Are you completely sure you want to delete ${name} from the roster? This removes their profile config.`)) return;
+    const key = name.replace(/[.#$/\[\]]/g, "_");
+    await remove(ref(db, `bathroom/roster/${key}`));
+  };
+
+  window.editLimitInline = async function(name, currentLimit) {
+    const newLimit = prompt(`Enter new weekly limit for ${name}:`, currentLimit);
+    if (newLimit === null) return;
+    const parsing = parseInt(newLimit, 10);
+    if (isNaN(parsing) || parsing < 0) { alert("Invalid limit entered."); return; }
+    
+    const key = name.replace(/[.#$/\[\]]/g, "_");
+    await update(ref(db, `bathroom/roster/${key}`), { limit: parsing });
+  };
+
+  function renderRosterManager() {
+    const container = document.getElementById('roster-container');
+    if (!STUDENTS.length) {
+      container.innerHTML = '<p class="no-data">Roster entry list is clear.</p>';
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Student Name</th>
+          <th>Gender</th>
+          <th>Weekly Pass Limit</th>
+          <th>Actions</th>
+        </tr>
+      </thead>`;
+
+    const tbody = document.createElement('tbody');
+    STUDENTS.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="student-name-cell">
+          <span class="gender-dot ${s.gender === 'b' ? 'boy' : 'girl'}"></span>${s.name}
+        </td>
+        <td style="text-transform: capitalize;">${s.gender === 'b' ? 'Boy' : 'Girl'}</td>
+        <td class="trips-cell">${s.limit || 5} passes</td>
+        <td>
+          <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editLimitInline('${s.name}', ${s.limit || 5})">✏️ Modify Limit</button>
+          <button class="btn" style="background:#cc0000; padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${s.name}')">Remove</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    container.innerHTML = '';
+    container.appendChild(table);
+  }
 
   // --- Date helpers ---
   function startOfWeek(date) {
@@ -503,14 +598,13 @@
 
   // --- Populate selectors ---
   function populateSelectors() {
-    // Weekly — collect unique week starts from history
     const weekSel = document.getElementById('week-select');
+    if(!weekSel) return;
     const weekSet = new Set();
     allHistory.forEach(h => {
       const ws = isoDate(startOfWeek(new Date(h.checkedOutAt)));
       weekSet.add(ws);
     });
-    // Also add current week
     weekSet.add(isoDate(startOfWeek(new Date())));
     const weeks = [...weekSet].sort().reverse();
     weekSel.innerHTML = weeks.map(w => {
@@ -519,7 +613,6 @@
       return `<option value="${w}">${formatDate(start)} – ${formatDate(end)}</option>`;
     }).join('');
 
-    // Monthly
     const monthSel = document.getElementById('month-select');
     const monthSet = new Set();
     allHistory.forEach(h => {
@@ -535,28 +628,27 @@
       return `<option value="${m}">${label}</option>`;
     }).join('');
 
-    // Custom defaults
     const today = isoDate(new Date());
     const weekAgo = isoDate(new Date(Date.now() - 7*24*60*60*1000));
     document.getElementById('custom-start').value = weekAgo;
     document.getElementById('custom-end').value = today;
   }
 
-  // --- Get teacher filter ---
   function getTeacherFilter() {
     if (currentTab === 'weekly') return document.getElementById('weekly-teacher-filter').value;
     if (currentTab === 'monthly') return document.getElementById('monthly-teacher-filter').value;
     return document.getElementById('custom-teacher-filter').value;
   }
 
-  // --- Get date range ---
   function getDateRange() {
     if (currentTab === 'weekly') {
       const val = document.getElementById('week-select').value;
+      if(!val) return null;
       const start = new Date(val + 'T12:00:00');
       return { start: startOfWeek(start).getTime(), end: endOfWeek(start).getTime(), label: `Week of ${formatDate(startOfWeek(start))}` };
     } else if (currentTab === 'monthly') {
       const val = document.getElementById('month-select').value;
+      if(!val) return null;
       const [y, m] = val.split('-').map(Number);
       const start = new Date(y, m-1, 1, 0, 0, 0, 0);
       const end = new Date(y, m, 0, 23, 59, 59, 999);
@@ -580,7 +672,6 @@
     let filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
     if (teacherFilter) filtered = filtered.filter(h => (h.teacher || 'Loveday') === teacherFilter);
 
-    // Summary stats
     const totalTrips = filtered.length;
     const totalMins = filtered.reduce((sum, h) => sum + Math.floor(h.duration / 60), 0);
     const uniqueStudents = new Set(filtered.map(h => h.name)).size;
@@ -595,7 +686,6 @@
 
     document.getElementById('table-title').textContent = `Student Summary — ${range.label}`;
 
-    // Per-student stats
     const studentMap = {};
     STUDENTS.forEach(s => {
       studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {} };
@@ -613,10 +703,8 @@
       s.days[dayKey].mins += Math.floor(h.duration / 60);
     });
 
-    // Only show students with at least 1 trip
     let rows = Object.values(studentMap).filter(s => s.trips > 0);
 
-    // Sort
     rows.sort((a, b) => {
       const av = a[sortCol], bv = b[sortCol];
       return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
@@ -628,7 +716,6 @@
       return;
     }
 
-    // Main table
     const thead = `
       <thead>
         <tr>
@@ -649,7 +736,6 @@
 
     document.getElementById('table-container').innerHTML = `<table>${thead}${tbody}</table>`;
 
-    // Daily breakdown
     const dayMap = {};
     filtered.forEach(h => {
       const dayKey = isoDate(new Date(h.checkedOutAt));
@@ -675,14 +761,12 @@
       </div>`).join('');
   };
 
-  // --- Sort ---
   window.sortBy = function(col) {
     if (sortCol === col) sortAsc = !sortAsc;
     else { sortCol = col; sortAsc = false; }
     renderReport();
   };
 
-  // --- Tab switching ---
   window.switchTab = function(tab) {
     currentTab = tab;
     ['weekly','monthly','custom'].forEach(t => {
@@ -692,7 +776,6 @@
     renderReport();
   };
 
-  // --- Export CSV ---
   window.exportCSV = function() {
     const range = getDateRange();
     if (!range) return;
@@ -722,9 +805,6 @@
     URL.revokeObjectURL(url);
   };
 
-  // --- Weekly Pass Usage ---
-  const WEEKLY_LIMIT = 5;
-
   function getWeekStart(date = new Date()) {
     const d = new Date(date);
     const day = d.getDay();
@@ -735,9 +815,9 @@
 
   function renderPassUsage() {
     const container = document.getElementById('pass-usage-container');
+    if(!container) return;
     const weekStart = getWeekStart();
 
-    // Count this week's checkouts per student
     const counts = {};
     allHistory.forEach(h => {
       const d = new Date(h.checkedOutAt);
@@ -745,13 +825,16 @@
       counts[h.name] = (counts[h.name] || 0) + 1;
     });
 
-    // Filter students with 3+ uses, sort by most used
-    const flagged = Object.entries(counts)
-      .filter(([, count]) => count >= 3)
-      .sort((a, b) => b[1] - a[1]);
+    // Flag students tracking at >= 60% of their unique allocated limit configuration
+    const flagged = STUDENTS.map(s => {
+      const used = counts[s.name] || 0;
+      const limit = s.limit || 5;
+      return { ...s, used, remaining: limit - used };
+    }).filter(s => s.used >= Math.ceil(s.limit * 0.6) || s.used > 0)
+      .sort((a, b) => b.used - a.used);
 
     if (!flagged.length) {
-      container.innerHTML = '<p class="no-data">No students have used 3 or more passes this week. 🎉</p>';
+      container.innerHTML = '<p class="no-data">No active pass usage this week. 🎉</p>';
       return;
     }
 
@@ -767,19 +850,17 @@
       </thead>`;
 
     const tbody = document.createElement('tbody');
-    flagged.forEach(([name, count]) => {
-      const remaining = WEEKLY_LIMIT - count;
-      const student = STUDENTS.find(s => s.name === name);
-      const status = remaining <= 0
+    flagged.forEach(s => {
+      const status = s.remaining <= 0
         ? '<span style="color:#cc0000;font-weight:700;">⛔ Out of passes</span>'
-        : `<span style="color:#e6a817;font-weight:700;">⚠️ ${remaining} left</span>`;
+        : `<span style="color:#e6a817;font-weight:700;">⚠️ ${s.remaining} left</span>`;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="student-name-cell">
-          <span class="gender-dot ${student?.gender === 'b' ? 'boy' : 'girl'}"></span>${name}
+          <span class="gender-dot ${s.gender === 'b' ? 'boy' : 'girl'}"></span>${s.name}
         </td>
-        <td class="trips-cell">${count} / ${WEEKLY_LIMIT}</td>
-        <td class="val-cell">${Math.max(0, remaining)}</td>
+        <td class="trips-cell">${s.used} / ${s.limit}</td>
+        <td class="val-cell">${Math.max(0, s.remaining)}</td>
         <td>${status}</td>`;
       tbody.appendChild(tr);
     });
@@ -789,14 +870,9 @@
     container.appendChild(table);
   }
 
-  // Hook into the main data load
-  const _origRender = window.renderReport;
-  window.renderReport = function() {
-    _origRender();
-    renderPassUsage();
-  };
   function populateStudentFilter() {
     const sel = document.getElementById('dm-student-filter');
+    if(!sel) return;
     const names = [...new Set(allHistory.map(h => h.name))].sort();
     sel.innerHTML = '<option value="">-- All Students --</option>';
     names.forEach(name => {
@@ -851,7 +927,7 @@
         <td>${timeStr}</td>
         <td class="val-cell">${dur < 1 ? '<1m' : dur + 'm'}</td>
         <td>
-          <button class="btn btn-sm" style="background:#cc0000;" onclick="deleteEntry('${h._key}', '${h.name}', '${timeStr} on ${dateStr}')">Delete</button>
+          <button class="btn btn-sm" style="background:#cc0000; padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${h.name}', '${timeStr} on ${dateStr}')">Delete</button>
         </td>`;
       tbody.appendChild(tr);
     });
