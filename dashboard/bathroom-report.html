@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bathroom Pass Reports</title>
+<title>Bathroom Checkout Management</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -55,7 +55,7 @@
   .control-group { display: flex; flex-direction: column; gap: 5px; }
   .control-group label { font-size: 0.72rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
 
-  select, input[type="date"], input[type="text"], input[type="number"] {
+  select, input[type="date"], input[type="text"], input[type="number"], input[type="file"] {
     padding: 9px 14px;
     border-radius: 8px;
     border: 1px solid #333;
@@ -267,7 +267,7 @@
 
 <header>
   <div>
-    <h1>Bathroom Pass Reports</h1>
+    <h1>Bathroom Checkout Management</h1>
     <p>Connected to live Firebase data</p>
   </div>
   <div style="display:flex; gap:10px; align-self:center;">
@@ -276,137 +276,159 @@
   </div>
 </header>
 
-<!-- Tabs -->
-<div class="tab-btns">
-  <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
-  <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
-  <button class="tab-btn" id="tab-custom" onclick="switchTab('custom')">Custom Range</button>
+<!-- MAIN VIEW TABS -->
+<div class="tab-btns no-print" style="border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px;">
+  <button class="tab-btn active" id="tab-view-reports" onclick="switchMainTab('reports')">📊 Reports</button>
+  <button class="tab-btn" id="tab-view-management" onclick="switchMainTab('management')">👥 Student Management</button>
 </div>
 
-<!-- Controls -->
-<div class="controls" id="controls-weekly">
-  <div class="control-group">
-    <label>Week</label>
-    <select id="week-select" onchange="renderReport()"></select>
+<!-- ================= REPORTS VIEW ================= -->
+<div id="view-reports">
+  <!-- Date Tabs -->
+  <div class="tab-btns">
+    <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
+    <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
+    <button class="tab-btn" id="tab-custom" onclick="switchTab('custom')">Custom Range</button>
   </div>
-  <div class="control-group">
-    <label>Teacher</label>
-    <select id="weekly-teacher-filter" onchange="renderReport()">
-      <option value="">All Teachers</option>
-      <option>Hartley</option>
-      <option>Loveday</option>
-      <option>Scales</option>
-      <option>Zinsmeister</option>
-    </select>
-  </div>
-</div>
 
-<div class="controls" id="controls-monthly" style="display:none;">
-  <div class="control-group">
-    <label>Month</label>
-    <select id="month-select" onchange="renderReport()"></select>
-  </div>
-  <div class="control-group">
-    <label>Teacher</label>
-    <select id="monthly-teacher-filter" onchange="renderReport()">
-      <option value="">All Teachers</option>
-      <option>Hartley</option>
-      <option>Loveday</option>
-      <option>Scales</option>
-      <option>Zinsmeister</option>
-    </select>
-  </div>
-</div>
-
-<div class="controls" id="controls-custom" style="display:none;">
-  <div class="control-group">
-    <label>Start Date</label>
-    <input type="date" id="custom-start">
-  </div>
-  <div class="control-group">
-    <label>End Date</label>
-    <input type="date" id="custom-end">
-  </div>
-  <div class="control-group">
-    <label>Teacher</label>
-    <select id="custom-teacher-filter">
-      <option value="">All Teachers</option>
-      <option>Hartley</option>
-      <option>Loveday</option>
-      <option>Scales</option>
-      <option>Zinsmeister</option>
-    </select>
-  </div>
-  <button class="btn" onclick="renderReport()">Generate</button>
-</div>
-
-<!-- Summary -->
-<div class="summary-grid" id="summary-grid"></div>
-
-<!-- Student Table -->
-<div class="table-card" id="main-table-card">
-  <h2 id="table-title">Student Summary</h2>
-  <div id="table-container"><p class="no-data">No data for this period.</p></div>
-</div>
-
-<!-- Daily Breakdown -->
-<div class="table-card" id="daily-table-card">
-  <h2>Daily Breakdown</h2>
-  <div id="daily-container"><p class="no-data">No data for this period.</p></div>
-</div>
-
-<!-- Weekly Pass Usage -->
-<div class="table-card" style="border-color: #cc0000; margin-bottom: 24px;">
-  <h2>🚫 Weekly Pass Usage — Current Week</h2>
-  <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px;">Students who are close to or over their allocated weekly bathroom limit.</p>
-  <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
-</div>
-
-<!-- Data Management -->
-<div class="table-card no-print" style="border-color: #e6a817; margin-top: 24px;">
-  <h2 style="color: #e6a817;">⚠ History Management</h2>
-  <p style="font-size:0.82rem; color: var(--muted); margin-bottom: 16px;">Find and delete individual history entries — useful if a student forgot to check back in. Deletions are permanent.</p>
-  <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end;">
-    <div class="control-group" style="flex:1; min-width:180px;">
-      <label>Filter by Student</label>
-      <select id="dm-student-filter" onchange="renderDataManager()">
-        <option value="">-- All Students --</option>
-      </select>
+  <!-- Controls -->
+  <div class="controls" id="controls-weekly">
+    <div class="control-group">
+      <label>Week</label>
+      <select id="week-select" onchange="renderReport()"></select>
     </div>
     <div class="control-group">
-      <label>Filter by Date</label>
-      <input type="date" id="dm-date-filter" onchange="renderDataManager()">
-    </div>
-    <button class="btn btn-outline" onclick="document.getElementById('dm-student-filter').value=''; document.getElementById('dm-date-filter').value=''; renderDataManager()">Clear Filters</button>
-  </div>
-  <div id="dm-container"><p class="no-data">No entries found.</p></div>
-</div>
-
-<!-- Roster Management -->
-<div class="table-card no-print" style="border-color: #1a6fb5; margin-top: 24px;">
-  <h2 style="color: #1a6fb5;">👥 Roster & Pass Limit Management</h2>
-  <p style="font-size:0.82rem; color: var(--muted); margin-bottom: 16px;">Add/remove students, update genders, or set individual special-needs weekly pass limits (default limit is 5).</p>
-  
-  <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:flex-end; background:#111; padding:16px; border-radius:8px;">
-    <div class="control-group" style="flex:2; min-width:180px;">
-      <label style="color:#aaa;">Student Name</label>
-      <input type="text" id="roster-new-name" placeholder="e.g., Jane D.">
-    </div>
-    <div class="control-group" style="flex:1;">
-      <label style="color:#aaa;">Gender Orientation</label>
-      <select id="roster-new-gender">
-        <option value="g">Girl</option>
-        <option value="b">Boy</option>
+      <label>Teacher</label>
+      <select id="weekly-teacher-filter" onchange="renderReport()">
+        <option value="">All Teachers</option>
+        <option>Hartley</option>
+        <option>Loveday</option>
+        <option>Scales</option>
+        <option>Zinsmeister</option>
       </select>
     </div>
-    <div class="control-group" style="flex:1;">
-      <label style="color:#aaa;">Weekly Pass Limit</label>
-      <input type="number" id="roster-new-limit" value="5" min="1">
-    </div>
-    <button class="btn" style="background:#1a6fb5;" onclick="saveStudent()">Add / Update Student</button>
   </div>
 
-  <div id="roster-container"><p class="no-data">Loading student directory...</p></div>
+  <div class="controls" id="controls-monthly" style="display:none;">
+    <div class="control-group">
+      <label>Month</label>
+      <select id="month-select" onchange="renderReport()"></select>
+    </div>
+    <div class="control-group">
+      <label>Teacher</label>
+      <select id="monthly-teacher-filter" onchange="renderReport()">
+        <option value="">All Teachers</option>
+        <option>Hartley</option>
+        <option>Loveday</option>
+        <option>Scales</option>
+        <option>Zinsmeister</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="controls" id="controls-custom" style="display:none;">
+    <div class="control-group">
+      <label>Start Date</label>
+      <input type="date" id="custom-start">
+    </div>
+    <div class="control-group">
+      <label>End Date</label>
+      <input type="date" id="custom-end">
+    </div>
+    <div class="control-group">
+      <label>Teacher</label>
+      <select id="custom-teacher-filter">
+        <option value="">All Teachers</option>
+        <option>Hartley</option>
+        <option>Loveday</option>
+        <option>Scales</option>
+        <option>Zinsmeister</option>
+      </select>
+    </div>
+    <button class="btn" onclick="renderReport()">Generate</button>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-grid" id="summary-grid"></div>
+
+  <!-- Student Table -->
+  <div class="table-card" id="main-table-card">
+    <h2 id="table-title">Student Summary</h2>
+    <div id="table-container"><p class="no-data">No data for this period.</p></div>
+  </div>
+
+  <!-- Daily Breakdown -->
+  <div class="table-card" id="daily-table-card">
+    <h2>Daily Breakdown</h2>
+    <div id="daily-container"><p class="no-data">No data for this period.</p></div>
+  </div>
+
+  <!-- Weekly Pass Usage -->
+  <div class="table-card" style="border-color: #cc0000; margin-bottom: 24px;">
+    <h2>🚫 Weekly Pass Usage — Current Week</h2>
+    <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px;">Students who are close to or over their allocated weekly bathroom limit.</p>
+    <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
+  </div>
+</div>
+
+<!-- =============== MANAGEMENT VIEW =============== -->
+<div id="view-management" style="display:none;">
+  <!-- Data Management -->
+  <div class="table-card no-print" style="border-color: #e6a817;">
+    <h2 style="color: #e6a817;">⚠ History Management</h2>
+    <p style="font-size:0.82rem; color: var(--muted); margin-bottom: 16px;">Find and delete individual history entries — useful if a student forgot to check back in. Deletions are permanent.</p>
+    <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end;">
+      <div class="control-group" style="flex:1; min-width:180px;">
+        <label>Filter by Student</label>
+        <select id="dm-student-filter" onchange="renderDataManager()">
+          <option value="">-- All Students --</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Filter by Date</label>
+        <input type="date" id="dm-date-filter" onchange="renderDataManager()">
+      </div>
+      <button class="btn btn-outline" onclick="document.getElementById('dm-student-filter').value=''; document.getElementById('dm-date-filter').value=''; renderDataManager()">Clear Filters</button>
+    </div>
+    <div id="dm-container"><p class="no-data">No entries found.</p></div>
+  </div>
+
+  <!-- Roster Management -->
+  <div class="table-card no-print" style="border-color: #1a6fb5; margin-top: 24px;">
+    <h2 style="color: #1a6fb5;">👥 Roster & Pass Limit Management</h2>
+    <p style="font-size:0.82rem; color: var(--muted); margin-bottom: 16px;">Add/remove students, update genders, or set individual special-needs weekly pass limits (default limit is 5).</p>
+    
+    <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:flex-end; background:#111; padding:16px; border-radius:8px;">
+      <div class="control-group" style="flex:2; min-width:180px;">
+        <label style="color:#aaa;">Student Name</label>
+        <input type="text" id="roster-new-name" placeholder="e.g., Jane D.">
+      </div>
+      <div class="control-group" style="flex:1;">
+        <label style="color:#aaa;">Gender Orientation</label>
+        <select id="roster-new-gender">
+          <option value="g">Girl</option>
+          <option value="b">Boy</option>
+        </select>
+      </div>
+      <div class="control-group" style="flex:1;">
+        <label style="color:#aaa;">Weekly Pass Limit</label>
+        <input type="number" id="roster-new-limit" value="5" min="1">
+      </div>
+      <button class="btn" style="background:#1a6fb5;" onclick="saveStudent()">Add / Update Student</button>
+    </div>
+
+    <div id="roster-container" style="margin-bottom: 24px;"><p class="no-data">Loading student directory...</p></div>
+
+    <!-- CSV UPLOAD BLOCK -->
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #333;">
+      <h3 style="color: #aaa; margin-bottom: 10px; font-size: 0.9rem;">Bulk Upload Students (CSV)</h3>
+      <p style="font-size:0.75rem; color:var(--muted); margin-bottom:10px;">Format: <code>Name, Gender (b/g), Limit</code>. Example: <code>Jane D., g, 5</code></p>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input type="file" id="csv-upload" accept=".csv" style="padding: 5px; max-width: 300px; width: 100%;">
+        <button class="btn btn-outline" onclick="processCSV()">Upload CSV</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -431,6 +453,15 @@
   let currentTab = 'weekly';
   let sortCol = 'totalMins';
   let sortAsc = false;
+
+  // --- Main View Switching Logic ---
+  window.switchMainTab = function(view) {
+    document.getElementById('tab-view-reports').classList.toggle('active', view === 'reports');
+    document.getElementById('tab-view-management').classList.toggle('active', view === 'management');
+    
+    document.getElementById('view-reports').style.display = view === 'reports' ? 'block' : 'none';
+    document.getElementById('view-management').style.display = view === 'management' ? 'block' : 'none';
+  };
 
   // --- Initial Roster Seed Check & Listener ---
   onValue(ref(db, 'bathroom/roster'), (snapshot) => {
@@ -513,20 +544,66 @@
     }
   };
 
+  window.editStudent = function(name, gender, limit) {
+    document.getElementById('roster-new-name').value = name;
+    document.getElementById('roster-new-gender').value = gender;
+    document.getElementById('roster-new-limit').value = limit || 5;
+    document.getElementById('roster-new-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   window.removeStudent = async function(name) {
     if (!confirm(`Are you completely sure you want to delete ${name} from the roster? This removes their profile config.`)) return;
     const key = name.replace(/[.#$/\[\]]/g, "_");
     await remove(ref(db, `bathroom/roster/${key}`));
   };
 
-  window.editLimitInline = async function(name, currentLimit) {
-    const newLimit = prompt(`Enter new weekly limit for ${name}:`, currentLimit);
-    if (newLimit === null) return;
-    const parsing = parseInt(newLimit, 10);
-    if (isNaN(parsing) || parsing < 0) { alert("Invalid limit entered."); return; }
-    
-    const key = name.replace(/[.#$/\[\]]/g, "_");
-    await update(ref(db, `bathroom/roster/${key}`), { limit: parsing });
+  // --- CSV Upload Logic ---
+  window.processCSV = async function() {
+    const fileInput = document.getElementById('csv-upload');
+    const file = fileInput.files[0];
+    if (!file) {
+      alert("Please select a CSV file first.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const text = e.target.result;
+      const lines = text.split('\n');
+      let successCount = 0;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const parts = line.split(',');
+        if (parts.length >= 2) {
+          const name = parts[0].trim();
+          let gender = parts[1].trim().toLowerCase();
+          
+          // Normalize gender string
+          if (gender.includes('girl') || gender === 'g') gender = 'g';
+          else if (gender.includes('boy') || gender === 'b') gender = 'b';
+          else gender = 'b'; // fallback
+          
+          // Parse limit, default to 5 if blank or invalid
+          const limit = parts.length >= 3 ? parseInt(parts[2].trim(), 10) : 5;
+          
+          // Firebase keys cannot contain certain characters
+          const key = name.replace(/[.#$/\[\]]/g, '_');
+          
+          await set(ref(db, `bathroom/roster/${key}`), {
+            name: name,
+            gender: gender,
+            limit: isNaN(limit) ? 5 : limit
+          });
+          successCount++;
+        }
+      }
+      alert(`Successfully uploaded ${successCount} students from CSV.`);
+      fileInput.value = ""; // Clear the input
+    };
+    reader.readAsText(file);
   };
 
   function renderRosterManager() {
@@ -557,7 +634,7 @@
         <td style="text-transform: capitalize;">${s.gender === 'b' ? 'Boy' : 'Girl'}</td>
         <td class="trips-cell">${s.limit || 5} passes</td>
         <td>
-          <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editLimitInline('${s.name}', ${s.limit || 5})">✏️ Modify Limit</button>
+          <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editStudent('${s.name}', '${s.gender}', ${s.limit || 5})">✏️ Edit</button>
           <button class="btn" style="background:#cc0000; padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${s.name}')">Remove</button>
         </td>`;
       tbody.appendChild(tr);
