@@ -404,6 +404,12 @@
       <button class="btn" style="background:#1a6fb5;" onclick="saveStudent()">Add / Update Student</button>
     </div>
 
+    <!-- Bulk action bar -->
+    <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+      <button class="btn" style="background:#cc0000;" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
+      <span id="rm-selected-count" style="color:#888; font-size:0.82rem; font-weight:600;">0 selected</span>
+    </div>
+
     <div id="roster-container" style="margin-bottom: 24px;"><p class="no-data">Loading student directory...</p></div>
 
     <!-- CSV UPLOAD BLOCK -->
@@ -748,6 +754,7 @@
     table.innerHTML = `
       <thead>
         <tr>
+          <th class="nosort check-cell"><input type="checkbox" id="rm-select-all" onclick="toggleSelectAllStudents(this)" title="Select all"></th>
           <th class="nosort">Student Name</th>
           <th class="nosort">Gender</th>
           <th class="nosort">Weekly Pass Limit</th>
@@ -757,8 +764,10 @@
 
     const tbody = document.createElement('tbody');
     STUDENTS.forEach(s => {
+      const key = s.name.replace(/[.#$/\[\]]/g, "_");
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
         <td class="student-name-cell">
           <span class="gender-dot ${s.gender === 'b' ? 'boy' : 'girl'}"></span>${s.name}
         </td>
@@ -774,6 +783,39 @@
     table.appendChild(tbody);
     container.innerHTML = '';
     container.appendChild(table);
+    updateStudentSelectedCount();
+  }
+
+  // --- Roster: checkboxes + bulk delete ---
+  window.toggleSelectAllStudents = function(master) {
+    document.querySelectorAll('.rm-check').forEach(cb => { cb.checked = master.checked; });
+    updateStudentSelectedCount();
+  };
+
+  window.updateStudentSelectedCount = function() {
+    const n = document.querySelectorAll('.rm-check:checked').length;
+    const countEl = document.getElementById('rm-selected-count');
+    if (countEl) countEl.textContent = `${n} selected`;
+    const master = document.getElementById('rm-select-all');
+    const all = document.querySelectorAll('.rm-check').length;
+    if (master) master.checked = all > 0 && n === all;
+  };
+
+  window.deleteSelectedStudents = async function() {
+    const checked = [...document.querySelectorAll('.rm-check:checked')];
+    if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to remove.'); return; }
+    if (!confirm(`Remove ${checked.length} selected student${checked.length === 1 ? '' : 's'} from the roster?\n\nThis removes their profile config and cannot be undone.`)) return;
+
+    // One atomic multi-path update: set each selected roster key to null
+    const updates = {};
+    checked.forEach(cb => { updates[`bathroom/roster/${cb.dataset.key}`] = null; });
+    try {
+      await update(ref(db), updates);
+      // Live listener will re-render the roster automatically
+    } catch (e) {
+      console.error(e);
+      alert('Error removing students. Please try again.');
+    }
   }
 
   // --- Date helpers ---
