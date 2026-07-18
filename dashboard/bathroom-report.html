@@ -806,15 +806,15 @@
     if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to remove.'); return; }
     if (!confirm(`Remove ${checked.length} selected student${checked.length === 1 ? '' : 's'} from the roster?\n\nThis removes their profile config and cannot be undone.`)) return;
 
-    // One atomic multi-path update: set each selected roster key to null
-    const updates = {};
-    checked.forEach(cb => { updates[`bathroom/roster/${cb.dataset.key}`] = null; });
+    // Use the same remove() mechanism as the single-delete button, run across all checked rows.
     try {
-      await update(ref(db), updates);
+      await Promise.all(
+        checked.map(cb => remove(ref(db, `bathroom/roster/${cb.dataset.key}`)))
+      );
       // Live listener will re-render the roster automatically
     } catch (e) {
       console.error(e);
-      alert('Error removing students. Please try again.');
+      alert('Error removing students: ' + (e && e.message ? e.message : e));
     }
   }
 
@@ -1155,15 +1155,15 @@
     if (!checked.length) { alert('No entries are selected. Check the boxes for the rows you want to delete.'); return; }
     if (!confirm(`Delete ${checked.length} selected entr${checked.length === 1 ? 'y' : 'ies'}?\n\nThis cannot be undone.`)) return;
 
-    // One atomic multi-path update: set each selected history key to null
-    const updates = {};
-    checked.forEach(cb => { updates[`bathroom/history/${cb.dataset.key}`] = null; });
+    // Use the same remove() mechanism as the single-delete button, run across all checked rows.
     try {
-      await update(ref(db), updates);
+      await Promise.all(
+        checked.map(cb => remove(ref(db, `bathroom/history/${cb.dataset.key}`)))
+      );
       // Live listener will re-render automatically
     } catch (e) {
       console.error(e);
-      alert('Error deleting entries. Please try again.');
+      alert('Error deleting entries: ' + (e && e.message ? e.message : e));
     }
   };
 
