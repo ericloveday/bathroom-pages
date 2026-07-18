@@ -578,7 +578,48 @@
         
         const parts = line.split(',');
         if (parts.length >= 2) {
-          const name = parts[0].trim();
+         // 1. Format the name to First Name + Last Initial
+let rawName = parts[0].trim();
+let nameParts = rawName.split(/\s+/);
+let name = rawName;
+let firstName = '';
+
+if (nameParts.length > 1) {
+    firstName = nameParts[0].toLowerCase();
+    firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+    let lastInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase();
+    name = `${firstName} ${lastInitial}.`;
+} else if (nameParts.length === 1) {
+    firstName = nameParts[0].toLowerCase();
+    firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+    name = firstName;
+}
+
+// 2. Handle Gender (Read from CSV or Guess using AI/API)
+let gender = 'b'; // default fallback
+let explicitGender = parts.length >= 2 ? parts[1].trim().toLowerCase() : '';
+
+if (explicitGender.includes('girl') || explicitGender === 'g') {
+    gender = 'g';
+} else if (explicitGender.includes('boy') || explicitGender === 'b') {
+    gender = 'b';
+} else if (firstName) {
+    // If no clear gender was provided, ask the API to guess based on the first name
+    try {
+        const response = await fetch(`https://api.genderize.io/?name=${firstName}`);
+        const data = await response.json();
+        
+        // The API returns 'male', 'female', or null
+        if (data.gender === 'female') {
+            gender = 'g';
+        } else if (data.gender === 'male') {
+            gender = 'b';
+        }
+    } catch (error) {
+        console.error("Failed to guess gender:", error);
+        gender = 'b'; // default fallback if API fails or rate limit hit
+    }
+}
           let gender = parts[1].trim().toLowerCase();
           
           // Normalize gender string
