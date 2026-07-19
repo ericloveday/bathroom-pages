@@ -277,10 +277,6 @@
     <h1>Bathroom Checkout Dashboard</h1>
     <p>Connected to live Firebase data</p>
   </div>
-  <div id="report-actions" style="display:flex; gap:10px; align-self:center;">
-    <button class="btn btn-outline" onclick="window.print()">🖨 Print</button>
-    <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
-  </div>
 </header>
 
 <!-- MAIN VIEW TABS -->
@@ -292,11 +288,17 @@
 
 <!-- ================= REPORTS VIEW ================= -->
 <div id="view-reports">
-  <!-- Date Tabs -->
-  <div class="tab-btns">
-    <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
-    <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
-    <button class="tab-btn" id="tab-custom" onclick="switchTab('custom')">Custom Range</button>
+  <!-- Date Tabs + report actions -->
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+    <div class="tab-btns" style="margin-bottom:0;">
+      <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
+      <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
+      <button class="tab-btn" id="tab-custom" onclick="switchTab('custom')">Custom Range</button>
+    </div>
+    <div id="report-actions" style="display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-outline" onclick="window.print()">🖨 Print</button>
+      <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
   </div>
 
   <!-- Controls -->
@@ -505,9 +507,6 @@
       document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
       document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
     });
-    // Print / Export only make sense on the Reports tab
-    const reportActions = document.getElementById('report-actions');
-    if (reportActions) reportActions.style.display = (view === 'reports') ? 'flex' : 'none';
   };
 
   // --- Roster Listener (no auto-seed) ---
