@@ -641,24 +641,27 @@
             name = firstName;
           }
 
-          // 2. Handle Gender: explicit CSV value first, then the built-in name list
-          let gender = 'b';
-          let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
+Here is the updated code snippet. I changed the initial fallback variable and the final else block to use 'unk' instead of 'b'.
 
-          if (explicitGender.includes('girl') || explicitGender === 'g' || explicitGender === 'f' || explicitGender === 'female') {
-            gender = 'g';
-            genderReadCount++;
-          } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
-            gender = 'b';
-            genderReadCount++;
-          } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
-            gender = GENDER_MAP[firstName.toLowerCase()];
-            genderMatchedCount++;
-          } else {
-            gender = 'b'; // not recognized — default and flag for review
-            genderUnknownCount++;
-            unknownNames.push(name);
-          }
+JavaScript
+        // 2. Handle Gender: explicit CSV value first, then the built-in name list
+        let gender = 'unk'; 
+        let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
+        
+        if (explicitGender.includes('girl') || explicitGender === 'g' || explicitGender === 'f' || explicitGender === 'female') {
+          gender = 'g';
+          genderReadCount++;
+        } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
+          gender = 'b';
+          genderReadCount++;
+        } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
+          gender = GENDER_MAP[firstName.toLowerCase()];
+          genderMatchedCount++;
+        } else {
+          gender = 'unk'; // not recognized — default to unknown and flag for review
+          genderUnknownCount++;
+          unknownNames.push(name);
+        }
 
           // 3. Parse limit, default to 5 if blank or invalid
           const limitStr = parts.length > dataIndex + 1 ? parts[dataIndex + 1].trim() : '';
@@ -680,9 +683,9 @@
         let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
         summary += `• Gender read from file: ${genderReadCount}\n`;
         summary += `• Gender matched from name list: ${genderMatchedCount}\n`;
-        summary += `• Not recognized (defaulted to Boy): ${genderUnknownCount}\n`;
+       summary += `• Not recognized (defaulted to Unknown): ${genderUnknownCount}\n`;
         if (unknownNames.length) {
-          summary += `\n⚠️ These names weren't in the built-in list and were set to Boy — fix any that are wrong with the Edit button:\n${unknownNames.join(', ')}`;
+          summary += `\n⚠️ These names weren't in the built-in list and were set to Unknown — fix any that are wrong with the Edit button:\n${unknownNames.join(', ')}`;
         }
         alert(summary);
 
