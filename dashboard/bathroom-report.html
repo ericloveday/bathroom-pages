@@ -277,7 +277,7 @@
     <h1>Bathroom Checkout Dashboard</h1>
     <p>Connected to live Firebase data</p>
   </div>
-  <div style="display:flex; gap:10px; align-self:center;">
+  <div id="report-actions" style="display:flex; gap:10px; align-self:center;">
     <button class="btn btn-outline" onclick="window.print()">🖨 Print</button>
     <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
   </div>
@@ -396,14 +396,17 @@
         <select id="roster-new-gender">
           <option value="g">Girl</option>
           <option value="b">Boy</option>
+          <option value="unk">Unknown</option>
         </select>
       </div>
       <div class="control-group" style="flex:1;">
         <label style="color:#aaa;">Weekly Pass Limit</label>
         <input type="number" id="roster-new-limit" value="5" min="1">
       </div>
-      <button class="btn" style="background:#1a6fb5;" onclick="saveStudent()">Add / Update Student</button>
+      <button class="btn" id="roster-save-btn" style="background:#1a6fb5;" onclick="saveStudent()">Add / Update Student</button>
     </div>
+
+    <div id="roster-edit-hint" style="display:none; margin-bottom:14px; font-size:0.82rem; color:#e6a817; font-weight:600;"></div>
 
     <!-- Bulk action bar -->
     <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
@@ -477,6 +480,7 @@
   let currentTab = 'weekly';
   let sortCol = 'totalMins';
   let sortAsc = false;
+  let editingOriginalName = null; // set when the Edit button is used, so renames update instead of duplicate
 
   // --- Built-in first-name → gender list (offline, no external API) ---
   // Seeded with this class's roster (authoritative for unisex names like Alex/Elliott/Morgan)
@@ -501,6 +505,9 @@
       document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
       document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
     });
+    // Print / Export only make sense on the Reports tab
+    const reportActions = document.getElementById('report-actions');
+    if (reportActions) reportActions.style.display = (view === 'reports') ? 'flex' : 'none';
   };
 
   // --- Roster Listener (no auto-seed) ---
@@ -533,21 +540,57 @@
 
     if (!name) { alert("Please input a valid student name."); return; }
 
-    // Create a safe Firebase key configuration
-    const key = name.replace(/[.#$/\[\]]/g, "_");
+    const newKey = name.replace(/[.#$/\[\]]/g, "_");
     try {
-      await set(ref(db, `bathroom/roster/${key}`), { name, gender, limit });
-      nameInput.value = '';
-      document.getElementById('roster-new-limit').value = '5';
+      // Write the (new or updated) student record
+      await set(ref(db, `bathroom/roster/${newKey}`), { name, gender, limit });
+
+      // If this was a rename via Edit, clean up the old record and keep history consistent
+      if (editingOriginalName && editingOriginalName !== name) {
+        const oldKey = editingOriginalName.replace(/[.#$/\[\]]/g, "_");
+        if (oldKey !== newKey) {
+          await remove(ref(db, `bathroom/roster/${oldKey}`));
+        }
+        // Update the student's name on their past history entries so their trips
+        // still show up under the new name in reports.
+        const toRename = allHistory.filter(h => h.name === editingOriginalName);
+        if (toRename.length) {
+          await Promise.all(
+            toRename.map(h => update(ref(db, `bathroom/history/${h._key}`), { name }))
+          );
+        }
+      }
+
+      cancelEdit(); // clears the form + resets the button/hint + editing state
     } catch(e) {
-      alert("Error adding student properties.");
+      console.error(e);
+      alert("Error saving student: " + (e && e.message ? e.message : e));
     }
   };
 
+  window.cancelEdit = function() {
+    editingOriginalName = null;
+    document.getElementById('roster-new-name').value = '';
+    document.getElementById('roster-new-gender').value = 'g';
+    document.getElementById('roster-new-limit').value = '5';
+    const btn = document.getElementById('roster-save-btn');
+    if (btn) btn.textContent = 'Add / Update Student';
+    const hint = document.getElementById('roster-edit-hint');
+    if (hint) hint.style.display = 'none';
+  };
+
   window.editStudent = function(name, gender, limit) {
+    editingOriginalName = name; // remember who we're editing so a rename updates in place
     document.getElementById('roster-new-name').value = name;
     document.getElementById('roster-new-gender').value = gender;
     document.getElementById('roster-new-limit').value = limit || 5;
+    const btn = document.getElementById('roster-save-btn');
+    if (btn) btn.textContent = 'Update Student';
+    const hint = document.getElementById('roster-edit-hint');
+    if (hint) {
+      hint.style.display = 'block';
+      hint.innerHTML = `✏️ Editing <strong>${name}</strong> — <a href="#" onclick="cancelEdit(); return false;" style="color:#1a6fb5;">cancel</a>`;
+    }
     document.getElementById('roster-new-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
