@@ -186,6 +186,7 @@
   }
   .gender-dot.boy { background: var(--boy); }
   .gender-dot.girl { background: var(--girl); }
+  .gender-dot.unknown { background: #999999; }
 
   .val-cell { font-weight: 600; color: var(--red); }
   .trips-cell { font-weight: 600; color: #333; }
@@ -483,8 +484,15 @@
   const GENDER_MAP = {};
   `aiden akshay benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`
     .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'b'; });
-  `aaliyah aanya abby Lalla akira alex alyson amelia amiyah Lamia Josephine ananya aubrey avery gabby hadiara bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`
+  `aaliyah aanya abby akira alex alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`
     .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'g'; });
+
+  // Map a stored gender value ('b' / 'g' / anything else) to a CSS class + label.
+  function genderInfo(g) {
+    if (g === 'b') return { cls: 'boy', label: 'Boy' };
+    if (g === 'g') return { cls: 'girl', label: 'Girl' };
+    return { cls: 'unknown', label: 'Unknown' };
+  }
 
   // --- Main View Switching Logic ---
   window.switchMainTab = function(view) {
@@ -641,27 +649,24 @@
             name = firstName;
           }
 
-Here is the updated code snippet. I changed the initial fallback variable and the final else block to use 'unk' instead of 'b'.
+          // 2. Handle Gender: explicit CSV value first, then the built-in name list
+          let gender = 'unk';
+          let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
 
-JavaScript
-        // 2. Handle Gender: explicit CSV value first, then the built-in name list
-        let gender = 'unk'; 
-        let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
-        
-        if (explicitGender.includes('girl') || explicitGender === 'g' || explicitGender === 'f' || explicitGender === 'female') {
-          gender = 'g';
-          genderReadCount++;
-        } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
-          gender = 'b';
-          genderReadCount++;
-        } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
-          gender = GENDER_MAP[firstName.toLowerCase()];
-          genderMatchedCount++;
-        } else {
-          gender = 'unk'; // not recognized — default to unknown and flag for review
-          genderUnknownCount++;
-          unknownNames.push(name);
-        }
+          if (explicitGender.includes('girl') || explicitGender === 'g' || explicitGender === 'f' || explicitGender === 'female') {
+            gender = 'g';
+            genderReadCount++;
+          } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
+            gender = 'b';
+            genderReadCount++;
+          } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
+            gender = GENDER_MAP[firstName.toLowerCase()];
+            genderMatchedCount++;
+          } else {
+            gender = 'unk'; // not recognized — mark Unknown and flag for review
+            genderUnknownCount++;
+            unknownNames.push(name);
+          }
 
           // 3. Parse limit, default to 5 if blank or invalid
           const limitStr = parts.length > dataIndex + 1 ? parts[dataIndex + 1].trim() : '';
@@ -683,9 +688,9 @@ JavaScript
         let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
         summary += `• Gender read from file: ${genderReadCount}\n`;
         summary += `• Gender matched from name list: ${genderMatchedCount}\n`;
-       summary += `• Not recognized (defaulted to Unknown): ${genderUnknownCount}\n`;
+        summary += `• Not recognized (marked Unknown): ${genderUnknownCount}\n`;
         if (unknownNames.length) {
-          summary += `\n⚠️ These names weren't in the built-in list and were set to Unknown — fix any that are wrong with the Edit button:\n${unknownNames.join(', ')}`;
+          summary += `\n⚠️ These names weren't in the built-in list and were marked Unknown — set them with the Edit button:\n${unknownNames.join(', ')}`;
         }
         alert(summary);
 
@@ -728,9 +733,9 @@ JavaScript
       tr.innerHTML = `
         <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
         <td class="student-name-cell">
-          <span class="gender-dot ${s.gender === 'b' ? 'boy' : 'girl'}"></span>${s.name}
+          <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
         </td>
-        <td style="text-transform: capitalize;">${s.gender === 'b' ? 'Boy' : 'Girl'}</td>
+        <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
         <td class="trips-cell">${s.limit || 5} passes</td>
         <td>
           <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editStudent('${s.name}', '${s.gender}', ${s.limit || 5})">✏️ Edit</button>
@@ -937,7 +942,7 @@ JavaScript
     const tbody = `<tbody>${rows.map(s => `
       <tr>
         <td class="student-name-cell">
-          <span class="gender-dot ${s.gender === 'b' ? 'boy' : 'girl'}"></span>${s.name}
+          <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
         </td>
         <td class="trips-cell">${s.trips}</td>
         <td class="val-cell">${s.totalMins}m</td>
@@ -996,7 +1001,7 @@ JavaScript
       const student = STUDENTS.find(s => s.name === h.name);
       rows.push([
         h.name,
-        student ? (student.gender === 'b' ? 'Boy' : 'Girl') : '',
+        student ? (genderInfo(student.gender).label) : '',
         h.teacher || 'Loveday',
         isoDate(d),
         d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -1066,7 +1071,7 @@ JavaScript
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="student-name-cell">
-          <span class="gender-dot ${s.gender === 'b' ? 'boy' : 'girl'}"></span>${s.name}
+          <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
         </td>
         <td class="trips-cell">${s.used} / ${s.limit}</td>
         <td class="val-cell">${Math.max(0, s.remaining)}</td>
@@ -1166,7 +1171,7 @@ JavaScript
       tr.innerHTML = `
         <td class="check-cell"><input type="checkbox" class="dm-check" data-key="${h._key}" onclick="updateSelectedCount()"></td>
         <td class="student-name-cell">
-          <span class="gender-dot ${h.gender === 'b' ? 'boy' : 'girl'}"></span>${h.name}
+          <span class="gender-dot ${genderInfo(h.gender).cls}"></span>${h.name}
         </td>
         <td>${h.teacher || 'Loveday'}</td>
         <td>${dateStr}</td>
