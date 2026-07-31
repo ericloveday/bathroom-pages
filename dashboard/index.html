@@ -369,6 +369,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -383,6 +384,17 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+
+    // Sign in anonymously so the database rules (auth != null) let this page
+    // read/write. This is invisible — no login screen appears.
+    const auth = getAuth(app);
+    const authReady = new Promise((resolve, reject) => {
+      onAuthStateChanged(auth, user => {
+        if (user) resolve(user);
+      });
+      signInAnonymously(auth).catch(reject);
+    });
+
     let announcements = [];
     let editingKey = null;
 
@@ -399,18 +411,23 @@
     document.getElementById('ann-end-date').value = getDateStringOffset(3);
 
     // --- Load announcements ---
-    onValue(ref(db, 'announcements'), (snapshot) => {
-      const data = snapshot.val() || {};
-      announcements = Object.entries(data)
-        .map(([k, v]) => ({ ...v, _key: k }))
-        .sort((a, b) => {
-          const aStart = a.startDate || a.date || '';
-          const bStart = b.startDate || b.date || '';
-          return bStart.localeCompare(aStart);
-        });
-      renderList();
-      renderPreview();
-      document.getElementById('loading').style.display = 'none';
+    authReady.then(() => {
+      onValue(ref(db, 'announcements'), (snapshot) => {
+        const data = snapshot.val() || {};
+        announcements = Object.entries(data)
+          .map(([k, v]) => ({ ...v, _key: k }))
+          .sort((a, b) => {
+            const aStart = a.startDate || a.date || '';
+            const bStart = b.startDate || b.date || '';
+            return bStart.localeCompare(aStart);
+          });
+        renderList();
+        renderPreview();
+        document.getElementById('loading').style.display = 'none';
+      });
+    }).catch(err => {
+      console.error("Anonymous sign-in failed:", err);
+      document.getElementById('loading').innerHTML = '<p style="color:#f87171;font-weight:600;">Couldn\'t connect to the database. Check your connection and reload the page.</p>';
     });
 
     // --- Save ---
