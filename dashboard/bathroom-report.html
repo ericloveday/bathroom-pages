@@ -462,6 +462,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getDatabase, ref, onValue, remove, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
@@ -477,6 +478,16 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
+  // Sign in anonymously so the database rules (auth != null) let this page
+  // read/write. This is invisible — no login screen appears.
+  const auth = getAuth(app);
+  const authReady = new Promise((resolve, reject) => {
+    onAuthStateChanged(auth, user => {
+      if (user) resolve(user);
+    });
+    signInAnonymously(auth).catch(reject);
+  });
+
   let allHistory = [];
   let STUDENTS = [];
   let currentTab = 'weekly';
@@ -485,22 +496,18 @@
   let editingOriginalName = null; // set when the Edit button is used, so renames update instead of duplicate
 
   // --- Built-in first-name → gender list (offline, no external API) ---
-  // Seeded with this class's roster (authoritative for unisex names like Alex/Elliott/Morgan)
-  // plus a broad set of common U.S. names. Add/adjust names here anytime.
   const GENDER_MAP = {};
   `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`
     .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'b'; });
   `aaliyah aanya abby akira alex alexandra alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`
     .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'g'; });
 
-  // Map a stored gender value ('b' / 'g' / anything else) to a CSS class + label.
   function genderInfo(g) {
     if (g === 'b') return { cls: 'boy', label: 'Boy' };
     if (g === 'g') return { cls: 'girl', label: 'Girl' };
     return { cls: 'unknown', label: 'Unknown' };
   }
 
-  // --- Main View Switching Logic ---
   window.switchMainTab = function(view) {
     const views = ['reports', 'management', 'history'];
     views.forEach(v => {
@@ -509,28 +516,30 @@
     });
   };
 
-  // --- Roster Listener (no auto-seed) ---
-  onValue(ref(db, 'bathroom/roster'), (snapshot) => {
-    const data = snapshot.val();
-    STUDENTS = data ? Object.values(data).sort((a,b) => a.name.localeCompare(b.name)) : [];
-    renderReport();
-    renderRosterManager();
-    renderPassUsage();
+  authReady.then(() => {
+    onValue(ref(db, 'bathroom/roster'), (snapshot) => {
+      const data = snapshot.val();
+      STUDENTS = data ? Object.values(data).sort((a,b) => a.name.localeCompare(b.name)) : [];
+      renderReport();
+      renderRosterManager();
+      renderPassUsage();
+    });
+
+    onValue(ref(db, 'bathroom/history'), (snapshot) => {
+      const data = snapshot.val() || {};
+      allHistory = Object.entries(data).map(([k,v]) => ({...v, _key: k})).sort((a,b) => b.checkedOutAt - a.checkedOutAt);
+      populateSelectors();
+      renderReport();
+      populateStudentFilter();
+      renderDataManager();
+      renderPassUsage();
+      document.getElementById('loading').style.display = 'none';
+    });
+  }).catch(err => {
+    console.error("Anonymous sign-in failed:", err);
+    document.getElementById('loading').innerHTML = '<p style="color:#cc0000;">Couldn\'t connect to the database (sign-in failed). Check your connection and reload the page.</p>';
   });
 
-  // --- Load history data ---
-  onValue(ref(db, 'bathroom/history'), (snapshot) => {
-    const data = snapshot.val() || {};
-    allHistory = Object.entries(data).map(([k,v]) => ({...v, _key: k})).sort((a,b) => b.checkedOutAt - a.checkedOutAt);
-    populateSelectors();
-    renderReport();
-    populateStudentFilter();
-    renderDataManager();
-    renderPassUsage();
-    document.getElementById('loading').style.display = 'none';
-  });
-
-  // --- Roster Logic Management ---
   window.saveStudent = async function() {
     const nameInput = document.getElementById('roster-new-name');
     const name = nameInput.value.trim();
@@ -541,17 +550,13 @@
 
     const newKey = name.replace(/[.#$/\[\]]/g, "_");
     try {
-      // Write the (new or updated) student record
       await set(ref(db, `bathroom/roster/${newKey}`), { name, gender, limit });
 
-      // If this was a rename via Edit, clean up the old record and keep history consistent
       if (editingOriginalName && editingOriginalName !== name) {
         const oldKey = editingOriginalName.replace(/[.#$/\[\]]/g, "_");
         if (oldKey !== newKey) {
           await remove(ref(db, `bathroom/roster/${oldKey}`));
         }
-        // Update the student's name on their past history entries so their trips
-        // still show up under the new name in reports.
         const toRename = allHistory.filter(h => h.name === editingOriginalName);
         if (toRename.length) {
           await Promise.all(
@@ -560,7 +565,7 @@
         }
       }
 
-      cancelEdit(); // clears the form + resets the button/hint + editing state
+      cancelEdit();
     } catch(e) {
       console.error(e);
       alert("Error saving student: " + (e && e.message ? e.message : e));
@@ -579,7 +584,7 @@
   };
 
   window.editStudent = function(name, gender, limit) {
-    editingOriginalName = name; // remember who we're editing so a rename updates in place
+    editingOriginalName = name;
     document.getElementById('roster-new-name').value = name;
     document.getElementById('roster-new-gender').value = gender;
     document.getElementById('roster-new-limit').value = limit || 5;
@@ -599,7 +604,6 @@
     await remove(ref(db, `bathroom/roster/${key}`));
   };
 
-  // --- CSV Bulk Upload (single clean function, with live status + header detection) ---
   window.processCSV = async function() {
     const fileInput = document.getElementById('csv-upload');
     const statusEl = document.getElementById('csv-status');
@@ -627,7 +631,6 @@
       try {
         const text = e.target.result;
 
-        // Split on both Windows (\r\n) and Unix (\n) line endings, drop blank lines
         let rawLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
 
         if (!rawLines.length) {
@@ -636,7 +639,6 @@
           return;
         }
 
-        // Detect and skip a header row (e.g. "Name, Gender, Limit")
         const firstCol = rawLines[0].split(',')[0].replace(/"/g, '').trim().toLowerCase();
         const headerWords = ['name', 'student', 'student name', 'first name', 'firstname', 'last name', 'lastname', 'first', 'last'];
         if (headerWords.includes(firstCol)) {
@@ -650,15 +652,14 @@
         }
 
         let successCount = 0;
-        let genderReadCount = 0;      // gender came straight from the CSV
-        let genderMatchedCount = 0;   // gender matched from the built-in name list
-        let genderUnknownCount = 0;   // name not recognized — defaulted to Boy, needs review
-        const unknownNames = [];      // names we couldn't determine, so you can fix them
+        let genderReadCount = 0;
+        let genderMatchedCount = 0;
+        let genderUnknownCount = 0;
+        const unknownNames = [];
 
         for (let i = 0; i < rawLines.length; i++) {
           setStatus(`Processing ${i + 1} of ${rawLines.length}...`);
 
-          // Clean up any rogue quotes generated by Excel or Google Sheets
           const cleanLine = rawLines[i].replace(/"/g, '');
           const parts = cleanLine.split(',');
           if (!parts.length || !parts[0].trim()) continue;
@@ -666,7 +667,6 @@
           let rawName = parts[0].trim();
           let dataIndex = 1;
 
-          // Fix "Last, First" format by checking if column 2 is actually a name
           if (parts.length > 1) {
             let nextPart = parts[1].trim().toLowerCase();
             if (!['g', 'b', 'girl', 'boy', 'm', 'f', 'male', 'female'].includes(nextPart) && isNaN(parseInt(nextPart))) {
@@ -675,7 +675,6 @@
             }
           }
 
-          // 1. Format the name to First Name + Last Initial
           let nameParts = rawName.split(/\s+/);
           let name = rawName;
           let firstName = '';
@@ -691,7 +690,6 @@
             name = firstName;
           }
 
-          // 2. Handle Gender: explicit CSV value first, then the built-in name list
           let gender = 'unk';
           let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
 
@@ -705,16 +703,14 @@
             gender = GENDER_MAP[firstName.toLowerCase()];
             genderMatchedCount++;
           } else {
-            gender = 'unk'; // not recognized — mark Unknown and flag for review
+            gender = 'unk';
             genderUnknownCount++;
             unknownNames.push(name);
           }
 
-          // 3. Parse limit, default to 5 if blank or invalid
           const limitStr = parts.length > dataIndex + 1 ? parts[dataIndex + 1].trim() : '';
           const limit = parseInt(limitStr, 10);
 
-          // 4. Save to Firebase
           const key = name.replace(/[.#$/\[\]]/g, '_');
           await set(ref(db, `bathroom/roster/${key}`), {
             name: name,
@@ -724,7 +720,6 @@
           successCount++;
         }
 
-        // Persistent on-screen status + a summary alert
         setStatus(`✅ Done. Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} — ${genderReadCount} from file, ${genderMatchedCount} matched, ${genderUnknownCount} need review.`, '#1a7a1a');
 
         let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
@@ -792,7 +787,6 @@
     updateStudentSelectedCount();
   }
 
-  // --- Roster: checkboxes + bulk delete ---
   window.toggleSelectAllStudents = function(master) {
     document.querySelectorAll('.rm-check').forEach(cb => { cb.checked = master.checked; });
     updateStudentSelectedCount();
@@ -812,19 +806,16 @@
     if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to remove.'); return; }
     if (!confirm(`Remove ${checked.length} selected student${checked.length === 1 ? '' : 's'} from the roster?\n\nThis removes their profile config and cannot be undone.`)) return;
 
-    // Use the same remove() mechanism as the single-delete button, run across all checked rows.
     try {
       await Promise.all(
         checked.map(cb => remove(ref(db, `bathroom/roster/${cb.dataset.key}`)))
       );
-      // Live listener will re-render the roster automatically
     } catch (e) {
       console.error(e);
       alert('Error removing students: ' + (e && e.message ? e.message : e));
     }
   }
 
-  // --- Date helpers ---
   function startOfWeek(date) {
     const d = new Date(date);
     const day = d.getDay();
@@ -852,7 +843,6 @@
     return date.toISOString().split('T')[0];
   }
 
-  // --- Populate selectors ---
   function populateSelectors() {
     const weekSel = document.getElementById('week-select');
     if(!weekSel) return;
@@ -919,7 +909,6 @@
     }
   }
 
-  // --- Render report ---
   window.renderReport = function() {
     const range = getDateRange();
     if (!range) return;
@@ -1081,7 +1070,6 @@
       counts[h.name] = (counts[h.name] || 0) + 1;
     });
 
-    // Flag students tracking at >= 60% of their unique allocated limit configuration
     const flagged = STUDENTS.map(s => {
       const used = counts[s.name] || 0;
       const limit = s.limit || 5;
@@ -1138,10 +1126,9 @@
       opt.textContent = name;
       sel.appendChild(opt);
     });
-    sel.value = prev; // preserve selection across live data refreshes
+    sel.value = prev;
   }
 
-  // --- History Management: checkboxes + bulk delete ---
   window.toggleSelectAll = function(master) {
     document.querySelectorAll('.dm-check').forEach(cb => { cb.checked = master.checked; });
     updateSelectedCount();
@@ -1161,12 +1148,10 @@
     if (!checked.length) { alert('No entries are selected. Check the boxes for the rows you want to delete.'); return; }
     if (!confirm(`Delete ${checked.length} selected entr${checked.length === 1 ? 'y' : 'ies'}?\n\nThis cannot be undone.`)) return;
 
-    // Use the same remove() mechanism as the single-delete button, run across all checked rows.
     try {
       await Promise.all(
         checked.map(cb => remove(ref(db, `bathroom/history/${cb.dataset.key}`)))
       );
-      // Live listener will re-render automatically
     } catch (e) {
       console.error(e);
       alert('Error deleting entries: ' + (e && e.message ? e.message : e));
