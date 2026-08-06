@@ -30,6 +30,32 @@
     padding: 24px;
   }
 
+  /* ---------------- Sign-In Screen ---------------- */
+  #signin-screen {
+    position: fixed; inset: 0; background: var(--bg); z-index: 100000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .signin-card {
+    background: var(--card); border: 2px solid var(--red-border); border-radius: var(--radius);
+    padding: 40px 32px; max-width: 380px; width: 90%; text-align: center;
+  }
+  .signin-card h1 { font-size: 1.3rem; margin-bottom: 8px; color: var(--text); text-transform: uppercase; }
+  .signin-card p { font-size: 0.88rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .google-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 12px; background: #fff; color: #1f1f1f;
+    border: 1px solid #dadce0; border-radius: 8px; font-family: 'Montserrat', sans-serif;
+    font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+  }
+  .google-btn:hover { background: #f7f7f7; }
+  .signin-error {
+    margin-top: 16px; padding: 10px 14px; background: #fdecea; border: 1px solid var(--red);
+    color: var(--red-dark); border-radius: 8px; font-size: 0.85rem; display: none;
+  }
+  .signin-note { margin-top: 18px; font-size: 0.75rem; color: #999; }
+
+  #app-content { display: none; }
+
   header { margin-bottom: 28px; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
 
   h1 {
@@ -40,6 +66,15 @@
   }
 
   header p { color: #888; font-size: 0.85rem; margin-top: 4px; }
+
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  #user-badge { font-size: 0.8rem; color: #aaa; }
+  #signout-btn {
+    font-size: 0.75rem; font-weight: 700; color: #aaa; background: #1a1a1a;
+    border: 1px solid #333; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+    font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  #signout-btn:hover { color: #fff; border-color: var(--red); }
 
   .controls {
     background: #1a1a1a;
@@ -267,15 +302,34 @@
 </head>
 <body>
 
+<div id="signin-screen">
+  <div class="signin-card">
+    <h1>Bathroom Dashboard</h1>
+    <p>Sign in with your Cornerstone Google account to continue.</p>
+    <button class="google-btn" id="google-signin-btn">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.82 2.73v2.27h2.94c1.72-1.59 2.68-3.93 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.94-2.27c-.8.55-1.84.85-3.02.85-2.34 0-4.32-1.58-5.03-3.7H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.7c-.18-.55-.28-1.13-.28-1.7s.1-1.15.28-1.7V4.96H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.04l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.6-2.6C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="signin-error" id="signin-error"></div>
+    <p class="signin-note">Restricted to @cornerstonek12.org accounts</p>
+  </div>
+</div>
+
 <div id="loading">
   <div class="spinner"></div>
   <p>Loading report data...</p>
 </div>
 
+<div id="app-content">
+
 <header>
   <div>
     <h1>Bathroom Checkout Dashboard</h1>
     <p>Connected to live Firebase data</p>
+  </div>
+  <div class="header-right no-print">
+    <span id="user-badge"></span>
+    <button id="signout-btn" onclick="doSignOut()">Sign Out</button>
   </div>
 </header>
 
@@ -460,9 +514,11 @@
   </div>
 </div>
 
+</div><!-- /#app-content -->
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getDatabase, ref, onValue, remove, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
@@ -475,48 +531,96 @@
     appId: "1:385219454253:web:970acbfe28672f73c45fa4"
   };
 
+  const ALLOWED_DOMAIN = "cornerstonek12.org";
+
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-
-  // Sign in anonymously so the database rules (auth != null) let this page
-  // read/write. This is invisible — no login screen appears.
   const auth = getAuth(app);
-  const authReady = new Promise((resolve, reject) => {
-    onAuthStateChanged(auth, user => {
-      if (user) resolve(user);
-    });
-    signInAnonymously(auth).catch(reject);
-  });
 
-  let allHistory = [];
-  let STUDENTS = [];
-  let currentTab = 'weekly';
-  let sortCol = 'totalMins';
-  let sortAsc = false;
-  let editingOriginalName = null; // set when the Edit button is used, so renames update instead of duplicate
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
 
-  // --- Built-in first-name → gender list (offline, no external API) ---
-  const GENDER_MAP = {};
-  `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`
-    .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'b'; });
-  `aaliyah aanya abby akira alex alexandra alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`
-    .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'g'; });
+  const signinScreen = document.getElementById('signin-screen');
+  const appContent = document.getElementById('app-content');
+  const loadingScreen = document.getElementById('loading');
+  const signinError = document.getElementById('signin-error');
+  const userBadge = document.getElementById('user-badge');
 
-  function genderInfo(g) {
-    if (g === 'b') return { cls: 'boy', label: 'Boy' };
-    if (g === 'g') return { cls: 'girl', label: 'Girl' };
-    return { cls: 'unknown', label: 'Unknown' };
+  function showSigninError(msg) {
+    signinError.textContent = msg;
+    signinError.style.display = 'block';
   }
 
-  window.switchMainTab = function(view) {
-    const views = ['reports', 'management', 'history'];
-    views.forEach(v => {
-      document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
-      document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
+  document.getElementById('google-signin-btn').addEventListener('click', () => {
+    signinError.style.display = 'none';
+    signInWithPopup(auth, provider).catch(err => {
+      console.error(err);
+      showSigninError('Sign-in failed. Please try again.');
     });
+  });
+
+  window.doSignOut = function() {
+    signOut(auth);
   };
 
-  authReady.then(() => {
+  let appStarted = false;
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      signinScreen.style.display = 'flex';
+      appContent.style.display = 'none';
+      loadingScreen.style.display = 'none';
+      return;
+    }
+
+    const email = user.email || "";
+    if (!email.endsWith("@" + ALLOWED_DOMAIN)) {
+      showSigninError(`This tool is restricted to @${ALLOWED_DOMAIN} accounts. You signed in as ${email}.`);
+      signOut(auth);
+      return;
+    }
+
+    signinScreen.style.display = 'none';
+    loadingScreen.style.display = 'flex';
+    userBadge.textContent = email;
+
+    if (!appStarted) {
+      appStarted = true;
+      startApp();
+    }
+  });
+
+  function startApp() {
+    appContent.style.display = 'block';
+
+    let allHistory = [];
+    let STUDENTS = [];
+    let currentTab = 'weekly';
+    let sortCol = 'totalMins';
+    let sortAsc = false;
+    let editingOriginalName = null; // set when the Edit button is used, so renames update instead of duplicate
+
+    // --- Built-in first-name → gender list (offline, no external API) ---
+    const GENDER_MAP = {};
+    `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`
+      .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'b'; });
+    `aaliyah aanya abby akira alex alexandra alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`
+      .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'g'; });
+
+    function genderInfo(g) {
+      if (g === 'b') return { cls: 'boy', label: 'Boy' };
+      if (g === 'g') return { cls: 'girl', label: 'Girl' };
+      return { cls: 'unknown', label: 'Unknown' };
+    }
+
+    window.switchMainTab = function(view) {
+      const views = ['reports', 'management', 'history'];
+      views.forEach(v => {
+        document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
+        document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
+      });
+    };
+
     onValue(ref(db, 'bathroom/roster'), (snapshot) => {
       const data = snapshot.val();
       STUDENTS = data ? Object.values(data).sort((a,b) => a.name.localeCompare(b.name)) : [];
@@ -533,696 +637,693 @@
       populateStudentFilter();
       renderDataManager();
       renderPassUsage();
-      document.getElementById('loading').style.display = 'none';
+      loadingScreen.style.display = 'none';
     });
-  }).catch(err => {
-    console.error("Anonymous sign-in failed:", err);
-    document.getElementById('loading').innerHTML = '<p style="color:#cc0000;">Couldn\'t connect to the database (sign-in failed). Check your connection and reload the page.</p>';
-  });
 
-  window.saveStudent = async function() {
-    const nameInput = document.getElementById('roster-new-name');
-    const name = nameInput.value.trim();
-    const gender = document.getElementById('roster-new-gender').value;
-    const limit = parseInt(document.getElementById('roster-new-limit').value, 10) || 5;
+    window.saveStudent = async function() {
+      const nameInput = document.getElementById('roster-new-name');
+      const name = nameInput.value.trim();
+      const gender = document.getElementById('roster-new-gender').value;
+      const limit = parseInt(document.getElementById('roster-new-limit').value, 10) || 5;
 
-    if (!name) { alert("Please input a valid student name."); return; }
+      if (!name) { alert("Please input a valid student name."); return; }
 
-    const newKey = name.replace(/[.#$/\[\]]/g, "_");
-    try {
-      await set(ref(db, `bathroom/roster/${newKey}`), { name, gender, limit });
-
-      if (editingOriginalName && editingOriginalName !== name) {
-        const oldKey = editingOriginalName.replace(/[.#$/\[\]]/g, "_");
-        if (oldKey !== newKey) {
-          await remove(ref(db, `bathroom/roster/${oldKey}`));
-        }
-        const toRename = allHistory.filter(h => h.name === editingOriginalName);
-        if (toRename.length) {
-          await Promise.all(
-            toRename.map(h => update(ref(db, `bathroom/history/${h._key}`), { name }))
-          );
-        }
-      }
-
-      cancelEdit();
-    } catch(e) {
-      console.error(e);
-      alert("Error saving student: " + (e && e.message ? e.message : e));
-    }
-  };
-
-  window.cancelEdit = function() {
-    editingOriginalName = null;
-    document.getElementById('roster-new-name').value = '';
-    document.getElementById('roster-new-gender').value = 'g';
-    document.getElementById('roster-new-limit').value = '5';
-    const btn = document.getElementById('roster-save-btn');
-    if (btn) btn.textContent = 'Add / Update Student';
-    const hint = document.getElementById('roster-edit-hint');
-    if (hint) hint.style.display = 'none';
-  };
-
-  window.editStudent = function(name, gender, limit) {
-    editingOriginalName = name;
-    document.getElementById('roster-new-name').value = name;
-    document.getElementById('roster-new-gender').value = gender;
-    document.getElementById('roster-new-limit').value = limit || 5;
-    const btn = document.getElementById('roster-save-btn');
-    if (btn) btn.textContent = 'Update Student';
-    const hint = document.getElementById('roster-edit-hint');
-    if (hint) {
-      hint.style.display = 'block';
-      hint.innerHTML = `✏️ Editing <strong>${name}</strong> — <a href="#" onclick="cancelEdit(); return false;" style="color:#1a6fb5;">cancel</a>`;
-    }
-    document.getElementById('roster-new-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
-  window.removeStudent = async function(name) {
-    if (!confirm(`Are you completely sure you want to delete ${name} from the roster? This removes their profile config.`)) return;
-    const key = name.replace(/[.#$/\[\]]/g, "_");
-    await remove(ref(db, `bathroom/roster/${key}`));
-  };
-
-  window.processCSV = async function() {
-    const fileInput = document.getElementById('csv-upload');
-    const statusEl = document.getElementById('csv-status');
-    const uploadBtn = document.getElementById('csv-upload-btn');
-    const file = fileInput.files[0];
-
-    if (!file) {
-      alert("Please select a CSV file first.");
-      return;
-    }
-
-    const setStatus = (msg, color) => {
-      statusEl.textContent = msg;
-      statusEl.style.color = color || '#888';
-    };
-
-    const reader = new FileReader();
-
-    reader.onerror = function() {
-      setStatus("❌ Could not read the file. Try re-saving it as a .csv and upload again.", '#cc0000');
-    };
-
-    reader.onload = async function(e) {
-      uploadBtn.disabled = true;
+      const newKey = name.replace(/[.#$/\[\]]/g, "_");
       try {
-        const text = e.target.result;
+        await set(ref(db, `bathroom/roster/${newKey}`), { name, gender, limit });
 
-        let rawLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
-
-        if (!rawLines.length) {
-          setStatus("❌ The file appears to be empty — no rows found.", '#cc0000');
-          uploadBtn.disabled = false;
-          return;
-        }
-
-        const firstCol = rawLines[0].split(',')[0].replace(/"/g, '').trim().toLowerCase();
-        const headerWords = ['name', 'student', 'student name', 'first name', 'firstname', 'last name', 'lastname', 'first', 'last'];
-        if (headerWords.includes(firstCol)) {
-          rawLines.shift();
-        }
-
-        if (!rawLines.length) {
-          setStatus("❌ Only a header row was found — no student data to import.", '#cc0000');
-          uploadBtn.disabled = false;
-          return;
-        }
-
-        let successCount = 0;
-        let genderReadCount = 0;
-        let genderMatchedCount = 0;
-        let genderUnknownCount = 0;
-        const unknownNames = [];
-
-        for (let i = 0; i < rawLines.length; i++) {
-          setStatus(`Processing ${i + 1} of ${rawLines.length}...`);
-
-          const cleanLine = rawLines[i].replace(/"/g, '');
-          const parts = cleanLine.split(',');
-          if (!parts.length || !parts[0].trim()) continue;
-
-          let rawName = parts[0].trim();
-          let dataIndex = 1;
-
-          if (parts.length > 1) {
-            let nextPart = parts[1].trim().toLowerCase();
-            if (!['g', 'b', 'girl', 'boy', 'm', 'f', 'male', 'female'].includes(nextPart) && isNaN(parseInt(nextPart))) {
-              rawName = parts[1].trim() + " " + parts[0].trim();
-              dataIndex = 2;
-            }
+        if (editingOriginalName && editingOriginalName !== name) {
+          const oldKey = editingOriginalName.replace(/[.#$/\[\]]/g, "_");
+          if (oldKey !== newKey) {
+            await remove(ref(db, `bathroom/roster/${oldKey}`));
           }
-
-          let nameParts = rawName.split(/\s+/);
-          let name = rawName;
-          let firstName = '';
-
-          if (nameParts.length > 1) {
-            firstName = nameParts[0].toLowerCase();
-            firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-            let lastInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase();
-            name = `${firstName} ${lastInitial}.`;
-          } else if (nameParts.length === 1) {
-            firstName = nameParts[0].toLowerCase();
-            firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-            name = firstName;
+          const toRename = allHistory.filter(h => h.name === editingOriginalName);
+          if (toRename.length) {
+            await Promise.all(
+              toRename.map(h => update(ref(db, `bathroom/history/${h._key}`), { name }))
+            );
           }
-
-          let gender = 'unk';
-          let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
-
-          if (explicitGender.includes('girl') || explicitGender === 'g' || explicitGender === 'f' || explicitGender === 'female') {
-            gender = 'g';
-            genderReadCount++;
-          } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
-            gender = 'b';
-            genderReadCount++;
-          } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
-            gender = GENDER_MAP[firstName.toLowerCase()];
-            genderMatchedCount++;
-          } else {
-            gender = 'unk';
-            genderUnknownCount++;
-            unknownNames.push(name);
-          }
-
-          const limitStr = parts.length > dataIndex + 1 ? parts[dataIndex + 1].trim() : '';
-          const limit = parseInt(limitStr, 10);
-
-          const key = name.replace(/[.#$/\[\]]/g, '_');
-          await set(ref(db, `bathroom/roster/${key}`), {
-            name: name,
-            gender: gender,
-            limit: isNaN(limit) ? 5 : limit
-          });
-          successCount++;
         }
 
-        setStatus(`✅ Done. Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} — ${genderReadCount} from file, ${genderMatchedCount} matched, ${genderUnknownCount} need review.`, '#1a7a1a');
-
-        let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
-        summary += `• Gender read from file: ${genderReadCount}\n`;
-        summary += `• Gender matched from name list: ${genderMatchedCount}\n`;
-        summary += `• Not recognized (marked Unknown): ${genderUnknownCount}\n`;
-        if (unknownNames.length) {
-          summary += `\n⚠️ These names weren't in the built-in list and were marked Unknown — set them with the Edit button:\n${unknownNames.join(', ')}`;
-        }
-        alert(summary);
-
-        fileInput.value = "";
-      } catch (err) {
-        console.error(err);
-        setStatus("❌ Something went wrong during import. Check the browser console for details.", '#cc0000');
-      } finally {
-        uploadBtn.disabled = false;
+        cancelEdit();
+      } catch(e) {
+        console.error(e);
+        alert("Error saving student: " + (e && e.message ? e.message : e));
       }
     };
 
-    setStatus("Reading file...");
-    reader.readAsText(file);
-  };
+    window.cancelEdit = function() {
+      editingOriginalName = null;
+      document.getElementById('roster-new-name').value = '';
+      document.getElementById('roster-new-gender').value = 'g';
+      document.getElementById('roster-new-limit').value = '5';
+      const btn = document.getElementById('roster-save-btn');
+      if (btn) btn.textContent = 'Add / Update Student';
+      const hint = document.getElementById('roster-edit-hint');
+      if (hint) hint.style.display = 'none';
+    };
 
-  function renderRosterManager() {
-    const container = document.getElementById('roster-container');
-    if (!STUDENTS.length) {
-      container.innerHTML = '<p class="no-data">Roster entry list is clear.</p>';
-      return;
+    window.editStudent = function(name, gender, limit) {
+      editingOriginalName = name;
+      document.getElementById('roster-new-name').value = name;
+      document.getElementById('roster-new-gender').value = gender;
+      document.getElementById('roster-new-limit').value = limit || 5;
+      const btn = document.getElementById('roster-save-btn');
+      if (btn) btn.textContent = 'Update Student';
+      const hint = document.getElementById('roster-edit-hint');
+      if (hint) {
+        hint.style.display = 'block';
+        hint.innerHTML = `✏️ Editing <strong>${name}</strong> — <a href="#" onclick="cancelEdit(); return false;" style="color:#1a6fb5;">cancel</a>`;
+      }
+      document.getElementById('roster-new-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    window.removeStudent = async function(name) {
+      if (!confirm(`Are you completely sure you want to delete ${name} from the roster? This removes their profile config.`)) return;
+      const key = name.replace(/[.#$/\[\]]/g, "_");
+      await remove(ref(db, `bathroom/roster/${key}`));
+    };
+
+    window.processCSV = async function() {
+      const fileInput = document.getElementById('csv-upload');
+      const statusEl = document.getElementById('csv-status');
+      const uploadBtn = document.getElementById('csv-upload-btn');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert("Please select a CSV file first.");
+        return;
+      }
+
+      const setStatus = (msg, color) => {
+        statusEl.textContent = msg;
+        statusEl.style.color = color || '#888';
+      };
+
+      const reader = new FileReader();
+
+      reader.onerror = function() {
+        setStatus("❌ Could not read the file. Try re-saving it as a .csv and upload again.", '#cc0000');
+      };
+
+      reader.onload = async function(e) {
+        uploadBtn.disabled = true;
+        try {
+          const text = e.target.result;
+
+          let rawLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+
+          if (!rawLines.length) {
+            setStatus("❌ The file appears to be empty — no rows found.", '#cc0000');
+            uploadBtn.disabled = false;
+            return;
+          }
+
+          const firstCol = rawLines[0].split(',')[0].replace(/"/g, '').trim().toLowerCase();
+          const headerWords = ['name', 'student', 'student name', 'first name', 'firstname', 'last name', 'lastname', 'first', 'last'];
+          if (headerWords.includes(firstCol)) {
+            rawLines.shift();
+          }
+
+          if (!rawLines.length) {
+            setStatus("❌ Only a header row was found — no student data to import.", '#cc0000');
+            uploadBtn.disabled = false;
+            return;
+          }
+
+          let successCount = 0;
+          let genderReadCount = 0;
+          let genderMatchedCount = 0;
+          let genderUnknownCount = 0;
+          const unknownNames = [];
+
+          for (let i = 0; i < rawLines.length; i++) {
+            setStatus(`Processing ${i + 1} of ${rawLines.length}...`);
+
+            const cleanLine = rawLines[i].replace(/"/g, '');
+            const parts = cleanLine.split(',');
+            if (!parts.length || !parts[0].trim()) continue;
+
+            let rawName = parts[0].trim();
+            let dataIndex = 1;
+
+            if (parts.length > 1) {
+              let nextPart = parts[1].trim().toLowerCase();
+              if (!['g', 'b', 'girl', 'boy', 'm', 'f', 'male', 'female'].includes(nextPart) && isNaN(parseInt(nextPart))) {
+                rawName = parts[1].trim() + " " + parts[0].trim();
+                dataIndex = 2;
+              }
+            }
+
+            let nameParts = rawName.split(/\s+/);
+            let name = rawName;
+            let firstName = '';
+
+            if (nameParts.length > 1) {
+              firstName = nameParts[0].toLowerCase();
+              firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+              let lastInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase();
+              name = `${firstName} ${lastInitial}.`;
+            } else if (nameParts.length === 1) {
+              firstName = nameParts[0].toLowerCase();
+              firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+              name = firstName;
+            }
+
+            let gender = 'unk';
+            let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
+
+            if (explicitGender.includes('girl') || explicitGender === 'g' || explicitGender === 'f' || explicitGender === 'female') {
+              gender = 'g';
+              genderReadCount++;
+            } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
+              gender = 'b';
+              genderReadCount++;
+            } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
+              gender = GENDER_MAP[firstName.toLowerCase()];
+              genderMatchedCount++;
+            } else {
+              gender = 'unk';
+              genderUnknownCount++;
+              unknownNames.push(name);
+            }
+
+            const limitStr = parts.length > dataIndex + 1 ? parts[dataIndex + 1].trim() : '';
+            const limit = parseInt(limitStr, 10);
+
+            const key = name.replace(/[.#$/\[\]]/g, '_');
+            await set(ref(db, `bathroom/roster/${key}`), {
+              name: name,
+              gender: gender,
+              limit: isNaN(limit) ? 5 : limit
+            });
+            successCount++;
+          }
+
+          setStatus(`✅ Done. Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} — ${genderReadCount} from file, ${genderMatchedCount} matched, ${genderUnknownCount} need review.`, '#1a7a1a');
+
+          let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
+          summary += `• Gender read from file: ${genderReadCount}\n`;
+          summary += `• Gender matched from name list: ${genderMatchedCount}\n`;
+          summary += `• Not recognized (marked Unknown): ${genderUnknownCount}\n`;
+          if (unknownNames.length) {
+            summary += `\n⚠️ These names weren't in the built-in list and were marked Unknown — set them with the Edit button:\n${unknownNames.join(', ')}`;
+          }
+          alert(summary);
+
+          fileInput.value = "";
+        } catch (err) {
+          console.error(err);
+          setStatus("❌ Something went wrong during import. Check the browser console for details.", '#cc0000');
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      };
+
+      setStatus("Reading file...");
+      reader.readAsText(file);
+    };
+
+    function renderRosterManager() {
+      const container = document.getElementById('roster-container');
+      if (!STUDENTS.length) {
+        container.innerHTML = '<p class="no-data">Roster entry list is clear.</p>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="nosort check-cell"><input type="checkbox" id="rm-select-all" onclick="toggleSelectAllStudents(this)" title="Select all"></th>
+            <th class="nosort">Student Name</th>
+            <th class="nosort">Gender</th>
+            <th class="nosort">Weekly Pass Limit</th>
+            <th class="nosort">Actions</th>
+          </tr>
+        </thead>`;
+
+      const tbody = document.createElement('tbody');
+      STUDENTS.forEach(s => {
+        const key = s.name.replace(/[.#$/\[\]]/g, "_");
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+          </td>
+          <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
+          <td class="trips-cell">${s.limit || 5} passes</td>
+          <td>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editStudent('${s.name}', '${s.gender}', ${s.limit || 5})">✏️ Edit</button>
+            <button class="btn" style="background:#cc0000; padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${s.name}')">Remove</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.innerHTML = '';
+      container.appendChild(table);
+      updateStudentSelectedCount();
     }
 
-    const table = document.createElement('table');
-    table.innerHTML = `
-      <thead>
+    window.toggleSelectAllStudents = function(master) {
+      document.querySelectorAll('.rm-check').forEach(cb => { cb.checked = master.checked; });
+      updateStudentSelectedCount();
+    };
+
+    window.updateStudentSelectedCount = function() {
+      const n = document.querySelectorAll('.rm-check:checked').length;
+      const countEl = document.getElementById('rm-selected-count');
+      if (countEl) countEl.textContent = `${n} selected`;
+      const master = document.getElementById('rm-select-all');
+      const all = document.querySelectorAll('.rm-check').length;
+      if (master) master.checked = all > 0 && n === all;
+    };
+
+    window.deleteSelectedStudents = async function() {
+      const checked = [...document.querySelectorAll('.rm-check:checked')];
+      if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to remove.'); return; }
+      if (!confirm(`Remove ${checked.length} selected student${checked.length === 1 ? '' : 's'} from the roster?\n\nThis removes their profile config and cannot be undone.`)) return;
+
+      try {
+        await Promise.all(
+          checked.map(cb => remove(ref(db, `bathroom/roster/${cb.dataset.key}`)))
+        );
+      } catch (e) {
+        console.error(e);
+        alert('Error removing students: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    function startOfWeek(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      d.setDate(d.getDate() - day);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    function endOfWeek(date) {
+      const d = startOfWeek(date);
+      d.setDate(d.getDate() + 6);
+      d.setHours(23,59,59,999);
+      return d;
+    }
+
+    function formatDate(ts) {
+      return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatDateShort(ts) {
+      return new Date(ts).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    function isoDate(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    function populateSelectors() {
+      const weekSel = document.getElementById('week-select');
+      if(!weekSel) return;
+      const weekSet = new Set();
+      allHistory.forEach(h => {
+        const ws = isoDate(startOfWeek(new Date(h.checkedOutAt)));
+        weekSet.add(ws);
+      });
+      weekSet.add(isoDate(startOfWeek(new Date())));
+      const weeks = [...weekSet].sort().reverse();
+      weekSel.innerHTML = weeks.map(w => {
+        const start = new Date(w + 'T12:00:00');
+        const end = endOfWeek(start);
+        return `<option value="${w}">${formatDate(start)} – ${formatDate(end)}</option>`;
+      }).join('');
+
+      const monthSel = document.getElementById('month-select');
+      const monthSet = new Set();
+      allHistory.forEach(h => {
+        const d = new Date(h.checkedOutAt);
+        monthSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+      });
+      const now = new Date();
+      monthSet.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+      const months = [...monthSet].sort().reverse();
+      monthSel.innerHTML = months.map(m => {
+        const [y, mo] = m.split('-');
+        const label = new Date(y, mo-1, 1).toLocaleDateString([], { month: 'long', year: 'numeric' });
+        return `<option value="${m}">${label}</option>`;
+      }).join('');
+
+      const today = isoDate(new Date());
+      const weekAgo = isoDate(new Date(Date.now() - 7*24*60*60*1000));
+      document.getElementById('custom-start').value = weekAgo;
+      document.getElementById('custom-end').value = today;
+    }
+
+    function getTeacherFilter() {
+      if (currentTab === 'weekly') return document.getElementById('weekly-teacher-filter').value;
+      if (currentTab === 'monthly') return document.getElementById('monthly-teacher-filter').value;
+      return document.getElementById('custom-teacher-filter').value;
+    }
+
+    function getDateRange() {
+      if (currentTab === 'weekly') {
+        const val = document.getElementById('week-select').value;
+        if(!val) return null;
+        const start = new Date(val + 'T12:00:00');
+        return { start: startOfWeek(start).getTime(), end: endOfWeek(start).getTime(), label: `Week of ${formatDate(startOfWeek(start))}` };
+      } else if (currentTab === 'monthly') {
+        const val = document.getElementById('month-select').value;
+        if(!val) return null;
+        const [y, m] = val.split('-').map(Number);
+        const start = new Date(y, m-1, 1, 0, 0, 0, 0);
+        const end = new Date(y, m, 0, 23, 59, 59, 999);
+        return { start: start.getTime(), end: end.getTime(), label: start.toLocaleDateString([], { month: 'long', year: 'numeric' }) };
+      } else {
+        const s = document.getElementById('custom-start').value;
+        const e = document.getElementById('custom-end').value;
+        if (!s || !e) return null;
+        const start = new Date(s + 'T00:00:00').getTime();
+        const end = new Date(e + 'T23:59:59').getTime();
+        return { start, end, label: `${s} to ${e}` };
+      }
+    }
+
+    window.renderReport = function() {
+      const range = getDateRange();
+      if (!range) return;
+      const teacherFilter = getTeacherFilter();
+
+      let filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
+      if (teacherFilter) filtered = filtered.filter(h => (h.teacher || 'Loveday') === teacherFilter);
+
+      const totalTrips = filtered.length;
+      const totalMins = filtered.reduce((sum, h) => sum + Math.floor(h.duration / 60), 0);
+      const uniqueStudents = new Set(filtered.map(h => h.name)).size;
+      const avgMins = totalTrips > 0 ? Math.round(totalMins / totalTrips) : 0;
+
+      document.getElementById('summary-grid').innerHTML = `
+        <div class="summary-card"><div class="val">${totalTrips}</div><div class="lbl">Total Trips</div></div>
+        <div class="summary-card"><div class="val">${totalMins}m</div><div class="lbl">Total Time</div></div>
+        <div class="summary-card"><div class="val">${uniqueStudents}</div><div class="lbl">Students Out</div></div>
+        <div class="summary-card"><div class="val">${avgMins}m</div><div class="lbl">Avg Trip</div></div>
+      `;
+
+      document.getElementById('table-title').textContent = `Student Summary — ${range.label}`;
+
+      const studentMap = {};
+      STUDENTS.forEach(s => {
+        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {} };
+      });
+
+      filtered.forEach(h => {
+        if (!studentMap[h.name]) return;
+        const s = studentMap[h.name];
+        s.trips++;
+        s.totalMins += Math.floor(h.duration / 60);
+        const day = new Date(h.checkedOutAt).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        const dayKey = isoDate(new Date(h.checkedOutAt));
+        if (!s.days[dayKey]) s.days[dayKey] = { label: day, trips: 0, mins: 0 };
+        s.days[dayKey].trips++;
+        s.days[dayKey].mins += Math.floor(h.duration / 60);
+      });
+
+      let rows = Object.values(studentMap).filter(s => s.trips > 0);
+
+      rows.sort((a, b) => {
+        const av = a[sortCol], bv = b[sortCol];
+        return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+      });
+
+      if (!rows.length) {
+        document.getElementById('table-container').innerHTML = '<p class="no-data">No bathroom trips recorded for this period.</p>';
+        document.getElementById('daily-container').innerHTML = '<p class="no-data">No data for this period.</p>';
+        return;
+      }
+
+      const thead = `
+        <thead>
+          <tr>
+            <th onclick="sortBy('name')" class="${sortCol==='name'?'sorted':''}">Student ${sortCol==='name'?(sortAsc?'↑':'↓'):''}</th>
+            <th onclick="sortBy('trips')" class="${sortCol==='trips'?'sorted':''}">Trips ${sortCol==='trips'?(sortAsc?'↑':'↓'):''}</th>
+            <th onclick="sortBy('totalMins')" class="${sortCol==='totalMins'?'sorted':''}">Total Time ${sortCol==='totalMins'?(sortAsc?'↑':'↓'):''}</th>
+          </tr>
+        </thead>`;
+
+      const tbody = `<tbody>${rows.map(s => `
         <tr>
-          <th class="nosort check-cell"><input type="checkbox" id="rm-select-all" onclick="toggleSelectAllStudents(this)" title="Select all"></th>
-          <th class="nosort">Student Name</th>
-          <th class="nosort">Gender</th>
-          <th class="nosort">Weekly Pass Limit</th>
-          <th class="nosort">Actions</th>
-        </tr>
-      </thead>`;
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+          </td>
+          <td class="trips-cell">${s.trips}</td>
+          <td class="val-cell">${s.totalMins}m</td>
+        </tr>`).join('')}</tbody>`;
 
-    const tbody = document.createElement('tbody');
-    STUDENTS.forEach(s => {
-      const key = s.name.replace(/[.#$/\[\]]/g, "_");
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
-        <td class="student-name-cell">
-          <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
-        </td>
-        <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
-        <td class="trips-cell">${s.limit || 5} passes</td>
-        <td>
-          <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editStudent('${s.name}', '${s.gender}', ${s.limit || 5})">✏️ Edit</button>
-          <button class="btn" style="background:#cc0000; padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${s.name}')">Remove</button>
-        </td>`;
-      tbody.appendChild(tr);
-    });
+      document.getElementById('table-container').innerHTML = `<table>${thead}${tbody}</table>`;
 
-    table.appendChild(tbody);
-    container.innerHTML = '';
-    container.appendChild(table);
-    updateStudentSelectedCount();
-  }
+      const dayMap = {};
+      filtered.forEach(h => {
+        const dayKey = isoDate(new Date(h.checkedOutAt));
+        const label = formatDateShort(h.checkedOutAt);
+        if (!dayMap[dayKey]) dayMap[dayKey] = { label, trips: 0, mins: 0, students: new Set() };
+        dayMap[dayKey].trips++;
+        dayMap[dayKey].mins += Math.floor(h.duration / 60);
+        dayMap[dayKey].students.add(h.name);
+      });
 
-  window.toggleSelectAllStudents = function(master) {
-    document.querySelectorAll('.rm-check').forEach(cb => { cb.checked = master.checked; });
-    updateStudentSelectedCount();
-  };
+      const days = Object.entries(dayMap).sort((a,b) => b[0].localeCompare(a[0]));
 
-  window.updateStudentSelectedCount = function() {
-    const n = document.querySelectorAll('.rm-check:checked').length;
-    const countEl = document.getElementById('rm-selected-count');
-    if (countEl) countEl.textContent = `${n} selected`;
-    const master = document.getElementById('rm-select-all');
-    const all = document.querySelectorAll('.rm-check').length;
-    if (master) master.checked = all > 0 && n === all;
-  };
+      document.getElementById('daily-container').innerHTML = days.map(([key, d]) => `
+        <div class="day-row">
+          <div>
+            <span class="day-label">${d.label}</span>
+            <span style="color:#aaa; font-size:0.78rem; margin-left:8px;">${d.students.size} student${d.students.size!==1?'s':''}</span>
+          </div>
+          <div>
+            <span class="trips-cell" style="margin-right:16px; font-size:0.82rem;">${d.trips} trip${d.trips!==1?'s':''}</span>
+            <span class="day-val">${d.mins}m</span>
+          </div>
+        </div>`).join('');
+    };
 
-  window.deleteSelectedStudents = async function() {
-    const checked = [...document.querySelectorAll('.rm-check:checked')];
-    if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to remove.'); return; }
-    if (!confirm(`Remove ${checked.length} selected student${checked.length === 1 ? '' : 's'} from the roster?\n\nThis removes their profile config and cannot be undone.`)) return;
+    window.sortBy = function(col) {
+      if (sortCol === col) sortAsc = !sortAsc;
+      else { sortCol = col; sortAsc = false; }
+      renderReport();
+    };
 
-    try {
-      await Promise.all(
-        checked.map(cb => remove(ref(db, `bathroom/roster/${cb.dataset.key}`)))
-      );
-    } catch (e) {
-      console.error(e);
-      alert('Error removing students: ' + (e && e.message ? e.message : e));
-    }
-  }
+    window.switchTab = function(tab) {
+      currentTab = tab;
+      ['weekly','monthly','custom'].forEach(t => {
+        document.getElementById(`controls-${t}`).style.display = t === tab ? 'flex' : 'none';
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      });
+      renderReport();
+    };
 
-  function startOfWeek(date) {
-    const d = new Date(date);
-    const day = d.getDay();
-    d.setDate(d.getDate() - day);
-    d.setHours(0,0,0,0);
-    return d;
-  }
+    window.exportCSV = function() {
+      const range = getDateRange();
+      if (!range) return;
+      const filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
 
-  function endOfWeek(date) {
-    const d = startOfWeek(date);
-    d.setDate(d.getDate() + 6);
-    d.setHours(23,59,59,999);
-    return d;
-  }
+      const rows = [['Student', 'Gender', 'Teacher', 'Date', 'Time Out', 'Duration (min)']];
+      filtered.forEach(h => {
+        const d = new Date(h.checkedOutAt);
+        const student = STUDENTS.find(s => s.name === h.name);
+        rows.push([
+          h.name,
+          student ? (genderInfo(student.gender).label) : '',
+          h.teacher || 'Loveday',
+          isoDate(d),
+          d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          Math.floor(h.duration / 60)
+        ]);
+      });
 
-  function formatDate(ts) {
-    return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-  }
+      const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bathroom-report-${range.label.replace(/\s+/g,'-')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
 
-  function formatDateShort(ts) {
-    return new Date(ts).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-  }
-
-  function isoDate(date) {
-    return date.toISOString().split('T')[0];
-  }
-
-  function populateSelectors() {
-    const weekSel = document.getElementById('week-select');
-    if(!weekSel) return;
-    const weekSet = new Set();
-    allHistory.forEach(h => {
-      const ws = isoDate(startOfWeek(new Date(h.checkedOutAt)));
-      weekSet.add(ws);
-    });
-    weekSet.add(isoDate(startOfWeek(new Date())));
-    const weeks = [...weekSet].sort().reverse();
-    weekSel.innerHTML = weeks.map(w => {
-      const start = new Date(w + 'T12:00:00');
-      const end = endOfWeek(start);
-      return `<option value="${w}">${formatDate(start)} – ${formatDate(end)}</option>`;
-    }).join('');
-
-    const monthSel = document.getElementById('month-select');
-    const monthSet = new Set();
-    allHistory.forEach(h => {
-      const d = new Date(h.checkedOutAt);
-      monthSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-    });
-    const now = new Date();
-    monthSet.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
-    const months = [...monthSet].sort().reverse();
-    monthSel.innerHTML = months.map(m => {
-      const [y, mo] = m.split('-');
-      const label = new Date(y, mo-1, 1).toLocaleDateString([], { month: 'long', year: 'numeric' });
-      return `<option value="${m}">${label}</option>`;
-    }).join('');
-
-    const today = isoDate(new Date());
-    const weekAgo = isoDate(new Date(Date.now() - 7*24*60*60*1000));
-    document.getElementById('custom-start').value = weekAgo;
-    document.getElementById('custom-end').value = today;
-  }
-
-  function getTeacherFilter() {
-    if (currentTab === 'weekly') return document.getElementById('weekly-teacher-filter').value;
-    if (currentTab === 'monthly') return document.getElementById('monthly-teacher-filter').value;
-    return document.getElementById('custom-teacher-filter').value;
-  }
-
-  function getDateRange() {
-    if (currentTab === 'weekly') {
-      const val = document.getElementById('week-select').value;
-      if(!val) return null;
-      const start = new Date(val + 'T12:00:00');
-      return { start: startOfWeek(start).getTime(), end: endOfWeek(start).getTime(), label: `Week of ${formatDate(startOfWeek(start))}` };
-    } else if (currentTab === 'monthly') {
-      const val = document.getElementById('month-select').value;
-      if(!val) return null;
-      const [y, m] = val.split('-').map(Number);
-      const start = new Date(y, m-1, 1, 0, 0, 0, 0);
-      const end = new Date(y, m, 0, 23, 59, 59, 999);
-      return { start: start.getTime(), end: end.getTime(), label: start.toLocaleDateString([], { month: 'long', year: 'numeric' }) };
-    } else {
-      const s = document.getElementById('custom-start').value;
-      const e = document.getElementById('custom-end').value;
-      if (!s || !e) return null;
-      const start = new Date(s + 'T00:00:00').getTime();
-      const end = new Date(e + 'T23:59:59').getTime();
-      return { start, end, label: `${s} to ${e}` };
-    }
-  }
-
-  window.renderReport = function() {
-    const range = getDateRange();
-    if (!range) return;
-    const teacherFilter = getTeacherFilter();
-
-    let filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
-    if (teacherFilter) filtered = filtered.filter(h => (h.teacher || 'Loveday') === teacherFilter);
-
-    const totalTrips = filtered.length;
-    const totalMins = filtered.reduce((sum, h) => sum + Math.floor(h.duration / 60), 0);
-    const uniqueStudents = new Set(filtered.map(h => h.name)).size;
-    const avgMins = totalTrips > 0 ? Math.round(totalMins / totalTrips) : 0;
-
-    document.getElementById('summary-grid').innerHTML = `
-      <div class="summary-card"><div class="val">${totalTrips}</div><div class="lbl">Total Trips</div></div>
-      <div class="summary-card"><div class="val">${totalMins}m</div><div class="lbl">Total Time</div></div>
-      <div class="summary-card"><div class="val">${uniqueStudents}</div><div class="lbl">Students Out</div></div>
-      <div class="summary-card"><div class="val">${avgMins}m</div><div class="lbl">Avg Trip</div></div>
-    `;
-
-    document.getElementById('table-title').textContent = `Student Summary — ${range.label}`;
-
-    const studentMap = {};
-    STUDENTS.forEach(s => {
-      studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {} };
-    });
-
-    filtered.forEach(h => {
-      if (!studentMap[h.name]) return;
-      const s = studentMap[h.name];
-      s.trips++;
-      s.totalMins += Math.floor(h.duration / 60);
-      const day = new Date(h.checkedOutAt).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-      const dayKey = isoDate(new Date(h.checkedOutAt));
-      if (!s.days[dayKey]) s.days[dayKey] = { label: day, trips: 0, mins: 0 };
-      s.days[dayKey].trips++;
-      s.days[dayKey].mins += Math.floor(h.duration / 60);
-    });
-
-    let rows = Object.values(studentMap).filter(s => s.trips > 0);
-
-    rows.sort((a, b) => {
-      const av = a[sortCol], bv = b[sortCol];
-      return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
-    });
-
-    if (!rows.length) {
-      document.getElementById('table-container').innerHTML = '<p class="no-data">No bathroom trips recorded for this period.</p>';
-      document.getElementById('daily-container').innerHTML = '<p class="no-data">No data for this period.</p>';
-      return;
+    function getWeekStart(date = new Date()) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return d.toISOString().split('T')[0];
     }
 
-    const thead = `
-      <thead>
-        <tr>
-          <th onclick="sortBy('name')" class="${sortCol==='name'?'sorted':''}">Student ${sortCol==='name'?(sortAsc?'↑':'↓'):''}</th>
-          <th onclick="sortBy('trips')" class="${sortCol==='trips'?'sorted':''}">Trips ${sortCol==='trips'?(sortAsc?'↑':'↓'):''}</th>
-          <th onclick="sortBy('totalMins')" class="${sortCol==='totalMins'?'sorted':''}">Total Time ${sortCol==='totalMins'?(sortAsc?'↑':'↓'):''}</th>
-        </tr>
-      </thead>`;
+    function renderPassUsage() {
+      const container = document.getElementById('pass-usage-container');
+      if(!container) return;
+      const weekStart = getWeekStart();
 
-    const tbody = `<tbody>${rows.map(s => `
-      <tr>
-        <td class="student-name-cell">
-          <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
-        </td>
-        <td class="trips-cell">${s.trips}</td>
-        <td class="val-cell">${s.totalMins}m</td>
-      </tr>`).join('')}</tbody>`;
+      const counts = {};
+      allHistory.forEach(h => {
+        const d = new Date(h.checkedOutAt);
+        if (getWeekStart(d) !== weekStart) return;
+        counts[h.name] = (counts[h.name] || 0) + 1;
+      });
 
-    document.getElementById('table-container').innerHTML = `<table>${thead}${tbody}</table>`;
+      const flagged = STUDENTS.map(s => {
+        const used = counts[s.name] || 0;
+        const limit = s.limit || 5;
+        return { ...s, used, remaining: limit - used };
+      }).filter(s => s.used >= Math.ceil(s.limit * 0.6) || s.used > 0)
+        .sort((a, b) => b.used - a.used);
 
-    const dayMap = {};
-    filtered.forEach(h => {
-      const dayKey = isoDate(new Date(h.checkedOutAt));
-      const label = formatDateShort(h.checkedOutAt);
-      if (!dayMap[dayKey]) dayMap[dayKey] = { label, trips: 0, mins: 0, students: new Set() };
-      dayMap[dayKey].trips++;
-      dayMap[dayKey].mins += Math.floor(h.duration / 60);
-      dayMap[dayKey].students.add(h.name);
-    });
+      if (!flagged.length) {
+        container.innerHTML = '<p class="no-data">No active pass usage this week. 🎉</p>';
+        return;
+      }
 
-    const days = Object.entries(dayMap).sort((a,b) => b[0].localeCompare(a[0]));
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="nosort">Student</th>
+            <th class="nosort">Used</th>
+            <th class="nosort">Remaining</th>
+            <th class="nosort">Status</th>
+          </tr>
+        </thead>`;
 
-    document.getElementById('daily-container').innerHTML = days.map(([key, d]) => `
-      <div class="day-row">
-        <div>
-          <span class="day-label">${d.label}</span>
-          <span style="color:#aaa; font-size:0.78rem; margin-left:8px;">${d.students.size} student${d.students.size!==1?'s':''}</span>
-        </div>
-        <div>
-          <span class="trips-cell" style="margin-right:16px; font-size:0.82rem;">${d.trips} trip${d.trips!==1?'s':''}</span>
-          <span class="day-val">${d.mins}m</span>
-        </div>
-      </div>`).join('');
-  };
+      const tbody = document.createElement('tbody');
+      flagged.forEach(s => {
+        const status = s.remaining <= 0
+          ? '<span style="color:#cc0000;font-weight:700;">⛔ Out of passes</span>'
+          : `<span style="color:#e6a817;font-weight:700;">⚠️ ${s.remaining} left</span>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+          </td>
+          <td class="trips-cell">${s.used} / ${s.limit}</td>
+          <td class="val-cell">${Math.max(0, s.remaining)}</td>
+          <td>${status}</td>`;
+        tbody.appendChild(tr);
+      });
 
-  window.sortBy = function(col) {
-    if (sortCol === col) sortAsc = !sortAsc;
-    else { sortCol = col; sortAsc = false; }
-    renderReport();
-  };
-
-  window.switchTab = function(tab) {
-    currentTab = tab;
-    ['weekly','monthly','custom'].forEach(t => {
-      document.getElementById(`controls-${t}`).style.display = t === tab ? 'flex' : 'none';
-      document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
-    });
-    renderReport();
-  };
-
-  window.exportCSV = function() {
-    const range = getDateRange();
-    if (!range) return;
-    const filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
-
-    const rows = [['Student', 'Gender', 'Teacher', 'Date', 'Time Out', 'Duration (min)']];
-    filtered.forEach(h => {
-      const d = new Date(h.checkedOutAt);
-      const student = STUDENTS.find(s => s.name === h.name);
-      rows.push([
-        h.name,
-        student ? (genderInfo(student.gender).label) : '',
-        h.teacher || 'Loveday',
-        isoDate(d),
-        d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        Math.floor(h.duration / 60)
-      ]);
-    });
-
-    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bathroom-report-${range.label.replace(/\s+/g,'-')}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  function getWeekStart(date = new Date()) {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    return d.toISOString().split('T')[0];
-  }
-
-  function renderPassUsage() {
-    const container = document.getElementById('pass-usage-container');
-    if(!container) return;
-    const weekStart = getWeekStart();
-
-    const counts = {};
-    allHistory.forEach(h => {
-      const d = new Date(h.checkedOutAt);
-      if (getWeekStart(d) !== weekStart) return;
-      counts[h.name] = (counts[h.name] || 0) + 1;
-    });
-
-    const flagged = STUDENTS.map(s => {
-      const used = counts[s.name] || 0;
-      const limit = s.limit || 5;
-      return { ...s, used, remaining: limit - used };
-    }).filter(s => s.used >= Math.ceil(s.limit * 0.6) || s.used > 0)
-      .sort((a, b) => b.used - a.used);
-
-    if (!flagged.length) {
-      container.innerHTML = '<p class="no-data">No active pass usage this week. 🎉</p>';
-      return;
+      table.appendChild(tbody);
+      container.innerHTML = '';
+      container.appendChild(table);
     }
 
-    const table = document.createElement('table');
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th class="nosort">Student</th>
-          <th class="nosort">Used</th>
-          <th class="nosort">Remaining</th>
-          <th class="nosort">Status</th>
-        </tr>
-      </thead>`;
-
-    const tbody = document.createElement('tbody');
-    flagged.forEach(s => {
-      const status = s.remaining <= 0
-        ? '<span style="color:#cc0000;font-weight:700;">⛔ Out of passes</span>'
-        : `<span style="color:#e6a817;font-weight:700;">⚠️ ${s.remaining} left</span>`;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="student-name-cell">
-          <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
-        </td>
-        <td class="trips-cell">${s.used} / ${s.limit}</td>
-        <td class="val-cell">${Math.max(0, s.remaining)}</td>
-        <td>${status}</td>`;
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
-    container.innerHTML = '';
-    container.appendChild(table);
-  }
-
-  function populateStudentFilter() {
-    const sel = document.getElementById('dm-student-filter');
-    if(!sel) return;
-    const prev = sel.value;
-    const names = [...new Set(allHistory.map(h => h.name))].sort();
-    sel.innerHTML = '<option value="">-- All Students --</option>';
-    names.forEach(name => {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      sel.appendChild(opt);
-    });
-    sel.value = prev;
-  }
-
-  window.toggleSelectAll = function(master) {
-    document.querySelectorAll('.dm-check').forEach(cb => { cb.checked = master.checked; });
-    updateSelectedCount();
-  };
-
-  window.updateSelectedCount = function() {
-    const n = document.querySelectorAll('.dm-check:checked').length;
-    const countEl = document.getElementById('dm-selected-count');
-    if (countEl) countEl.textContent = `${n} selected`;
-    const master = document.getElementById('dm-select-all');
-    const all = document.querySelectorAll('.dm-check').length;
-    if (master) master.checked = all > 0 && n === all;
-  };
-
-  window.deleteSelected = async function() {
-    const checked = [...document.querySelectorAll('.dm-check:checked')];
-    if (!checked.length) { alert('No entries are selected. Check the boxes for the rows you want to delete.'); return; }
-    if (!confirm(`Delete ${checked.length} selected entr${checked.length === 1 ? 'y' : 'ies'}?\n\nThis cannot be undone.`)) return;
-
-    try {
-      await Promise.all(
-        checked.map(cb => remove(ref(db, `bathroom/history/${cb.dataset.key}`)))
-      );
-    } catch (e) {
-      console.error(e);
-      alert('Error deleting entries: ' + (e && e.message ? e.message : e));
+    function populateStudentFilter() {
+      const sel = document.getElementById('dm-student-filter');
+      if(!sel) return;
+      const prev = sel.value;
+      const names = [...new Set(allHistory.map(h => h.name))].sort();
+      sel.innerHTML = '<option value="">-- All Students --</option>';
+      names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.value = prev;
     }
-  };
 
-  window.renderDataManager = function() {
-    const studentFilter = document.getElementById('dm-student-filter').value;
-    const dateFilter = document.getElementById('dm-date-filter').value;
-
-    let entries = [...allHistory];
-    if (studentFilter) entries = entries.filter(h => h.name === studentFilter);
-    if (dateFilter) entries = entries.filter(h => isoDate(new Date(h.checkedOutAt)) === dateFilter);
-
-    const container = document.getElementById('dm-container');
-    if (!entries.length) {
-      container.innerHTML = '<p class="no-data">No entries match your filters.</p>';
+    window.toggleSelectAll = function(master) {
+      document.querySelectorAll('.dm-check').forEach(cb => { cb.checked = master.checked; });
       updateSelectedCount();
-      return;
-    }
+    };
 
-    container.innerHTML = '';
-    const table = document.createElement('table');
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th class="nosort check-cell"><input type="checkbox" id="dm-select-all" onclick="toggleSelectAll(this)" title="Select all"></th>
-          <th class="nosort">Student</th>
-          <th class="nosort">Teacher</th>
-          <th class="nosort">Date</th>
-          <th class="nosort">Time Out</th>
-          <th class="nosort">Duration</th>
-          <th class="nosort">Action</th>
-        </tr>
-      </thead>`;
+    window.updateSelectedCount = function() {
+      const n = document.querySelectorAll('.dm-check:checked').length;
+      const countEl = document.getElementById('dm-selected-count');
+      if (countEl) countEl.textContent = `${n} selected`;
+      const master = document.getElementById('dm-select-all');
+      const all = document.querySelectorAll('.dm-check').length;
+      if (master) master.checked = all > 0 && n === all;
+    };
 
-    const tbody = document.createElement('tbody');
-    entries.forEach(h => {
-      const d = new Date(h.checkedOutAt);
-      const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const dur = Math.floor(h.duration / 60);
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="check-cell"><input type="checkbox" class="dm-check" data-key="${h._key}" onclick="updateSelectedCount()"></td>
-        <td class="student-name-cell">
-          <span class="gender-dot ${genderInfo(h.gender).cls}"></span>${h.name}
-        </td>
-        <td>${h.teacher || 'Loveday'}</td>
-        <td>${dateStr}</td>
-        <td>${timeStr}</td>
-        <td class="val-cell">${dur < 1 ? '<1m' : dur + 'm'}</td>
-        <td>
-          <button class="btn btn-sm" style="background:#cc0000; padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${h.name}', '${timeStr} on ${dateStr}')">Delete</button>
-        </td>`;
-      tbody.appendChild(tr);
-    });
+    window.deleteSelected = async function() {
+      const checked = [...document.querySelectorAll('.dm-check:checked')];
+      if (!checked.length) { alert('No entries are selected. Check the boxes for the rows you want to delete.'); return; }
+      if (!confirm(`Delete ${checked.length} selected entr${checked.length === 1 ? 'y' : 'ies'}?\n\nThis cannot be undone.`)) return;
 
-    table.appendChild(tbody);
-    container.appendChild(table);
-    updateSelectedCount();
-  };
+      try {
+        await Promise.all(
+          checked.map(cb => remove(ref(db, `bathroom/history/${cb.dataset.key}`)))
+        );
+      } catch (e) {
+        console.error(e);
+        alert('Error deleting entries: ' + (e && e.message ? e.message : e));
+      }
+    };
 
-  window.deleteEntry = async function(key, name, label) {
-    if (!confirm(`Delete this entry?\n\n${name} — ${label}\n\nThis cannot be undone.`)) return;
-    try {
-      await remove(ref(db, `bathroom/history/${key}`));
-    } catch(e) {
-      alert('Error deleting entry. Please try again.');
-    }
-  };
+    window.renderDataManager = function() {
+      const studentFilter = document.getElementById('dm-student-filter').value;
+      const dateFilter = document.getElementById('dm-date-filter').value;
+
+      let entries = [...allHistory];
+      if (studentFilter) entries = entries.filter(h => h.name === studentFilter);
+      if (dateFilter) entries = entries.filter(h => isoDate(new Date(h.checkedOutAt)) === dateFilter);
+
+      const container = document.getElementById('dm-container');
+      if (!entries.length) {
+        container.innerHTML = '<p class="no-data">No entries match your filters.</p>';
+        updateSelectedCount();
+        return;
+      }
+
+      container.innerHTML = '';
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="nosort check-cell"><input type="checkbox" id="dm-select-all" onclick="toggleSelectAll(this)" title="Select all"></th>
+            <th class="nosort">Student</th>
+            <th class="nosort">Teacher</th>
+            <th class="nosort">Date</th>
+            <th class="nosort">Time Out</th>
+            <th class="nosort">Duration</th>
+            <th class="nosort">Action</th>
+          </tr>
+        </thead>`;
+
+      const tbody = document.createElement('tbody');
+      entries.forEach(h => {
+        const d = new Date(h.checkedOutAt);
+        const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dur = Math.floor(h.duration / 60);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="check-cell"><input type="checkbox" class="dm-check" data-key="${h._key}" onclick="updateSelectedCount()"></td>
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(h.gender).cls}"></span>${h.name}
+          </td>
+          <td>${h.teacher || 'Loveday'}</td>
+          <td>${dateStr}</td>
+          <td>${timeStr}</td>
+          <td class="val-cell">${dur < 1 ? '<1m' : dur + 'm'}</td>
+          <td>
+            <button class="btn btn-sm" style="background:#cc0000; padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${h.name}', '${timeStr} on ${dateStr}')">Delete</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.appendChild(table);
+      updateSelectedCount();
+    };
+
+    window.deleteEntry = async function(key, name, label) {
+      if (!confirm(`Delete this entry?\n\n${name} — ${label}\n\nThis cannot be undone.`)) return;
+      try {
+        await remove(ref(db, `bathroom/history/${key}`));
+      } catch(e) {
+        alert('Error deleting entry. Please try again.');
+      }
+    };
+  } // end startApp
 </script>
 </body>
 </html>
