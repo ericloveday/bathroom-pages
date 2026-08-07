@@ -27,8 +27,40 @@
       min-height: 100vh;
       padding: 24px;
     }
+
+    /* ---------------- Sign-In Screen ---------------- */
+    #signin-screen {
+      position: fixed; inset: 0; background: var(--bg); z-index: 100000;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    .signin-card {
+      background: var(--card); border-radius: var(--radius); border: 2px solid var(--red);
+      max-width: 400px; width: 100%; padding: 28px; text-align: center;
+    }
+    .signin-card h1 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; text-transform: uppercase; }
+    .signin-card p { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+    .google-btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 12px; background: #fff; color: #1f1f1f;
+      border: 2px solid #ddd; border-radius: 8px; font-family: 'Montserrat', sans-serif;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.15s;
+    }
+    .google-btn:hover { background: #f5f5f5; }
+    .signin-error {
+      margin-top: 14px; padding: 10px 14px; background: #fdecea; border: 2px solid var(--red);
+      color: var(--red-dark); border-radius: 8px; font-size: 0.82rem; display: none;
+    }
+    .signin-note { margin-top: 16px; font-size: 0.74rem; color: #999; }
+
+    #app-content { display: none; }
+
     header {
       margin-bottom: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
     }
     h1 {
       font-size: 2rem;
@@ -41,6 +73,13 @@
       font-size: 0.85rem;
       margin-top: 4px;
     }
+    #signout-btn {
+      font-size: 0.72rem; font-weight: 700; color: #ccc; background: transparent;
+      border: 2px solid #333; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+      font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;
+      white-space: nowrap; align-self: flex-start;
+    }
+    #signout-btn:hover { color: #fff; border-color: var(--red); }
     .card {
       background: var(--card);
       border-radius: var(--radius);
@@ -312,6 +351,19 @@
 </head>
 <body>
 
+  <div id="signin-screen">
+    <div class="signin-card">
+      <h1>Announcement Manager</h1>
+      <p>Sign in with your Cornerstone Google account to continue.</p>
+      <button class="google-btn" id="google-signin-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.82 2.73v2.27h2.94c1.72-1.59 2.68-3.93 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.94-2.27c-.8.55-1.84.85-3.02.85-2.34 0-4.32-1.58-5.03-3.7H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.7c-.18-.55-.28-1.13-.28-1.7s.1-1.15.28-1.7V4.96H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.04l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.6-2.6C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+        Sign in with Google
+      </button>
+      <div class="signin-error" id="signin-error"></div>
+      <p class="signin-note">Restricted to @cornerstonek12.org accounts</p>
+    </div>
+  </div>
+
   <div id="loading">
     <div class="spinner"></div>
     <p>Connecting to Firebase...</p>
@@ -319,9 +371,13 @@
 
   <div id="alert"></div>
 
+  <div id="app-content">
   <header>
-    <h1>Science Announcement Manager</h1>
-    <p>Announcements update live on your Google Site</p>
+    <div>
+      <h1>Science Announcement Manager</h1>
+      <p>Announcements update live on your Google Site</p>
+    </div>
+    <button id="signout-btn" onclick="doSignOut()">Sign Out</button>
   </header>
 
   <div class="card">
@@ -366,10 +422,11 @@
       <p class="preview-empty">No active announcements to preview.</p>
     </div>
   </div>
+  </div><!-- /#app-content -->
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -384,34 +441,79 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
-    // Sign in anonymously so the database rules (auth != null) let this page
-    // read/write. This is invisible — no login screen appears.
     const auth = getAuth(app);
-    const authReady = new Promise((resolve, reject) => {
-      onAuthStateChanged(auth, user => {
-        if (user) resolve(user);
-      });
-      signInAnonymously(auth).catch(reject);
-    });
 
-    let announcements = [];
-    let editingKey = null;
+    const ALLOWED_DOMAIN = "cornerstonek12.org";
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
 
-    // Helper function to return a future string date offset by days
-    function getDateStringOffset(daysOffset = 0) {
-      const targetDate = new Date();
-      targetDate.setDate(targetDate.getDate() + daysOffset);
-      return targetDate.toISOString().split('T')[0];
+    const signinScreen = document.getElementById('signin-screen');
+    const appContent = document.getElementById('app-content');
+    const loadingScreen = document.getElementById('loading');
+    const signinError = document.getElementById('signin-error');
+
+    function showSigninError(msg) {
+      signinError.textContent = msg;
+      signinError.style.display = 'block';
     }
 
-    // Set defaults: Start = Today, End = 3 Days from Now
-    const todayStr = getDateStringOffset(0);
-    document.getElementById('ann-start-date').value = todayStr;
-    document.getElementById('ann-end-date').value = getDateStringOffset(3);
+    document.getElementById('google-signin-btn').addEventListener('click', () => {
+      signinError.style.display = 'none';
+      signInWithPopup(auth, provider).catch(err => {
+        console.error(err);
+        showSigninError('Sign-in failed. Please try again.');
+      });
+    });
 
-    // --- Load announcements ---
-    authReady.then(() => {
+    window.doSignOut = function() {
+      signOut(auth);
+    };
+
+    let appStarted = false;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        signinScreen.style.display = 'flex';
+        appContent.style.display = 'none';
+        loadingScreen.style.display = 'none';
+        return;
+      }
+
+      const email = user.email || "";
+      if (!email.endsWith("@" + ALLOWED_DOMAIN)) {
+        showSigninError(`This tool is restricted to @${ALLOWED_DOMAIN} accounts. You signed in as ${email}.`);
+        signOut(auth);
+        return;
+      }
+
+      signinScreen.style.display = 'none';
+      loadingScreen.style.display = 'flex';
+
+      if (!appStarted) {
+        appStarted = true;
+        startApp();
+      }
+    });
+
+    function startApp() {
+      appContent.style.display = 'block';
+
+      let announcements = [];
+      let editingKey = null;
+
+      // Helper function to return a future string date offset by days
+      function getDateStringOffset(daysOffset = 0) {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + daysOffset);
+        return targetDate.toISOString().split('T')[0];
+      }
+
+      // Set defaults: Start = Today, End = 3 Days from Now
+      const todayStr = getDateStringOffset(0);
+      document.getElementById('ann-start-date').value = todayStr;
+      document.getElementById('ann-end-date').value = getDateStringOffset(3);
+
+      // --- Load announcements ---
       onValue(ref(db, 'announcements'), (snapshot) => {
         const data = snapshot.val() || {};
         announcements = Object.entries(data)
@@ -423,236 +525,233 @@
           });
         renderList();
         renderPreview();
-        document.getElementById('loading').style.display = 'none';
+        loadingScreen.style.display = 'none';
       });
-    }).catch(err => {
-      console.error("Anonymous sign-in failed:", err);
-      document.getElementById('loading').innerHTML = '<p style="color:#f87171;font-weight:600;">Couldn\'t connect to the database. Check your connection and reload the page.</p>';
-    });
 
-    // --- Save ---
-    window.saveAnnouncement = async function() {
-      const startDate = document.getElementById('ann-start-date').value;
-      const endDate = document.getElementById('ann-end-date').value;
-      const text = document.getElementById('ann-text').value.trim();
-      const url = document.getElementById('ann-url').value.trim();
-      const urlLabel = document.getElementById('ann-url-label').value.trim() || 'Click Here';
+      // --- Save ---
+      window.saveAnnouncement = async function() {
+        const startDate = document.getElementById('ann-start-date').value;
+        const endDate = document.getElementById('ann-end-date').value;
+        const text = document.getElementById('ann-text').value.trim();
+        const url = document.getElementById('ann-url').value.trim();
+        const urlLabel = document.getElementById('ann-url-label').value.trim() || 'Click Here';
 
-      if (!startDate || !endDate) {
-        showAlert('Please select both a Start Date and an End Date.');
-        return;
-      }
-      if (new Date(endDate) < new Date(startDate)) {
-        showAlert('Error: End Date cannot be earlier than the Start Date!');
-        return;
-      }
-      if (!text) {
-        showAlert('Please enter announcement text.');
-        return;
-      }
+        if (!startDate || !endDate) {
+          showAlert('Please select both a Start Date and an End Date.');
+          return;
+        }
+        if (new Date(endDate) < new Date(startDate)) {
+          showAlert('Error: End Date cannot be earlier than the Start Date!');
+          return;
+        }
+        if (!text) {
+          showAlert('Please enter announcement text.');
+          return;
+        }
 
-      const entry = { 
-        startDate, 
-        endDate, 
-        text 
+        const entry = { 
+          startDate, 
+          endDate, 
+          text 
+        };
+
+        if (url) {
+          entry.url = url;
+          entry.urlLabel = urlLabel;
+        }
+
+        if (editingKey) {
+          await set(ref(db, `announcements/${editingKey}`), entry);
+          showAlert('Announcement updated!');
+          cancelEdit();
+        } else {
+          await push(ref(db, 'announcements'), entry);
+          showAlert(startDate > todayStr ? `Announcement scheduled for ${startDate}!` : 'Announcement added!');
+          
+          // Reset Form to baseline standards
+          document.getElementById('ann-text').value = '';
+          document.getElementById('ann-url').value = '';
+          document.getElementById('ann-url-label').value = '';
+          document.getElementById('ann-start-date').value = getDateStringOffset(0);
+          document.getElementById('ann-end-date').value = getDateStringOffset(7);
+        }
       };
 
-      if (url) {
-        entry.url = url;
-        entry.urlLabel = urlLabel;
-      }
-
-      if (editingKey) {
-        await set(ref(db, `announcements/${editingKey}`), entry);
-        showAlert('Announcement updated!');
-        cancelEdit();
-      } else {
-        await push(ref(db, 'announcements'), entry);
-        showAlert(startDate > todayStr ? `Announcement scheduled for ${startDate}!` : 'Announcement added!');
+      // --- Edit ---
+      window.editAnnouncement = function(key) {
+        const ann = announcements.find(a => a._key === key);
+        if (!ann) return;
+        editingKey = key;
         
-        // Reset Form to baseline standards
+        // Fallback mechanics parse historical entries safely
+        document.getElementById('ann-start-date').value = ann.startDate || ann.date || todayStr;
+        document.getElementById('ann-end-date').value = ann.endDate || ann.startDate || ann.date || todayStr;
+        
+        document.getElementById('ann-text').value = ann.text;
+        document.getElementById('ann-url').value = ann.url || '';
+        document.getElementById('ann-url-label').value = ann.urlLabel || '';
+        document.getElementById('form-title').textContent = 'Edit Announcement';
+        document.getElementById('cancel-btn').style.display = 'inline-block';
+        document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+        
+        document.querySelectorAll('.announcement-item').forEach(el => el.classList.remove('editing'));
+        const el = document.getElementById(`ann-${key}`);
+        if (el) el.classList.add('editing');
+      };
+
+      // --- Cancel edit ---
+      window.cancelEdit = function() {
+        editingKey = null;
+        document.getElementById('ann-start-date').value = getDateStringOffset(0);
+        document.getElementById('ann-end-date').value = getDateStringOffset(7);
         document.getElementById('ann-text').value = '';
         document.getElementById('ann-url').value = '';
         document.getElementById('ann-url-label').value = '';
-        document.getElementById('ann-start-date').value = getDateStringOffset(0);
-        document.getElementById('ann-end-date').value = getDateStringOffset(7);
-      }
-    };
+        document.getElementById('form-title').textContent = 'Add New Announcement';
+        document.getElementById('cancel-btn').style.display = 'none';
+        document.querySelectorAll('.announcement-item').forEach(el => el.classList.remove('editing'));
+      };
 
-    // --- Edit ---
-    window.editAnnouncement = function(key) {
-      const ann = announcements.find(a => a._key === key);
-      if (!ann) return;
-      editingKey = key;
-      
-      // Fallback mechanics parse historical entries safely
-      document.getElementById('ann-start-date').value = ann.startDate || ann.date || todayStr;
-      document.getElementById('ann-end-date').value = ann.endDate || ann.startDate || ann.date || todayStr;
-      
-      document.getElementById('ann-text').value = ann.text;
-      document.getElementById('ann-url').value = ann.url || '';
-      document.getElementById('ann-url-label').value = ann.urlLabel || '';
-      document.getElementById('form-title').textContent = 'Edit Announcement';
-      document.getElementById('cancel-btn').style.display = 'inline-block';
-      document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
-      
-      document.querySelectorAll('.announcement-item').forEach(el => el.classList.remove('editing'));
-      const el = document.getElementById(`ann-${key}`);
-      if (el) el.classList.add('editing');
-    };
+      // --- Delete ---
+      window.deleteAnnouncement = async function(key) {
+        if (!confirm('Delete this announcement? This cannot be undone.')) return;
+        await remove(ref(db, `announcements/${key}`));
+        showAlert('Announcement deleted.');
+      };
 
-    // --- Cancel edit ---
-    window.cancelEdit = function() {
-      editingKey = null;
-      document.getElementById('ann-start-date').value = getDateStringOffset(0);
-      document.getElementById('ann-end-date').value = getDateStringOffset(7);
-      document.getElementById('ann-text').value = '';
-      document.getElementById('ann-url').value = '';
-      document.getElementById('ann-url-label').value = '';
-      document.getElementById('form-title').textContent = 'Add New Announcement';
-      document.getElementById('cancel-btn').style.display = 'none';
-      document.querySelectorAll('.announcement-item').forEach(el => el.classList.remove('editing'));
-    };
-
-    // --- Delete ---
-    window.deleteAnnouncement = async function(key) {
-      if (!confirm('Delete this announcement? This cannot be undone.')) return;
-      await remove(ref(db, `announcements/${key}`));
-      showAlert('Announcement deleted.');
-    };
-
-    // --- Render list ---
-    function renderList() {
-      const container = document.getElementById('announcement-list');
-      if (!announcements.length) {
-        container.innerHTML = '<p class="empty-msg">No announcements yet.</p>';
-        return;
-      }
-      container.innerHTML = '';
-      const today = new Date().toISOString().split('T')[0];
-
-      const scheduled = [];
-      const live = [];
-      const expired = [];
-
-      announcements.forEach(a => {
-        const start = a.startDate || a.date;
-        const end = a.endDate || start;
-
-        if (today < start) {
-          scheduled.push(a);
-        } else if (today >= start && today <= end) {
-          live.push(a);
-        } else {
-          expired.push(a);
+      // --- Render list ---
+      function renderList() {
+        const container = document.getElementById('announcement-list');
+        if (!announcements.length) {
+          container.innerHTML = '<p class="empty-msg">No announcements yet.</p>';
+          return;
         }
-      });
+        container.innerHTML = '';
+        const today = new Date().toISOString().split('T')[0];
 
-      // 1. Scheduled Header & Content
-      if (scheduled.length) {
-        const header = document.createElement('p');
-        header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#e6a817;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;';
-        header.textContent = '⏰ Scheduled';
-        container.appendChild(header);
-        scheduled.sort((a,b) => (a.startDate||a.date).localeCompare(b.startDate||b.date))
-                 .forEach(ann => renderAnnItem(ann, container, 'scheduled'));
+        const scheduled = [];
+        const live = [];
+        const expired = [];
+
+        announcements.forEach(a => {
+          const start = a.startDate || a.date;
+          const end = a.endDate || start;
+
+          if (today < start) {
+            scheduled.push(a);
+          } else if (today >= start && today <= end) {
+            live.push(a);
+          } else {
+            expired.push(a);
+          }
+        });
+
+        // 1. Scheduled Header & Content
+        if (scheduled.length) {
+          const header = document.createElement('p');
+          header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#e6a817;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;';
+          header.textContent = '⏰ Scheduled';
+          container.appendChild(header);
+          scheduled.sort((a,b) => (a.startDate||a.date).localeCompare(b.startDate||b.date))
+                   .forEach(ann => renderAnnItem(ann, container, 'scheduled'));
+        }
+
+        // 2. Live Header & Content
+        if (live.length) {
+          const header = document.createElement('p');
+          header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px;';
+          header.textContent = '✓ Live';
+          container.appendChild(header);
+          live.forEach(ann => renderAnnItem(ann, container, 'live'));
+        }
+
+        // 3. Expired Header & Content
+        if (expired.length) {
+          const header = document.createElement('p');
+          header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#666666;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px;';
+          header.textContent = '⌛ Expired (Hidden from Website)';
+          container.appendChild(header);
+          expired.forEach(ann => renderAnnItem(ann, container, 'expired'));
+        }
       }
 
-      // 2. Live Header & Content
-      if (live.length) {
-        const header = document.createElement('p');
-        header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px;';
-        header.textContent = '✓ Live';
-        container.appendChild(header);
-        live.forEach(ann => renderAnnItem(ann, container, 'live'));
-      }
-
-      // 3. Expired Header & Content
-      if (expired.length) {
-        const header = document.createElement('p');
-        header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#666666;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px;';
-        header.textContent = '⌛ Expired (Hidden from Website)';
-        container.appendChild(header);
-        expired.forEach(ann => renderAnnItem(ann, container, 'expired'));
-      }
-    }
-
-    function renderAnnItem(ann, container, status) {
-      const start = ann.startDate || ann.date;
-      const end = ann.endDate || start;
-      
-      const dStart = new Date(start + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
-      const dEnd = new Date(end + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
-
-      const div = document.createElement('div');
-      div.className = `announcement-item${status === 'scheduled' ? ' scheduled' : ''}`;
-      div.id = `ann-${ann._key}`;
-      
-      if (status === 'expired') {
-        div.style.opacity = "0.65";
-        div.style.backgroundColor = "#f9f9f9";
-      }
-
-      const linkHtml = ann.url ? `<a href="${ann.url}" target="_blank" class="ann-link">${ann.urlLabel || 'Click Here'}</a>` : '';
-      
-      let badgeHtml = '';
-      if (status === 'scheduled') badgeHtml = '<span class="badge-scheduled">Scheduled</span>';
-      if (status === 'expired') badgeHtml = '<span class="badge-scheduled" style="background:#555;">Expired</span>';
-
-      div.innerHTML = `
-        <div>
-          <div class="ann-date">${dStart} to ${dEnd} ${badgeHtml}</div>
-          <div class="ann-text">${ann.text}</div>
-          ${linkHtml}
-        </div>
-        <div class="ann-actions">
-          <button class="btn btn-edit" onclick="editAnnouncement('${ann._key}')">Edit</button>
-          <button class="btn btn-danger" onclick="deleteAnnouncement('${ann._key}')">Delete</button>
-        </div>`;
-      container.appendChild(div);
-    }
-
-    // --- Render preview ---
-    function renderPreview() {
-      const container = document.getElementById('preview-box');
-      const today = new Date().toISOString().split('T')[0];
-      
-      const liveItems = announcements.filter(a => {
-        const start = a.startDate || a.date;
-        const end = a.endDate || start;
-        return today >= start && today <= end;
-      });
-
-      if (!liveItems.length) {
-        container.innerHTML = '<p class="preview-empty">No active announcements to preview.</p>';
-        return;
-      }
-
-      container.innerHTML = '';
-      liveItems.slice(0, 3).forEach(ann => {
+      function renderAnnItem(ann, container, status) {
         const start = ann.startDate || ann.date;
-        const d = new Date(start + 'T12:00:00');
-        const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        const end = ann.endDate || start;
         
-        const div = document.createElement('div');
-        div.className = 'preview-item';
-        const linkHtml = ann.url ? `<a href="${ann.url}" target="_blank" class="preview-link">${ann.urlLabel || 'Click Here'}</a>` : '';
-        
-        div.innerHTML = `
-          <div class="preview-date">${dateStr}</div>
-          <div class="preview-text">${ann.text}</div>
-          ${linkHtml}`;
-        container.appendChild(div);
-      });
-    }
+        const dStart = new Date(start + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+        const dEnd = new Date(end + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
 
-    function showAlert(msg) {
-      const el = document.getElementById('alert');
-      el.textContent = msg;
-      el.style.display = 'block';
-      clearTimeout(window._alertTimer);
-      window._alertTimer = setTimeout(() => el.style.display = 'none', 3000);
-    }
+        const div = document.createElement('div');
+        div.className = `announcement-item${status === 'scheduled' ? ' scheduled' : ''}`;
+        div.id = `ann-${ann._key}`;
+        
+        if (status === 'expired') {
+          div.style.opacity = "0.65";
+          div.style.backgroundColor = "#f9f9f9";
+        }
+
+        const linkHtml = ann.url ? `<a href="${ann.url}" target="_blank" class="ann-link">${ann.urlLabel || 'Click Here'}</a>` : '';
+        
+        let badgeHtml = '';
+        if (status === 'scheduled') badgeHtml = '<span class="badge-scheduled">Scheduled</span>';
+        if (status === 'expired') badgeHtml = '<span class="badge-scheduled" style="background:#555;">Expired</span>';
+
+        div.innerHTML = `
+          <div>
+            <div class="ann-date">${dStart} to ${dEnd} ${badgeHtml}</div>
+            <div class="ann-text">${ann.text}</div>
+            ${linkHtml}
+          </div>
+          <div class="ann-actions">
+            <button class="btn btn-edit" onclick="editAnnouncement('${ann._key}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteAnnouncement('${ann._key}')">Delete</button>
+          </div>`;
+        container.appendChild(div);
+      }
+
+      // --- Render preview ---
+      function renderPreview() {
+        const container = document.getElementById('preview-box');
+        const today = new Date().toISOString().split('T')[0];
+        
+        const liveItems = announcements.filter(a => {
+          const start = a.startDate || a.date;
+          const end = a.endDate || start;
+          return today >= start && today <= end;
+        });
+
+        if (!liveItems.length) {
+          container.innerHTML = '<p class="preview-empty">No active announcements to preview.</p>';
+          return;
+        }
+
+        container.innerHTML = '';
+        liveItems.slice(0, 3).forEach(ann => {
+          const start = ann.startDate || ann.date;
+          const d = new Date(start + 'T12:00:00');
+          const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+          
+          const div = document.createElement('div');
+          div.className = 'preview-item';
+          const linkHtml = ann.url ? `<a href="${ann.url}" target="_blank" class="preview-link">${ann.urlLabel || 'Click Here'}</a>` : '';
+          
+          div.innerHTML = `
+            <div class="preview-date">${dateStr}</div>
+            <div class="preview-text">${ann.text}</div>
+            ${linkHtml}`;
+          container.appendChild(div);
+        });
+      }
+
+      function showAlert(msg) {
+        const el = document.getElementById('alert');
+        el.textContent = msg;
+        el.style.display = 'block';
+        clearTimeout(window._alertTimer);
+        window._alertTimer = setTimeout(() => el.style.display = 'none', 3000);
+      }
+    } // end startApp
   </script>
 </body>
 </html>
