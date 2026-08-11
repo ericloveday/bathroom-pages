@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -896,10 +896,15 @@
       const group = conflictGroupsData[groupId] || {};
       const alreadyIn = group.studentIds || {};
 
-      const matches = Object.entries(masterRosterData)
+      let matches = Object.entries(masterRosterData)
         .filter(([id, s]) => !alreadyIn[id])
-        .filter(([id, s]) => (`${s.firstName} ${s.lastName}`.toLowerCase().includes(q)) || id.includes(q))
-        .slice(0, 15);
+        .filter(([id, s]) => (`${s.firstName} ${s.lastName}`.toLowerCase().includes(q)) || id.includes(q));
+
+      // Sort alphabetically by name first (not by ID/grade), so a broad query doesn't
+      // get dominated by whichever grade happens to sort first.
+      const totalMatches = matches.length;
+      matches.sort((a, b) => `${a[1].lastName} ${a[1].firstName}`.localeCompare(`${b[1].lastName} ${b[1].firstName}`));
+      matches = matches.slice(0, 25);
 
       if (matches.length === 0) {
         resultsEl.innerHTML = '<div class="search-result-item">No matches</div>';
@@ -910,6 +915,9 @@
             <span class="sr-grade">Gr ${s.grade}</span>
           </div>`
         ).join('');
+        if (totalMatches > 25) {
+          resultsEl.innerHTML += `<div class="search-result-item" style="color:var(--gray-500); font-style:italic; cursor:default;">+${totalMatches - 25} more — type more letters to narrow it down</div>`;
+        }
       }
       resultsEl.style.display = 'block';
     };
