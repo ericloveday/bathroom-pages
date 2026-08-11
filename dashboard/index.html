@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bathroom Checkout Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #ce1f07;
+    --red-dark: #a01a05;
+    --black: #111111;
+    --white: #ffffff;
+    --gray-50: #f7f7f8;
+    --gray-100: #eeeeee;
+    --gray-300: #cccccc;
+    --gray-500: #888888;
+    --gray-700: #444444;
+    --amber: #c98a00;
+    --blue: #1a6fb5;
+    --green: #1f7a3d;
+    --boy: #1a6fb5;
+    --girl: #b5006e;
+    --radius: 10px;
+    --shadow: 0 2px 10px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.14);
+    --history-bg: #f5f5f5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--gray-50);
+    font-family: 'Montserrat', sans-serif;
+    color: var(--black);
+    min-height: 100vh;
+  }
+
+  /* ---------------- Top bar ---------------- */
+  .topbar {
+    background: var(--black);
+    color: var(--white);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .topbar h1 { font-size: 18px; font-weight: 800; margin: 0; }
+  .topbar h1 span { color: var(--red); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  #user-badge { font-size: 12.5px; color: rgba(255,255,255,0.7); }
+  #signout-btn {
+    background: transparent; border: 1px solid rgba(255,255,255,0.4); color: var(--white);
+    padding: 6px 12px; border-radius: 6px; font-family: 'Montserrat', sans-serif; font-size: 12px;
+    font-weight: 600; cursor: pointer;
+  }
+  #signout-btn:hover { background: rgba(255,255,255,0.1); }
+  .subtitle-bar { max-width: 1300px; margin: 0 auto; padding: 14px 20px 0; color: var(--gray-700); font-size: 12.5px; }
+
+  /* ---------------- Sign-In Screen ---------------- */
+  #signin-screen {
+    position: fixed; inset: 0; background: var(--gray-50); z-index: 100000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 20px;
+  }
+  #signin-screen h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; color: var(--black); text-transform: none; }
+  #signin-screen p { font-size: 0.9rem; color: var(--gray-700); margin-bottom: 24px; max-width: 400px; line-height: 1.5; }
+  .google-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 12px 22px; background: var(--white); color: #1f1f1f;
+    border: 1px solid var(--gray-300); border-radius: 8px; font-family: 'Montserrat', sans-serif;
+    font-size: 0.92rem; font-weight: 600; cursor: pointer; box-shadow: var(--shadow);
+  }
+  .google-btn:hover { box-shadow: var(--shadow-lg); }
+  .signin-error {
+    margin-top: 16px; padding: 10px 14px; background: #fdf1ef; border: 1px solid var(--red);
+    color: var(--red-dark); border-radius: 8px; font-size: 0.85rem; display: none; max-width: 400px;
+  }
+  .signin-note { margin-top: 18px; font-size: 0.75rem; color: var(--gray-500); }
+
+  #app-content { display: none; max-width: 1300px; margin: 0 auto; padding: 20px 20px 60px; }
+
+  .header-block { margin-bottom: 20px; }
+  .header-block h2 { font-size: 1.1rem; font-weight: 800; color: var(--black); }
+
+  .tab-btns { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 8px 18px;
+    border-radius: 7px;
+    border: none;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .tab-btn.active { background: var(--black); color: var(--white); }
+  .tab-btn:hover:not(.active) { color: var(--black); }
+
+  .controls {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .control-group { display: flex; flex-direction: column; gap: 5px; }
+  .control-group label { font-size: 0.68rem; font-weight: 700; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.4px; }
+
+  select, input[type="date"], input[type="text"], input[type="number"], input[type="file"] {
+    padding: 9px 14px;
+    border-radius: 7px;
+    border: 1.5px solid var(--gray-300);
+    background: var(--white);
+    color: var(--black);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+
+  select:focus, input[type="date"]:focus, input[type="text"]:focus, input[type="number"]:focus { outline: none; border-color: var(--red); }
+
+  textarea {
+    width: 100%; min-height: 150px; font-family: 'Montserrat', sans-serif; font-size: 13.5px;
+    padding: 12px; border: 1.5px solid var(--gray-300); border-radius: 8px; resize: vertical;
+  }
+  textarea:focus { outline: none; border-color: var(--red); }
+
+  .btn {
+    padding: 10px 20px;
+    background: var(--red);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    align-self: flex-end;
+  }
+  .btn:hover { background: var(--red-dark); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--gray-300);
+    color: var(--gray-700);
+  }
+  .btn-outline:hover { border-color: var(--red); color: var(--red); background: transparent; }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .summary-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+    text-align: center;
+  }
+  .summary-card .val { font-size: 2rem; font-weight: 800; color: var(--red); line-height: 1; margin-bottom: 4px; }
+  .summary-card .lbl { font-size: 0.72rem; font-weight: 600; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.4px; }
+
+  /* Table */
+  .table-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .table-card h2 { font-size: 1rem; font-weight: 800; margin-bottom: 4px; color: var(--black); }
+  .table-card .card-desc { font-size: 0.82rem; color: var(--gray-700); margin-bottom: 16px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+
+  thead th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--gray-700);
+    background: var(--gray-50);
+    border-bottom: 2px solid var(--gray-100);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+  thead th:hover { color: var(--red); }
+  thead th.sorted { color: var(--red); }
+  thead th.nosort { cursor: default; }
+  thead th.nosort:hover { color: var(--gray-700); }
+
+  tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.1s; }
+  tbody tr:hover { background: var(--gray-50); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 10px 12px; }
+
+  .student-name-cell { font-weight: 700; }
+  .gender-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .gender-dot.boy { background: var(--boy); }
+  .gender-dot.girl { background: var(--girl); }
+  .gender-dot.unknown { background: var(--gray-500); }
+
+  .val-cell { font-weight: 700; color: var(--red); }
+  .trips-cell { font-weight: 600; color: var(--black); }
+
+  .check-cell { width: 36px; text-align: center; }
+  .check-cell input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--red); }
+
+  .daily-section { margin-top: 8px; }
+  .day-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; font-size: 0.82rem; margin-bottom: 4px; }
+  .day-row:nth-child(odd) { background: var(--history-bg); }
+  .day-label { font-weight: 600; color: var(--gray-700); }
+  .day-val { font-weight: 700; color: var(--red); }
+
+  #loading {
+    position: fixed; inset: 0; background: var(--gray-50);
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 9999;
+  }
+  #loading p { color: var(--gray-700); font-size: 1rem; font-weight: 600; }
+  .spinner { width: 40px; height: 40px; border: 4px solid var(--gray-100); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-msg { color: var(--gray-500); font-style: italic; font-size: 0.9rem; padding: 12px 0; }
+  .no-data { text-align: center; padding: 40px; color: var(--gray-500); font-style: italic; }
+
+  .section-panel {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px;
+    margin-bottom: 24px;
+    border-left: 4px solid var(--gray-300);
+  }
+  .section-panel.accent-blue { border-left-color: var(--blue); }
+  .section-panel.accent-amber { border-left-color: var(--amber); }
+  .section-panel.accent-red { border-left-color: var(--red); }
+  .section-panel h2 { font-size: 1rem; font-weight: 800; margin-bottom: 4px; }
+  .section-panel .card-desc { font-size: 0.82rem; color: var(--gray-700); margin-bottom: 16px; }
+
+  .inline-form-row {
+    display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end;
+    background: var(--gray-50); padding: 16px; border-radius: 8px;
+  }
+  .inline-form-row label { color: var(--gray-700); }
+
+  .edit-hint { display: none; margin-bottom: 14px; font-size: 0.82rem; color: var(--amber); font-weight: 600; }
+  .edit-hint a { color: var(--blue); }
+
+  .bulk-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .bulk-bar .btn { background: var(--red); }
+  .selected-count { color: var(--gray-500); font-size: 0.82rem; font-weight: 600; }
+
+  .csv-block { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--gray-100); }
+  .csv-block h3 { color: var(--gray-700); margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; }
+  .csv-block p { font-size: 0.75rem; color: var(--gray-500); margin-bottom: 10px; }
+  .csv-block code { background: var(--gray-100); padding: 1px 5px; border-radius: 4px; }
+  #csv-status { font-size: 0.8rem; color: var(--gray-500); margin-top: 12px; min-height: 1.2em; }
+
+  /* --- Master Roster tab --- */
+  .counts-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+  .count-box { background: var(--gray-50); border-radius: 10px; padding: 14px; text-align: center; }
+  .count-box .num { font-size: 24px; font-weight: 800; }
+  .count-box .lbl { font-size: 11px; color: var(--gray-700); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+  .format-note { font-size: 12px; color: var(--gray-500); margin-top: 8px; line-height: 1.5; }
+  .status-msg { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; display: none; white-space: pre-line; }
+  .status-msg.success { background: #eef8f0; color: var(--green); display: block; }
+  .status-msg.error { background: #fdf1ef; color: var(--red); display: block; }
+  .status-msg.warn { background: #fdf7e8; color: var(--amber); display: block; }
+  .preview-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12.5px; max-height: 280px; overflow-y: auto; display: block; }
+  .preview-table th { text-align: left; padding: 6px 8px; background: var(--gray-50); position: sticky; top: 0; }
+  .preview-table td { padding: 6px 8px; border-bottom: 1px solid var(--gray-100); }
+
+  /* --- Conflict Groups tab --- */
+  .roster-status { font-size: 12.5px; color: var(--gray-500); margin-bottom: 16px; }
+  .roster-status.warn { color: var(--amber); font-weight: 600; }
+  .groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .group-card { background: var(--white); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); }
+  .group-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+  .group-name-input { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 15px; border: none; border-bottom: 2px solid transparent; padding: 2px 0; width: 100%; background: transparent; }
+  .group-name-input:focus { outline: none; border-bottom-color: var(--red); }
+  .del-group-btn { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 4px; }
+  .del-group-btn:hover { color: var(--red); }
+  .member-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--gray-50); border: 1px solid var(--gray-100); border-radius: 20px; padding: 5px 10px 5px 12px; font-size: 12.5px; font-weight: 600; margin: 0 6px 6px 0; }
+  .member-chip .grade-tag { font-size: 10px; font-weight: 800; color: var(--red); }
+  .member-chip .remove-x { cursor: pointer; color: var(--gray-500); font-weight: 800; padding-left: 2px; }
+  .member-chip .remove-x:hover { color: var(--red); }
+  .members-box { min-height: 34px; margin-bottom: 10px; }
+  .empty-members { color: var(--gray-500); font-size: 12.5px; }
+  .add-student-wrap { position: relative; }
+  .add-student-input { width: 100%; font-family: 'Montserrat', sans-serif; font-size: 13px; padding: 9px 11px; border: 1.5px solid var(--gray-300); border-radius: 7px; }
+  .add-student-input:focus { outline: none; border-color: var(--red); }
+  .search-results { position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1px solid var(--gray-300); border-radius: 8px; box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; z-index: 20; display: none; }
+  .search-result-item { padding: 9px 12px; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+  .search-result-item:hover { background: var(--gray-50); }
+  .search-result-item .sr-grade { font-size: 11px; font-weight: 700; color: var(--gray-500); }
+  .empty-groups-state { text-align: center; padding: 60px 20px; color: var(--gray-500); }
+
+  /* Print styles */
+  @media print {
+    body { background: white; padding: 10px; }
+    .topbar, .subtitle-bar, .controls, .tab-btns, .btn, .no-print { display: none !important; }
+    .table-card { border: 1px solid #ccc; box-shadow: none; }
+    .summary-card { border: 1px solid #ccc; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="signin-screen">
+  <h1>Bathroom Checkout Dashboard</h1>
+  <p>Sign in with your Cornerstone Google account to continue.</p>
+  <button class="google-btn" id="google-signin-btn">
+    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.82 2.73v2.27h2.94c1.72-1.59 2.68-3.93 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.94-2.27c-.8.55-1.84.85-3.02.85-2.34 0-4.32-1.58-5.03-3.7H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.7c-.18-.55-.28-1.13-.28-1.7s.1-1.15.28-1.7V4.96H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.04l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.6-2.6C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+    Sign in with Google
+  </button>
+  <div class="signin-error" id="signin-error"></div>
+  <p class="signin-note">Restricted to @cornerstonek12.org accounts</p>
+</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Loading report data...</p>
+</div>
+
+<div class="topbar">
+  <h1>Bathroom <span>Checkout</span></h1>
+  <div class="header-right no-print">
+    <span id="user-badge"></span>
+    <button id="signout-btn" onclick="doSignOut()">Sign Out</button>
+  </div>
+</div>
+<div class="subtitle-bar no-print">Connected to live Firebase data</div>
+
+<div id="app-content">
+
+<!-- MAIN VIEW TABS -->
+<div class="tab-btns no-print">
+  <button class="tab-btn active" id="tab-view-reports" onclick="switchMainTab('reports')">📊 Reports</button>
+  <button class="tab-btn" id="tab-view-management" onclick="switchMainTab('management')">👥 Student Management</button>
+  <button class="tab-btn" id="tab-view-roster" onclick="switchMainTab('roster')">🧾 Master Roster</button>
+  <button class="tab-btn" id="tab-view-conflicts" onclick="switchMainTab('conflicts')">🚫 Conflict Groups</button>
+  <button class="tab-btn" id="tab-view-history" onclick="switchMainTab('history')">🗑 History Management</button>
+</div>
+
+<!-- ================= REPORTS VIEW ================= -->
+<div id="view-reports">
+  <!-- Date Tabs + report actions -->
+  <div style="display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+    <div class="tab-btns" style="margin-bottom:0;">
+      <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
+      <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
+      <button class="tab-btn" id="tab-custom" onclick="switchTab('custom')">Custom Range</button>
+    </div>
+    <div id="report-actions" style="display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-outline" onclick="window.print()">🖨 Print</button>
+      <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls" id="controls-weekly">
+    <div class="control-group">
+      <label>Week</label>
+      <select id="week-select" onchange="renderReport()"></select>
+    </div>
+    <div class="control-group">
+      <label>Teacher</label>
+      <select id="weekly-teacher-filter" onchange="renderReport()">
+        <option value="">All Teachers</option>
+        <option>Hartley</option>
+        <option>Loveday</option>
+        <option>Scales</option>
+        <option>Zinsmeister</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="controls" id="controls-monthly" style="display:none;">
+    <div class="control-group">
+      <label>Month</label>
+      <select id="month-select" onchange="renderReport()"></select>
+    </div>
+    <div class="control-group">
+      <label>Teacher</label>
+      <select id="monthly-teacher-filter" onchange="renderReport()">
+        <option value="">All Teachers</option>
+        <option>Hartley</option>
+        <option>Loveday</option>
+        <option>Scales</option>
+        <option>Zinsmeister</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="controls" id="controls-custom" style="display:none;">
+    <div class="control-group">
+      <label>Start Date</label>
+      <input type="date" id="custom-start">
+    </div>
+    <div class="control-group">
+      <label>End Date</label>
+      <input type="date" id="custom-end">
+    </div>
+    <div class="control-group">
+      <label>Teacher</label>
+      <select id="custom-teacher-filter">
+        <option value="">All Teachers</option>
+        <option>Hartley</option>
+        <option>Loveday</option>
+        <option>Scales</option>
+        <option>Zinsmeister</option>
+      </select>
+    </div>
+    <button class="btn" onclick="renderReport()">Generate</button>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-grid" id="summary-grid"></div>
+
+  <!-- Student Table -->
+  <div class="table-card" id="main-table-card">
+    <h2 id="table-title">Student Summary</h2>
+    <div id="table-container"><p class="no-data">No data for this period.</p></div>
+  </div>
+
+  <!-- Daily Breakdown -->
+  <div class="table-card" id="daily-table-card">
+    <h2>Daily Breakdown</h2>
+    <div id="daily-container"><p class="no-data">No data for this period.</p></div>
+  </div>
+
+  <!-- Weekly Pass Usage -->
+  <div class="table-card accent-red-border">
+    <h2>🚫 Weekly Pass Usage — Current Week</h2>
+    <div class="card-desc">Students who are close to or over their allocated weekly bathroom limit.</div>
+    <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
+  </div>
+</div>
+
+<!-- =============== STUDENT MANAGEMENT VIEW =============== -->
+<div id="view-management" style="display:none;">
+  <div class="section-panel accent-blue no-print">
+    <h2 style="color: var(--blue);">👥 Roster &amp; Pass Limit Management</h2>
+    <div class="card-desc">Add, remove, or edit student names or genders, or change individual weekly pass limits (default limit is 5).</div>
+
+    <div class="inline-form-row">
+      <div class="control-group" style="flex:2; min-width:180px;">
+        <label>Student Name</label>
+        <input type="text" id="roster-new-name" placeholder="e.g., Jane D.">
+      </div>
+      <div class="control-group" style="flex:1;">
+        <label>Gender Orientation</label>
+        <select id="roster-new-gender">
+          <option value="g">Girl</option>
+          <option value="b">Boy</option>
+          <option value="unk">Unknown</option>
+        </select>
+      </div>
+      <div class="control-group" style="flex:1;">
+        <label>Weekly Pass Limit</label>
+        <input type="number" id="roster-new-limit" value="5" min="1">
+      </div>
+      <button class="btn" id="roster-save-btn" style="background:var(--blue);" onclick="saveStudent()">Add / Update Student</button>
+    </div>
+
+    <div id="roster-edit-hint" class="edit-hint"></div>
+
+    <div class="bulk-bar">
+      <button class="btn" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
+      <span id="rm-selected-count" class="selected-count">0 selected</span>
+    </div>
+
+    <div id="roster-container" style="margin-bottom: 24px;"><p class="no-data">Loading student directory...</p></div>
+
+    <div class="csv-block">
+      <h3>Bulk Upload Students (CSV)</h3>
+      <p>Format: <code>Name, Gender (b/g), Limit</code>. Example: <code>Jane D., g, 5</code>. A header row (e.g. "Name") is detected and skipped automatically.</p>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input type="file" id="csv-upload" accept=".csv" style="padding: 5px; max-width: 300px; width: 100%;">
+        <button class="btn btn-outline" id="csv-upload-btn" onclick="processCSV()">Upload CSV</button>
+      </div>
+      <p id="csv-status"></p>
+    </div>
+  </div>
+</div>
+
+<!-- =============== MASTER ROSTER VIEW =============== -->
+<div id="view-roster" style="display:none;">
+  <div class="section-panel accent-red no-print">
+    <h2>🧾 Master Roster (Cross-Grade)</h2>
+    <div class="card-desc">This is separate from the pass-limit roster above — it's the shared 6th/7th/8th grade list used for conflict-group checking once the tool expands to all 12 teachers.</div>
+
+    <div class="counts-row">
+      <div class="count-box"><div class="num" id="mr-cnt6">0</div><div class="lbl">6th Grade</div></div>
+      <div class="count-box"><div class="num" id="mr-cnt7">0</div><div class="lbl">7th Grade</div></div>
+      <div class="count-box"><div class="num" id="mr-cnt8">0</div><div class="lbl">8th Grade</div></div>
+      <div class="count-box"><div class="num" id="mr-cntTotal">0</div><div class="lbl">Total</div></div>
+    </div>
+  </div>
+
+  <div class="section-panel no-print">
+    <h2>Option A — Seed Dummy Roster</h2>
+    <div class="card-desc">Generates 108 placeholder students per grade (324 total) so you can build and test conflict groups right now. Replace with the real roster later using Option B — no rebuilding needed.</div>
+    <button class="btn" id="mr-seed-btn" onclick="seedDummyRoster()">Seed 324 Dummy Students</button>
+    <div class="status-msg" id="mr-seed-status"></div>
+  </div>
+
+  <div class="section-panel no-print">
+    <h2>Option B — Import Real Roster</h2>
+    <div class="card-desc">Paste one student per line: <code>LastName, FirstName, Grade, Gender</code>. Grade should be 6, 7, or 8. Gender should be M or F. This <b>completely replaces</b> whatever is currently in the Master Roster — including conflict groups, which will need to be checked afterward since IDs are reassigned.</div>
+    <textarea id="mr-csv-input" placeholder="Smith, John, 7, M&#10;Garcia, Maria, 7, F&#10;Johnson, Alex, 6, M"></textarea>
+    <div class="format-note">Students are sorted alphabetically by last name within each grade, then assigned IDs like <code>7-001</code>, <code>7-002</code>, etc.</div>
+    <div style="margin-top:14px; display:flex; gap:10px;">
+      <button class="btn btn-outline" onclick="previewRosterImport()">Preview</button>
+      <button class="btn" id="mr-import-btn" onclick="confirmRosterImport()" disabled>Replace Roster With This List</button>
+    </div>
+    <div class="status-msg" id="mr-import-status"></div>
+    <table class="preview-table" id="mr-preview-table" style="display:none;"></table>
+  </div>
+</div>
+
+<!-- =============== CONFLICT GROUPS VIEW =============== -->
+<div id="view-conflicts" style="display:none;">
+  <div class="section-panel accent-red no-print">
+    <h2>🚫 Conflict Groups</h2>
+    <div class="card-desc">A conflict group is a set of students who can't be signed out at the same time — across any grade or teacher. When one is signed out, the others in their group are blocked until that student returns.</div>
+    <div class="roster-status" id="cg-roster-status">Loading roster…</div>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+    <h2 style="font-size:17px; font-weight:800;">Groups</h2>
+    <button class="btn" onclick="createConflictGroup()">+ New Group</button>
+  </div>
+
+  <div class="groups-grid" id="cg-groups-grid"></div>
+  <div class="empty-groups-state" id="cg-empty-groups" style="display:none;">No conflict groups yet. Click "+ New Group" to create one.</div>
+</div>
+
+<!-- =============== HISTORY MANAGEMENT VIEW =============== -->
+<div id="view-history" style="display:none;">
+  <div class="section-panel accent-amber no-print">
+    <h2 style="color: var(--amber);">⚠ History Management</h2>
+    <div class="card-desc">Find and delete individual history entries — useful if a student forgot to check back in. Check multiple rows and use <strong>Delete Selected</strong> for bulk cleanup. Deletions are permanent.</div>
+    <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end;">
+      <div class="control-group" style="flex:1; min-width:180px;">
+        <label>Filter by Student</label>
+        <select id="dm-student-filter" onchange="renderDataManager()">
+          <option value="">-- All Students --</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Filter by Date</label>
+        <input type="date" id="dm-date-filter" onchange="renderDataManager()">
+      </div>
+      <button class="btn btn-outline" onclick="document.getElementById('dm-student-filter').value=''; document.getElementById('dm-date-filter').value=''; renderDataManager()">Clear Filters</button>
+    </div>
+
+    <div class="bulk-bar">
+      <button class="btn" onclick="deleteSelected()">🗑 Delete Selected</button>
+      <span id="dm-selected-count" class="selected-count">0 selected</span>
+    </div>
+
+    <div id="dm-container"><p class="no-data">No entries found.</p></div>
+  </div>
+</div>
+
+</div><!-- /#app-content -->
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getDatabase, ref, onValue, remove, set, update, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBsja7ruNaLkTDTxyga9qd9TZG2Zz5AjHA",
+    authDomain: "bathroom-check-out.firebaseapp.com",
+    databaseURL: "https://bathroom-check-out-default-rtdb.firebaseio.com",
+    projectId: "bathroom-check-out",
+    storageBucket: "bathroom-check-out.firebasestorage.app",
+    messagingSenderId: "385219454253",
+    appId: "1:385219454253:web:970acbfe28672f73c45fa4"
+  };
+
+  const ALLOWED_DOMAIN = "cornerstonek12.org";
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
+
+  const signinScreen = document.getElementById('signin-screen');
+  const appContent = document.getElementById('app-content');
+  const loadingScreen = document.getElementById('loading');
+  const signinError = document.getElementById('signin-error');
+  const userBadge = document.getElementById('user-badge');
+  const topbar = document.querySelector('.topbar');
+  const subtitleBar = document.querySelector('.subtitle-bar');
+
+  function showSigninError(msg) {
+    signinError.textContent = msg;
+    signinError.style.display = 'block';
+  }
+
+  document.getElementById('google-signin-btn').addEventListener('click', () => {
+    signinError.style.display = 'none';
+    signInWithPopup(auth, provider).catch(err => {
+      console.error(err);
+      showSigninError('Sign-in failed. Please try again.');
+    });
+  });
+
+  window.doSignOut = function() {
+    signOut(auth);
+  };
+
+  let appStarted = false;
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      signinScreen.style.display = 'flex';
+      appContent.style.display = 'none';
+      topbar.style.display = 'none';
+      subtitleBar.style.display = 'none';
+      loadingScreen.style.display = 'none';
+      return;
+    }
+
+    const email = user.email || "";
+    if (!email.endsWith("@" + ALLOWED_DOMAIN)) {
+      showSigninError(`This tool is restricted to @${ALLOWED_DOMAIN} accounts. You signed in as ${email}.`);
+      signOut(auth);
+      return;
+    }
+
+    signinScreen.style.display = 'none';
+    topbar.style.display = 'flex';
+    subtitleBar.style.display = 'block';
+    loadingScreen.style.display = 'flex';
+    userBadge.textContent = email;
+
+    if (!appStarted) {
+      appStarted = true;
+      startApp();
+    }
+  });
+
+  function startApp() {
+    appContent.style.display = 'block';
+
+    let allHistory = [];
+    let STUDENTS = [];
+    let currentTab = 'weekly';
+    let sortCol = 'totalMins';
+    let sortAsc = false;
+    let editingOriginalName = null;
+
+    // Master Roster / Conflict Groups state
+    let masterRosterData = {};
+    let conflictGroupsData = {};
+    let pendingRosterImport = null;
+
+    // --- Built-in first-name → gender list (offline, no external API) ---
+    const GENDER_MAP = {};
+    `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`
+      .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'b'; });
+    `aaliyah aanya abby akira alex alexandra alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`
+      .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'g'; });
+
+    function genderInfo(g) {
+      if (g === 'b') return { cls: 'boy', label: 'Boy' };
+      if (g === 'g') return { cls: 'girl', label: 'Girl' };
+      return { cls: 'unknown', label: 'Unknown' };
+    }
+
+    window.switchMainTab = function(view) {
+      const views = ['reports', 'management', 'roster', 'conflicts', 'history'];
+      views.forEach(v => {
+        document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
+        document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
+      });
+    };
+
+    onValue(ref(db, 'bathroom/roster'), (snapshot) => {
+      const data = snapshot.val();
+      STUDENTS = data ? Object.values(data).sort((a,b) => a.name.localeCompare(b.name)) : [];
+      renderReport();
+      renderRosterManager();
+      renderPassUsage();
+    });
+
+    onValue(ref(db, 'bathroom/history'), (snapshot) => {
+      const data = snapshot.val() || {};
+      allHistory = Object.entries(data).map(([k,v]) => ({...v, _key: k})).sort((a,b) => b.checkedOutAt - a.checkedOutAt);
+      populateSelectors();
+      renderReport();
+      populateStudentFilter();
+      renderDataManager();
+      renderPassUsage();
+      loadingScreen.style.display = 'none';
+    });
+
+    // ---------------- Master Roster (cross-grade) ----------------
+    onValue(ref(db, 'masterRoster'), (snapshot) => {
+      masterRosterData = snapshot.val() || {};
+      const students = Object.values(masterRosterData);
+      document.getElementById('mr-cnt6').textContent = students.filter(s => s.grade === 6).length;
+      document.getElementById('mr-cnt7').textContent = students.filter(s => s.grade === 7).length;
+      document.getElementById('mr-cnt8').textContent = students.filter(s => s.grade === 8).length;
+      document.getElementById('mr-cntTotal').textContent = students.length;
+
+      const cgStatusEl = document.getElementById('cg-roster-status');
+      if (students.length === 0) {
+        cgStatusEl.className = 'roster-status warn';
+        cgStatusEl.textContent = 'No master roster loaded yet — go seed or import one on the Master Roster tab first.';
+      } else {
+        cgStatusEl.className = 'roster-status';
+        cgStatusEl.textContent = `Roster loaded: ${students.length} students.`;
+      }
+      renderConflictGroups();
+    });
+
+    window.seedDummyRoster = function() {
+      if (!confirm("This will overwrite whatever is currently in the Master Roster with 324 dummy students. Continue?")) return;
+      const btn = document.getElementById('mr-seed-btn');
+      btn.disabled = true;
+      btn.textContent = "Seeding...";
+
+      const roster = {};
+      [6, 7, 8].forEach(grade => {
+        for (let i = 1; i <= 108; i++) {
+          const num = String(i).padStart(3, '0');
+          const id = `${grade}-${num}`;
+          roster[id] = { firstName: "Test", lastName: `Student${grade}-${num}`, grade: grade, gender: (i % 2 === 0) ? "F" : "M" };
+        }
+      });
+
+      set(ref(db, 'masterRoster'), roster).then(() => {
+        showRosterStatus('mr-seed-status', 'success', "Dummy roster seeded — 324 students (108 per grade).");
+      }).catch(err => {
+        showRosterStatus('mr-seed-status', 'error', "Failed to seed roster: " + err.message);
+      }).finally(() => {
+        btn.disabled = false;
+        btn.textContent = "Seed 324 Dummy Students";
+      });
+    };
+
+    window.previewRosterImport = function() {
+      const raw = document.getElementById('mr-csv-input').value.trim();
+      document.getElementById('mr-import-btn').disabled = true;
+      pendingRosterImport = null;
+
+      if (!raw) {
+        showRosterStatus('mr-import-status', 'error', "Paste a roster list first.");
+        document.getElementById('mr-preview-table').style.display = 'none';
+        return;
+      }
+
+      const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const parsed = [];
+      const errors = [];
+
+      lines.forEach((line, idx) => {
+        const parts = line.split(',').map(p => p.trim());
+        if (parts.length < 3) {
+          errors.push(`Line ${idx + 1}: needs at least LastName, FirstName, Grade — got "${line}"`);
+          return;
+        }
+        const [lastName, firstName, gradeRaw, genderRaw] = parts;
+        const grade = parseInt(gradeRaw, 10);
+        if (![6, 7, 8].includes(grade)) {
+          errors.push(`Line ${idx + 1}: grade must be 6, 7, or 8 — got "${gradeRaw}"`);
+          return;
+        }
+        const gender = (genderRaw || "").toUpperCase().startsWith("F") ? "F" : "M";
+        parsed.push({ lastName, firstName, grade, gender });
+      });
+
+      if (errors.length > 0) {
+        showRosterStatus('mr-import-status', 'error', `Found ${errors.length} problem line(s):\n` + errors.slice(0, 8).join('\n'));
+        document.getElementById('mr-preview-table').style.display = 'none';
+        return;
+      }
+
+      const byGrade = { 6: [], 7: [], 8: [] };
+      parsed.forEach(s => byGrade[s.grade].push(s));
+
+      const finalRoster = {};
+      const previewRows = [];
+      [6, 7, 8].forEach(grade => {
+        byGrade[grade].sort((a, b) => a.lastName.localeCompare(b.lastName));
+        byGrade[grade].forEach((s, i) => {
+          const num = String(i + 1).padStart(3, '0');
+          const id = `${grade}-${num}`;
+          finalRoster[id] = { firstName: s.firstName, lastName: s.lastName, grade: s.grade, gender: s.gender };
+          previewRows.push({ id, ...s });
+        });
+      });
+
+      pendingRosterImport = finalRoster;
+
+      const table = document.getElementById('mr-preview-table');
+      table.style.display = 'block';
+      table.innerHTML = '<tr><th>ID</th><th>Last</th><th>First</th><th>Grade</th><th>Gender</th></tr>' +
+        previewRows.map(r => `<tr><td>${r.id}</td><td>${escapeHtml(r.lastName)}</td><td>${escapeHtml(r.firstName)}</td><td>${r.grade}</td><td>${r.gender}</td></tr>`).join('');
+
+      showRosterStatus('mr-import-status', 'success', `Looks good — ${previewRows.length} students parsed (6th: ${byGrade[6].length}, 7th: ${byGrade[7].length}, 8th: ${byGrade[8].length}). Review the preview below, then click Replace Roster.`);
+      document.getElementById('mr-import-btn').disabled = false;
+    };
+
+    window.confirmRosterImport = function() {
+      if (!pendingRosterImport) return;
+      if (!confirm(`This will COMPLETELY REPLACE the Master Roster with ${Object.keys(pendingRosterImport).length} students. Existing conflict groups reference the old IDs and will need to be reviewed afterward. Continue?`)) return;
+
+      const btn = document.getElementById('mr-import-btn');
+      btn.disabled = true;
+      btn.textContent = "Importing...";
+
+      set(ref(db, 'masterRoster'), pendingRosterImport).then(() => {
+        showRosterStatus('mr-import-status', 'success', "Real roster imported successfully. Head to the Conflict Groups tab to review/rebuild groups with the new IDs.");
+        pendingRosterImport = null;
+        document.getElementById('mr-csv-input').value = '';
+        document.getElementById('mr-preview-table').style.display = 'none';
+      }).catch(err => {
+        showRosterStatus('mr-import-status', 'error', "Import failed: " + err.message);
+      }).finally(() => {
+        btn.disabled = false;
+        btn.textContent = "Replace Roster With This List";
+      });
+    };
+
+    function showRosterStatus(elId, type, msg) {
+      const el = document.getElementById(elId);
+      el.className = 'status-msg ' + type;
+      el.textContent = msg;
+    }
+
+    // ---------------- Conflict Groups ----------------
+    onValue(ref(db, 'conflictGroups'), (snapshot) => {
+      conflictGroupsData = snapshot.val() || {};
+      renderConflictGroups();
+    });
+
+    window.createConflictGroup = function() {
+      const newRef = push(ref(db, 'conflictGroups'));
+      set(newRef, { name: "New Group", studentIds: {} });
+    };
+
+    window.deleteConflictGroup = function(groupId) {
+      if (!confirm("Delete this conflict group? This can't be undone.")) return;
+      remove(ref(db, 'conflictGroups/' + groupId));
+    };
+
+    window.renameConflictGroup = function(groupId, newName) {
+      set(ref(db, 'conflictGroups/' + groupId + '/name'), newName.trim() || "Untitled Group");
+    };
+
+    window.removeConflictMember = function(groupId, studentId) {
+      remove(ref(db, 'conflictGroups/' + groupId + '/studentIds/' + studentId));
+    };
+
+    window.addConflictMember = function(groupId, studentId) {
+      set(ref(db, 'conflictGroups/' + groupId + '/studentIds/' + studentId), true);
+      closeConflictSearch();
+    };
+
+    function closeConflictSearch() {
+      document.querySelectorAll('.search-results').forEach(el => { el.style.display = 'none'; });
+      document.querySelectorAll('.add-student-input').forEach(el => { el.value = ''; });
+    }
+
+    window.handleConflictSearchInput = function(groupId, value) {
+      const resultsEl = document.getElementById('cg-results-' + groupId);
+      const q = value.trim().toLowerCase();
+      if (!q) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
+
+      const group = conflictGroupsData[groupId] || {};
+      const alreadyIn = group.studentIds || {};
+
+      const matches = Object.entries(masterRosterData)
+        .filter(([id, s]) => !alreadyIn[id])
+        .filter(([id, s]) => (`${s.firstName} ${s.lastName}`.toLowerCase().includes(q)) || id.includes(q))
+        .slice(0, 15);
+
+      if (matches.length === 0) {
+        resultsEl.innerHTML = '<div class="search-result-item">No matches</div>';
+      } else {
+        resultsEl.innerHTML = matches.map(([id, s]) =>
+          `<div class="search-result-item" onclick="window.addConflictMember('${groupId}','${id}')">
+            <span>${escapeHtml(s.firstName)} ${escapeHtml(s.lastName)}</span>
+            <span class="sr-grade">Gr ${s.grade}</span>
+          </div>`
+        ).join('');
+      }
+      resultsEl.style.display = 'block';
+    };
+
+    function renderConflictGroups() {
+      const grid = document.getElementById('cg-groups-grid');
+      const emptyEl = document.getElementById('cg-empty-groups');
+      if (!grid) return;
+      const entries = Object.entries(conflictGroupsData);
+
+      if (entries.length === 0) {
+        grid.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+      emptyEl.style.display = 'none';
+
+      grid.innerHTML = entries.map(([groupId, group]) => {
+        const memberIds = Object.keys(group.studentIds || {});
+        const membersHtml = memberIds.length === 0
+          ? '<div class="empty-members">No students yet — search below to add.</div>'
+          : memberIds.map(id => {
+              const s = masterRosterData[id];
+              if (!s) return '';
+              return `<span class="member-chip">
+                <span class="grade-tag">Gr ${s.grade}</span> ${escapeHtml(s.firstName)} ${escapeHtml(s.lastName)}
+                <span class="remove-x" onclick="window.removeConflictMember('${groupId}','${id}')">&times;</span>
+              </span>`;
+            }).join('');
+
+        return `
+          <div class="group-card">
+            <div class="group-card-top">
+              <input class="group-name-input" value="${escapeHtml(group.name || 'Untitled Group')}"
+                onblur="window.renameConflictGroup('${groupId}', this.value)"
+                onkeydown="if(event.key==='Enter'){this.blur();}">
+              <button class="del-group-btn" onclick="window.deleteConflictGroup('${groupId}')" title="Delete group">&times;</button>
+            </div>
+            <div class="members-box">${membersHtml}</div>
+            <div class="add-student-wrap">
+              <input class="add-student-input" id="cg-input-${groupId}" placeholder="Search name to add..."
+                oninput="window.handleConflictSearchInput('${groupId}', this.value)">
+              <div class="search-results" id="cg-results-${groupId}"></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.add-student-wrap')) {
+        closeConflictSearch();
+      }
+    });
+
+    // ---------------- Student Management (bathroom/roster) ----------------
+    window.saveStudent = async function() {
+      const nameInput = document.getElementById('roster-new-name');
+      const name = nameInput.value.trim();
+      const gender = document.getElementById('roster-new-gender').value;
+      const limit = parseInt(document.getElementById('roster-new-limit').value, 10) || 5;
+
+      if (!name) { alert("Please input a valid student name."); return; }
+
+      const newKey = name.replace(/[.#$/\[\]]/g, "_");
+      try {
+        await set(ref(db, `bathroom/roster/${newKey}`), { name, gender, limit });
+
+        if (editingOriginalName && editingOriginalName !== name) {
+          const oldKey = editingOriginalName.replace(/[.#$/\[\]]/g, "_");
+          if (oldKey !== newKey) {
+            await remove(ref(db, `bathroom/roster/${oldKey}`));
+          }
+          const toRename = allHistory.filter(h => h.name === editingOriginalName);
+          if (toRename.length) {
+            await Promise.all(
+              toRename.map(h => update(ref(db, `bathroom/history/${h._key}`), { name }))
+            );
+          }
+        }
+
+        cancelEdit();
+      } catch(e) {
+        console.error(e);
+        alert("Error saving student: " + (e && e.message ? e.message : e));
+      }
+    };
+
+    window.cancelEdit = function() {
+      editingOriginalName = null;
+      document.getElementById('roster-new-name').value = '';
+      document.getElementById('roster-new-gender').value = 'g';
+      document.getElementById('roster-new-limit').value = '5';
+      const btn = document.getElementById('roster-save-btn');
+      if (btn) btn.textContent = 'Add / Update Student';
+      const hint = document.getElementById('roster-edit-hint');
+      if (hint) hint.style.display = 'none';
+    };
+
+    window.editStudent = function(name, gender, limit) {
+      editingOriginalName = name;
+      document.getElementById('roster-new-name').value = name;
+      document.getElementById('roster-new-gender').value = gender;
+      document.getElementById('roster-new-limit').value = limit || 5;
+      const btn = document.getElementById('roster-save-btn');
+      if (btn) btn.textContent = 'Update Student';
+      const hint = document.getElementById('roster-edit-hint');
+      if (hint) {
+        hint.style.display = 'block';
+        hint.innerHTML = `✏️ Editing <strong>${name}</strong> — <a href="#" onclick="cancelEdit(); return false;">cancel</a>`;
+      }
+      document.getElementById('roster-new-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    window.removeStudent = async function(name) {
+      if (!confirm(`Are you completely sure you want to delete ${name} from the roster? This removes their profile config.`)) return;
+      const key = name.replace(/[.#$/\[\]]/g, "_");
+      await remove(ref(db, `bathroom/roster/${key}`));
+    };
+
+    window.processCSV = async function() {
+      const fileInput = document.getElementById('csv-upload');
+      const statusEl = document.getElementById('csv-status');
+      const uploadBtn = document.getElementById('csv-upload-btn');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert("Please select a CSV file first.");
+        return;
+      }
+
+      const setStatus = (msg, color) => {
+        statusEl.textContent = msg;
+        statusEl.style.color = color || '#888';
+      };
+
+      const reader = new FileReader();
+
+      reader.onerror = function() {
+        setStatus("❌ Could not read the file. Try re-saving it as a .csv and upload again.", '#cc0000');
+      };
+
+      reader.onload = async function(e) {
+        uploadBtn.disabled = true;
+        try {
+          const text = e.target.result;
+
+          let rawLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+
+          if (!rawLines.length) {
+            setStatus("❌ The file appears to be empty — no rows found.", '#cc0000');
+            uploadBtn.disabled = false;
+            return;
+          }
+
+          const firstCol = rawLines[0].split(',')[0].replace(/"/g, '').trim().toLowerCase();
+          const headerWords = ['name', 'student', 'student name', 'first name', 'firstname', 'last name', 'lastname', 'first', 'last'];
+          if (headerWords.includes(firstCol)) {
+            rawLines.shift();
+          }
+
+          if (!rawLines.length) {
+            setStatus("❌ Only a header row was found — no student data to import.", '#cc0000');
+            uploadBtn.disabled = false;
+            return;
+          }
+
+          let successCount = 0;
+          let genderReadCount = 0;
+          let genderMatchedCount = 0;
+          let genderUnknownCount = 0;
+          const unknownNames = [];
+
+          for (let i = 0; i < rawLines.length; i++) {
+            setStatus(`Processing ${i + 1} of ${rawLines.length}...`);
+
+            const cleanLine = rawLines[i].replace(/"/g, '');
+            const parts = cleanLine.split(',');
+            if (!parts.length || !parts[0].trim()) continue;
+
+            let rawName = parts[0].trim();
+            let dataIndex = 1;
+
+            if (parts.length > 1) {
+              let nextPart = parts[1].trim().toLowerCase();
+              if (!['g', 'b', 'girl', 'boy', 'm', 'f', 'male', 'female'].includes(nextPart) && isNaN(parseInt(nextPart))) {
+                rawName = parts[1].trim() + " " + parts[0].trim();
+                dataIndex = 2;
+              }
+            }
+
+            let nameParts = rawName.split(/\s+/);
+            let name = rawName;
+            let firstName = '';
+
+            if (nameParts.length > 1) {
+              firstName = nameParts[0].toLowerCase();
+              firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+              let lastInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase();
+              name = `${firstName} ${lastInitial}.`;
+            } else if (nameParts.length === 1) {
+              firstName = nameParts[0].toLowerCase();
+              firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+              name = firstName;
+            }
+
+            let gender = 'unk';
+            let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
+
+            if (explicitGender.includes('girl') || explicitGender === 'g' || explicitGender === 'f' || explicitGender === 'female') {
+              gender = 'g';
+              genderReadCount++;
+            } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
+              gender = 'b';
+              genderReadCount++;
+            } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
+              gender = GENDER_MAP[firstName.toLowerCase()];
+              genderMatchedCount++;
+            } else {
+              gender = 'unk';
+              genderUnknownCount++;
+              unknownNames.push(name);
+            }
+
+            const limitStr = parts.length > dataIndex + 1 ? parts[dataIndex + 1].trim() : '';
+            const limit = parseInt(limitStr, 10);
+
+            const key = name.replace(/[.#$/\[\]]/g, '_');
+            await set(ref(db, `bathroom/roster/${key}`), {
+              name: name,
+              gender: gender,
+              limit: isNaN(limit) ? 5 : limit
+            });
+            successCount++;
+          }
+
+          setStatus(`✅ Done. Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} — ${genderReadCount} from file, ${genderMatchedCount} matched, ${genderUnknownCount} need review.`, '#1a7a1a');
+
+          let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
+          summary += `• Gender read from file: ${genderReadCount}\n`;
+          summary += `• Gender matched from name list: ${genderMatchedCount}\n`;
+          summary += `• Not recognized (marked Unknown): ${genderUnknownCount}\n`;
+          if (unknownNames.length) {
+            summary += `\n⚠️ These names weren't in the built-in list and were marked Unknown — set them with the Edit button:\n${unknownNames.join(', ')}`;
+          }
+          alert(summary);
+
+          fileInput.value = "";
+        } catch (err) {
+          console.error(err);
+          setStatus("❌ Something went wrong during import. Check the browser console for details.", '#cc0000');
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      };
+
+      setStatus("Reading file...");
+      reader.readAsText(file);
+    };
+
+    function renderRosterManager() {
+      const container = document.getElementById('roster-container');
+      if (!STUDENTS.length) {
+        container.innerHTML = '<p class="no-data">Roster entry list is clear.</p>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="nosort check-cell"><input type="checkbox" id="rm-select-all" onclick="toggleSelectAllStudents(this)" title="Select all"></th>
+            <th class="nosort">Student Name</th>
+            <th class="nosort">Gender</th>
+            <th class="nosort">Weekly Pass Limit</th>
+            <th class="nosort">Actions</th>
+          </tr>
+        </thead>`;
+
+      const tbody = document.createElement('tbody');
+      STUDENTS.forEach(s => {
+        const key = s.name.replace(/[.#$/\[\]]/g, "_");
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+          </td>
+          <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
+          <td class="trips-cell">${s.limit || 5} passes</td>
+          <td>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editStudent('${s.name}', '${s.gender}', ${s.limit || 5})">✏️ Edit</button>
+            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${s.name}')">Remove</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.innerHTML = '';
+      container.appendChild(table);
+      updateStudentSelectedCount();
+    }
+
+    window.toggleSelectAllStudents = function(master) {
+      document.querySelectorAll('.rm-check').forEach(cb => { cb.checked = master.checked; });
+      updateStudentSelectedCount();
+    };
+
+    window.updateStudentSelectedCount = function() {
+      const n = document.querySelectorAll('.rm-check:checked').length;
+      const countEl = document.getElementById('rm-selected-count');
+      if (countEl) countEl.textContent = `${n} selected`;
+      const master = document.getElementById('rm-select-all');
+      const all = document.querySelectorAll('.rm-check').length;
+      if (master) master.checked = all > 0 && n === all;
+    };
+
+    window.deleteSelectedStudents = async function() {
+      const checked = [...document.querySelectorAll('.rm-check:checked')];
+      if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to remove.'); return; }
+      if (!confirm(`Remove ${checked.length} selected student${checked.length === 1 ? '' : 's'} from the roster?\n\nThis removes their profile config and cannot be undone.`)) return;
+
+      try {
+        await Promise.all(
+          checked.map(cb => remove(ref(db, `bathroom/roster/${cb.dataset.key}`)))
+        );
+      } catch (e) {
+        console.error(e);
+        alert('Error removing students: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    function startOfWeek(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      d.setDate(d.getDate() - day);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    function endOfWeek(date) {
+      const d = startOfWeek(date);
+      d.setDate(d.getDate() + 6);
+      d.setHours(23,59,59,999);
+      return d;
+    }
+
+    function formatDate(ts) {
+      return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatDateShort(ts) {
+      return new Date(ts).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    function isoDate(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    function populateSelectors() {
+      const weekSel = document.getElementById('week-select');
+      if(!weekSel) return;
+      const weekSet = new Set();
+      allHistory.forEach(h => {
+        const ws = isoDate(startOfWeek(new Date(h.checkedOutAt)));
+        weekSet.add(ws);
+      });
+      weekSet.add(isoDate(startOfWeek(new Date())));
+      const weeks = [...weekSet].sort().reverse();
+      weekSel.innerHTML = weeks.map(w => {
+        const start = new Date(w + 'T12:00:00');
+        const end = endOfWeek(start);
+        return `<option value="${w}">${formatDate(start)} – ${formatDate(end)}</option>`;
+      }).join('');
+
+      const monthSel = document.getElementById('month-select');
+      const monthSet = new Set();
+      allHistory.forEach(h => {
+        const d = new Date(h.checkedOutAt);
+        monthSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+      });
+      const now = new Date();
+      monthSet.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+      const months = [...monthSet].sort().reverse();
+      monthSel.innerHTML = months.map(m => {
+        const [y, mo] = m.split('-');
+        const label = new Date(y, mo-1, 1).toLocaleDateString([], { month: 'long', year: 'numeric' });
+        return `<option value="${m}">${label}</option>`;
+      }).join('');
+
+      const today = isoDate(new Date());
+      const weekAgo = isoDate(new Date(Date.now() - 7*24*60*60*1000));
+      document.getElementById('custom-start').value = weekAgo;
+      document.getElementById('custom-end').value = today;
+    }
+
+    function getTeacherFilter() {
+      if (currentTab === 'weekly') return document.getElementById('weekly-teacher-filter').value;
+      if (currentTab === 'monthly') return document.getElementById('monthly-teacher-filter').value;
+      return document.getElementById('custom-teacher-filter').value;
+    }
+
+    function getDateRange() {
+      if (currentTab === 'weekly') {
+        const val = document.getElementById('week-select').value;
+        if(!val) return null;
+        const start = new Date(val + 'T12:00:00');
+        return { start: startOfWeek(start).getTime(), end: endOfWeek(start).getTime(), label: `Week of ${formatDate(startOfWeek(start))}` };
+      } else if (currentTab === 'monthly') {
+        const val = document.getElementById('month-select').value;
+        if(!val) return null;
+        const [y, m] = val.split('-').map(Number);
+        const start = new Date(y, m-1, 1, 0, 0, 0, 0);
+        const end = new Date(y, m, 0, 23, 59, 59, 999);
+        return { start: start.getTime(), end: end.getTime(), label: start.toLocaleDateString([], { month: 'long', year: 'numeric' }) };
+      } else {
+        const s = document.getElementById('custom-start').value;
+        const e = document.getElementById('custom-end').value;
+        if (!s || !e) return null;
+        const start = new Date(s + 'T00:00:00').getTime();
+        const end = new Date(e + 'T23:59:59').getTime();
+        return { start, end, label: `${s} to ${e}` };
+      }
+    }
+
+    window.renderReport = function() {
+      const range = getDateRange();
+      if (!range) return;
+      const teacherFilter = getTeacherFilter();
+
+      let filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
+      if (teacherFilter) filtered = filtered.filter(h => (h.teacher || 'Loveday') === teacherFilter);
+
+      const totalTrips = filtered.length;
+      const totalMins = filtered.reduce((sum, h) => sum + Math.floor(h.duration / 60), 0);
+      const uniqueStudents = new Set(filtered.map(h => h.name)).size;
+      const avgMins = totalTrips > 0 ? Math.round(totalMins / totalTrips) : 0;
+
+      document.getElementById('summary-grid').innerHTML = `
+        <div class="summary-card"><div class="val">${totalTrips}</div><div class="lbl">Total Trips</div></div>
+        <div class="summary-card"><div class="val">${totalMins}m</div><div class="lbl">Total Time</div></div>
+        <div class="summary-card"><div class="val">${uniqueStudents}</div><div class="lbl">Students Out</div></div>
+        <div class="summary-card"><div class="val">${avgMins}m</div><div class="lbl">Avg Trip</div></div>
+      `;
+
+      document.getElementById('table-title').textContent = `Student Summary — ${range.label}`;
+
+      const studentMap = {};
+      STUDENTS.forEach(s => {
+        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {} };
+      });
+
+      filtered.forEach(h => {
+        if (!studentMap[h.name]) return;
+        const s = studentMap[h.name];
+        s.trips++;
+        s.totalMins += Math.floor(h.duration / 60);
+        const day = new Date(h.checkedOutAt).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        const dayKey = isoDate(new Date(h.checkedOutAt));
+        if (!s.days[dayKey]) s.days[dayKey] = { label: day, trips: 0, mins: 0 };
+        s.days[dayKey].trips++;
+        s.days[dayKey].mins += Math.floor(h.duration / 60);
+      });
+
+      let rows = Object.values(studentMap).filter(s => s.trips > 0);
+
+      rows.sort((a, b) => {
+        const av = a[sortCol], bv = b[sortCol];
+        return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+      });
+
+      if (!rows.length) {
+        document.getElementById('table-container').innerHTML = '<p class="no-data">No bathroom trips recorded for this period.</p>';
+        document.getElementById('daily-container').innerHTML = '<p class="no-data">No data for this period.</p>';
+        return;
+      }
+
+      const thead = `
+        <thead>
+          <tr>
+            <th onclick="sortBy('name')" class="${sortCol==='name'?'sorted':''}">Student ${sortCol==='name'?(sortAsc?'↑':'↓'):''}</th>
+            <th onclick="sortBy('trips')" class="${sortCol==='trips'?'sorted':''}">Trips ${sortCol==='trips'?(sortAsc?'↑':'↓'):''}</th>
+            <th onclick="sortBy('totalMins')" class="${sortCol==='totalMins'?'sorted':''}">Total Time ${sortCol==='totalMins'?(sortAsc?'↑':'↓'):''}</th>
+          </tr>
+        </thead>`;
+
+      const tbody = `<tbody>${rows.map(s => `
+        <tr>
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+          </td>
+          <td class="trips-cell">${s.trips}</td>
+          <td class="val-cell">${s.totalMins}m</td>
+        </tr>`).join('')}</tbody>`;
+
+      document.getElementById('table-container').innerHTML = `<table>${thead}${tbody}</table>`;
+
+      const dayMap = {};
+      filtered.forEach(h => {
+        const dayKey = isoDate(new Date(h.checkedOutAt));
+        const label = formatDateShort(h.checkedOutAt);
+        if (!dayMap[dayKey]) dayMap[dayKey] = { label, trips: 0, mins: 0, students: new Set() };
+        dayMap[dayKey].trips++;
+        dayMap[dayKey].mins += Math.floor(h.duration / 60);
+        dayMap[dayKey].students.add(h.name);
+      });
+
+      const days = Object.entries(dayMap).sort((a,b) => b[0].localeCompare(a[0]));
+
+      document.getElementById('daily-container').innerHTML = days.map(([key, d]) => `
+        <div class="day-row">
+          <div>
+            <span class="day-label">${d.label}</span>
+            <span style="color:var(--gray-500); font-size:0.78rem; margin-left:8px;">${d.students.size} student${d.students.size!==1?'s':''}</span>
+          </div>
+          <div>
+            <span class="trips-cell" style="margin-right:16px; font-size:0.82rem;">${d.trips} trip${d.trips!==1?'s':''}</span>
+            <span class="day-val">${d.mins}m</span>
+          </div>
+        </div>`).join('');
+    };
+
+    window.sortBy = function(col) {
+      if (sortCol === col) sortAsc = !sortAsc;
+      else { sortCol = col; sortAsc = false; }
+      renderReport();
+    };
+
+    window.switchTab = function(tab) {
+      currentTab = tab;
+      ['weekly','monthly','custom'].forEach(t => {
+        document.getElementById(`controls-${t}`).style.display = t === tab ? 'flex' : 'none';
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      });
+      renderReport();
+    };
+
+    window.exportCSV = function() {
+      const range = getDateRange();
+      if (!range) return;
+      const filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
+
+      const rows = [['Student', 'Gender', 'Teacher', 'Date', 'Time Out', 'Duration (min)']];
+      filtered.forEach(h => {
+        const d = new Date(h.checkedOutAt);
+        const student = STUDENTS.find(s => s.name === h.name);
+        rows.push([
+          h.name,
+          student ? (genderInfo(student.gender).label) : '',
+          h.teacher || 'Loveday',
+          isoDate(d),
+          d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          Math.floor(h.duration / 60)
+        ]);
+      });
+
+      const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bathroom-report-${range.label.replace(/\s+/g,'-')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    function getWeekStart(date = new Date()) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return d.toISOString().split('T')[0];
+    }
+
+    function renderPassUsage() {
+      const container = document.getElementById('pass-usage-container');
+      if(!container) return;
+      const weekStart = getWeekStart();
+
+      const counts = {};
+      allHistory.forEach(h => {
+        const d = new Date(h.checkedOutAt);
+        if (getWeekStart(d) !== weekStart) return;
+        counts[h.name] = (counts[h.name] || 0) + 1;
+      });
+
+      const flagged = STUDENTS.map(s => {
+        const used = counts[s.name] || 0;
+        const limit = s.limit || 5;
+        return { ...s, used, remaining: limit - used };
+      }).filter(s => s.used >= Math.ceil(s.limit * 0.6) || s.used > 0)
+        .sort((a, b) => b.used - a.used);
+
+      if (!flagged.length) {
+        container.innerHTML = '<p class="no-data">No active pass usage this week. 🎉</p>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="nosort">Student</th>
+            <th class="nosort">Used</th>
+            <th class="nosort">Remaining</th>
+            <th class="nosort">Status</th>
+          </tr>
+        </thead>`;
+
+      const tbody = document.createElement('tbody');
+      flagged.forEach(s => {
+        const status = s.remaining <= 0
+          ? '<span style="color:var(--red);font-weight:700;">⛔ Out of passes</span>'
+          : `<span style="color:var(--amber);font-weight:700;">⚠️ ${s.remaining} left</span>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+          </td>
+          <td class="trips-cell">${s.used} / ${s.limit}</td>
+          <td class="val-cell">${Math.max(0, s.remaining)}</td>
+          <td>${status}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.innerHTML = '';
+      container.appendChild(table);
+    }
+
+    function populateStudentFilter() {
+      const sel = document.getElementById('dm-student-filter');
+      if(!sel) return;
+      const prev = sel.value;
+      const names = [...new Set(allHistory.map(h => h.name))].sort();
+      sel.innerHTML = '<option value="">-- All Students --</option>';
+      names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.value = prev;
+    }
+
+    window.toggleSelectAll = function(master) {
+      document.querySelectorAll('.dm-check').forEach(cb => { cb.checked = master.checked; });
+      updateSelectedCount();
+    };
+
+    window.updateSelectedCount = function() {
+      const n = document.querySelectorAll('.dm-check:checked').length;
+      const countEl = document.getElementById('dm-selected-count');
+      if (countEl) countEl.textContent = `${n} selected`;
+      const master = document.getElementById('dm-select-all');
+      const all = document.querySelectorAll('.dm-check').length;
+      if (master) master.checked = all > 0 && n === all;
+    };
+
+    window.deleteSelected = async function() {
+      const checked = [...document.querySelectorAll('.dm-check:checked')];
+      if (!checked.length) { alert('No entries are selected. Check the boxes for the rows you want to delete.'); return; }
+      if (!confirm(`Delete ${checked.length} selected entr${checked.length === 1 ? 'y' : 'ies'}?\n\nThis cannot be undone.`)) return;
+
+      try {
+        await Promise.all(
+          checked.map(cb => remove(ref(db, `bathroom/history/${cb.dataset.key}`)))
+        );
+      } catch (e) {
+        console.error(e);
+        alert('Error deleting entries: ' + (e && e.message ? e.message : e));
+      }
+    };
+
+    window.renderDataManager = function() {
+      const studentFilter = document.getElementById('dm-student-filter').value;
+      const dateFilter = document.getElementById('dm-date-filter').value;
+
+      let entries = [...allHistory];
+      if (studentFilter) entries = entries.filter(h => h.name === studentFilter);
+      if (dateFilter) entries = entries.filter(h => isoDate(new Date(h.checkedOutAt)) === dateFilter);
+
+      const container = document.getElementById('dm-container');
+      if (!entries.length) {
+        container.innerHTML = '<p class="no-data">No entries match your filters.</p>';
+        updateSelectedCount();
+        return;
+      }
+
+      container.innerHTML = '';
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="nosort check-cell"><input type="checkbox" id="dm-select-all" onclick="toggleSelectAll(this)" title="Select all"></th>
+            <th class="nosort">Student</th>
+            <th class="nosort">Teacher</th>
+            <th class="nosort">Date</th>
+            <th class="nosort">Time Out</th>
+            <th class="nosort">Duration</th>
+            <th class="nosort">Action</th>
+          </tr>
+        </thead>`;
+
+      const tbody = document.createElement('tbody');
+      entries.forEach(h => {
+        const d = new Date(h.checkedOutAt);
+        const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dur = Math.floor(h.duration / 60);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="check-cell"><input type="checkbox" class="dm-check" data-key="${h._key}" onclick="updateSelectedCount()"></td>
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(h.gender).cls}"></span>${h.name}
+          </td>
+          <td>${h.teacher || 'Loveday'}</td>
+          <td>${dateStr}</td>
+          <td>${timeStr}</td>
+          <td class="val-cell">${dur < 1 ? '<1m' : dur + 'm'}</td>
+          <td>
+            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${h.name}', '${timeStr} on ${dateStr}')">Delete</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.appendChild(table);
+      updateSelectedCount();
+    };
+
+    window.deleteEntry = async function(key, name, label) {
+      if (!confirm(`Delete this entry?\n\n${name} — ${label}\n\nThis cannot be undone.`)) return;
+      try {
+        await remove(ref(db, `bathroom/history/${key}`));
+      } catch(e) {
+        alert('Error deleting entry. Please try again.');
+      }
+    };
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || "";
+      return div.innerHTML;
+    }
+  } // end startApp
+</script>
+</body>
+</html>
