@@ -355,7 +355,6 @@
 <div class="tab-btns no-print">
   <button class="tab-btn active" id="tab-view-reports" onclick="switchMainTab('reports')">📊 Reports</button>
   <button class="tab-btn" id="tab-view-management" onclick="switchMainTab('management')">👥 Student Management</button>
-  <button class="tab-btn" id="tab-view-roster" onclick="switchMainTab('roster')">🧾 Master Roster</button>
   <button class="tab-btn" id="tab-view-conflicts" onclick="switchMainTab('conflicts')">🚫 Conflict Groups</button>
   <button class="tab-btn" id="tab-view-history" onclick="switchMainTab('history')">🗑 History Management</button>
 </div>
@@ -459,12 +458,37 @@
 <div id="view-management" style="display:none;">
   <div class="section-panel accent-blue no-print">
     <h2 style="color: var(--blue);">👥 Roster &amp; Pass Limit Management</h2>
-    <div class="card-desc">Add, remove, or edit student names or genders, or change individual weekly pass limits (default limit is 5).</div>
+    <div class="card-desc">This is the one shared roster for all three grades — used for weekly pass limits here and for Conflict Groups. Filter by grade below to make managing 300+ students easier.</div>
+
+    <div class="csv-block" style="margin-top:0; padding-top:0; border-top:none; margin-bottom:22px;">
+      <h3>Bulk Upload Students (CSV)</h3>
+      <p>Format: <code>LastName, FirstName, Grade, Gender, Limit</code>. Grade must be 6, 7, or 8. Gender and Limit are optional — gender is guessed from the first name if left blank, limit defaults to 5. Example: <code>Doe, Jane, 7, F, 5</code>. A header row is detected and skipped automatically.</p>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input type="file" id="csv-upload" accept=".csv" style="padding: 5px; max-width: 300px; width: 100%;">
+        <button class="btn btn-outline" id="csv-upload-btn" onclick="processCSV()">Upload CSV</button>
+      </div>
+      <p id="csv-status"></p>
+    </div>
+
+    <div style="border-top:1px solid var(--gray-100); margin: 0 0 22px;"></div>
 
     <div class="inline-form-row">
-      <div class="control-group" style="flex:2; min-width:180px;">
-        <label>Student Name</label>
-        <input type="text" id="roster-new-name" placeholder="e.g., Jane D.">
+      <div class="control-group" style="flex:1; min-width:130px;">
+        <label>First Name</label>
+        <input type="text" id="roster-new-first" placeholder="e.g., Jane">
+      </div>
+      <div class="control-group" style="flex:1; min-width:130px;">
+        <label>Last Name</label>
+        <input type="text" id="roster-new-last" placeholder="e.g., Doe">
+      </div>
+      <div class="control-group" style="flex:1;">
+        <label>Grade</label>
+        <select id="roster-new-grade">
+          <option value="">Unassigned</option>
+          <option value="6">6th</option>
+          <option value="7">7th</option>
+          <option value="8">8th</option>
+        </select>
       </div>
       <div class="control-group" style="flex:1;">
         <label>Gender Orientation</label>
@@ -483,57 +507,24 @@
 
     <div id="roster-edit-hint" class="edit-hint"></div>
 
-    <div class="bulk-bar">
-      <button class="btn" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
-      <span id="rm-selected-count" class="selected-count">0 selected</span>
-    </div>
-
-    <div id="roster-container" style="margin-bottom: 24px;"><p class="no-data">Loading student directory...</p></div>
-
-    <div class="csv-block">
-      <h3>Bulk Upload Students (CSV)</h3>
-      <p>Format: <code>Name, Gender (b/g), Limit</code>. Example: <code>Jane D., g, 5</code>. A header row (e.g. "Name") is detected and skipped automatically.</p>
-      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <input type="file" id="csv-upload" accept=".csv" style="padding: 5px; max-width: 300px; width: 100%;">
-        <button class="btn btn-outline" id="csv-upload-btn" onclick="processCSV()">Upload CSV</button>
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:14px;">
+      <div class="bulk-bar" style="margin-bottom:0;">
+        <button class="btn" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
+        <span id="rm-selected-count" class="selected-count">0 selected</span>
       </div>
-      <p id="csv-status"></p>
+      <div class="control-group" style="min-width:170px;">
+        <label>Filter by Grade</label>
+        <select id="rm-grade-filter" onchange="renderRosterManager()">
+          <option value="">All Grades</option>
+          <option value="6">6th Grade</option>
+          <option value="7">7th Grade</option>
+          <option value="8">8th Grade</option>
+          <option value="unassigned">Unassigned</option>
+        </select>
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- =============== MASTER ROSTER VIEW =============== -->
-<div id="view-roster" style="display:none;">
-  <div class="section-panel accent-red no-print">
-    <h2>🧾 Master Roster (Cross-Grade)</h2>
-    <div class="card-desc">This is separate from the pass-limit roster above — it's the shared 6th/7th/8th grade list used for conflict-group checking once the tool expands to all 12 teachers.</div>
-
-    <div class="counts-row">
-      <div class="count-box"><div class="num" id="mr-cnt6">0</div><div class="lbl">6th Grade</div></div>
-      <div class="count-box"><div class="num" id="mr-cnt7">0</div><div class="lbl">7th Grade</div></div>
-      <div class="count-box"><div class="num" id="mr-cnt8">0</div><div class="lbl">8th Grade</div></div>
-      <div class="count-box"><div class="num" id="mr-cntTotal">0</div><div class="lbl">Total</div></div>
-    </div>
-  </div>
-
-  <div class="section-panel no-print">
-    <h2>Option A — Seed Dummy Roster</h2>
-    <div class="card-desc">Generates 108 placeholder students per grade (324 total) so you can build and test conflict groups right now. Replace with the real roster later using Option B — no rebuilding needed.</div>
-    <button class="btn" id="mr-seed-btn" onclick="seedDummyRoster()">Seed 324 Dummy Students</button>
-    <div class="status-msg" id="mr-seed-status"></div>
-  </div>
-
-  <div class="section-panel no-print">
-    <h2>Option B — Import Real Roster</h2>
-    <div class="card-desc">Paste one student per line: <code>LastName, FirstName, Grade, Gender</code>. Grade should be 6, 7, or 8. Gender should be M or F. This <b>completely replaces</b> whatever is currently in the Master Roster — including conflict groups, which will need to be checked afterward since IDs are reassigned.</div>
-    <textarea id="mr-csv-input" placeholder="Smith, John, 7, M&#10;Garcia, Maria, 7, F&#10;Johnson, Alex, 6, M"></textarea>
-    <div class="format-note">Students are sorted alphabetically by last name within each grade, then assigned IDs like <code>7-001</code>, <code>7-002</code>, etc.</div>
-    <div style="margin-top:14px; display:flex; gap:10px;">
-      <button class="btn btn-outline" onclick="previewRosterImport()">Preview</button>
-      <button class="btn" id="mr-import-btn" onclick="confirmRosterImport()" disabled>Replace Roster With This List</button>
-    </div>
-    <div class="status-msg" id="mr-import-status"></div>
-    <table class="preview-table" id="mr-preview-table" style="display:none;"></table>
+    <div id="roster-container"><p class="no-data">Loading student directory...</p></div>
   </div>
 </div>
 
@@ -674,10 +665,9 @@
     let sortAsc = false;
     let editingOriginalName = null;
 
-    // Master Roster / Conflict Groups state
-    let masterRosterData = {};
+    // Conflict Groups state (shares the same roster as Student Management)
+    let rosterKeyed = {};
     let conflictGroupsData = {};
-    let pendingRosterImport = null;
 
     // --- Built-in first-name → gender list (offline, no external API) ---
     const GENDER_MAP = {};
@@ -693,7 +683,7 @@
     }
 
     window.switchMainTab = function(view) {
-      const views = ['reports', 'management', 'roster', 'conflicts', 'history'];
+      const views = ['reports', 'management', 'conflicts', 'history'];
       views.forEach(v => {
         document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
         document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
@@ -702,10 +692,13 @@
 
     onValue(ref(db, 'bathroom/roster'), (snapshot) => {
       const data = snapshot.val();
+      rosterKeyed = data || {};
       STUDENTS = data ? Object.values(data).sort((a,b) => a.name.localeCompare(b.name)) : [];
       renderReport();
       renderRosterManager();
       renderPassUsage();
+      renderConflictGroups();
+      updateConflictRosterStatus();
     });
 
     onValue(ref(db, 'bathroom/history'), (snapshot) => {
@@ -719,139 +712,24 @@
       loadingScreen.style.display = 'none';
     });
 
-    // ---------------- Master Roster (cross-grade) ----------------
-    onValue(ref(db, 'masterRoster'), (snapshot) => {
-      masterRosterData = snapshot.val() || {};
-      const students = Object.values(masterRosterData);
-      document.getElementById('mr-cnt6').textContent = students.filter(s => s.grade === 6).length;
-      document.getElementById('mr-cnt7').textContent = students.filter(s => s.grade === 7).length;
-      document.getElementById('mr-cnt8').textContent = students.filter(s => s.grade === 8).length;
-      document.getElementById('mr-cntTotal').textContent = students.length;
+    // Falls back gracefully for legacy roster entries that only have a combined "name" field
+    function displayNameParts(s) {
+      if (s.firstName && s.lastName) return { first: s.firstName, last: s.lastName };
+      const bits = (s.name || '').split(' ');
+      return { first: bits[0] || s.name || 'Unknown', last: (bits[1] || '').replace('.', '') };
+    }
 
+    function updateConflictRosterStatus() {
       const cgStatusEl = document.getElementById('cg-roster-status');
-      if (students.length === 0) {
+      if (!cgStatusEl) return;
+      const count = STUDENTS.length;
+      if (count === 0) {
         cgStatusEl.className = 'roster-status warn';
-        cgStatusEl.textContent = 'No master roster loaded yet — go seed or import one on the Master Roster tab first.';
+        cgStatusEl.textContent = 'No students loaded yet — add or upload students on the Student Management tab first.';
       } else {
         cgStatusEl.className = 'roster-status';
-        cgStatusEl.textContent = `Roster loaded: ${students.length} students.`;
+        cgStatusEl.textContent = `Roster loaded: ${count} students.`;
       }
-      renderConflictGroups();
-    });
-
-    window.seedDummyRoster = function() {
-      if (!confirm("This will overwrite whatever is currently in the Master Roster with 324 dummy students. Continue?")) return;
-      const btn = document.getElementById('mr-seed-btn');
-      btn.disabled = true;
-      btn.textContent = "Seeding...";
-
-      const roster = {};
-      [6, 7, 8].forEach(grade => {
-        for (let i = 1; i <= 108; i++) {
-          const num = String(i).padStart(3, '0');
-          const id = `${grade}-${num}`;
-          roster[id] = { firstName: "Test", lastName: `Student${grade}-${num}`, grade: grade, gender: (i % 2 === 0) ? "F" : "M" };
-        }
-      });
-
-      set(ref(db, 'masterRoster'), roster).then(() => {
-        showRosterStatus('mr-seed-status', 'success', "Dummy roster seeded — 324 students (108 per grade).");
-      }).catch(err => {
-        showRosterStatus('mr-seed-status', 'error', "Failed to seed roster: " + err.message);
-      }).finally(() => {
-        btn.disabled = false;
-        btn.textContent = "Seed 324 Dummy Students";
-      });
-    };
-
-    window.previewRosterImport = function() {
-      const raw = document.getElementById('mr-csv-input').value.trim();
-      document.getElementById('mr-import-btn').disabled = true;
-      pendingRosterImport = null;
-
-      if (!raw) {
-        showRosterStatus('mr-import-status', 'error', "Paste a roster list first.");
-        document.getElementById('mr-preview-table').style.display = 'none';
-        return;
-      }
-
-      const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      const parsed = [];
-      const errors = [];
-
-      lines.forEach((line, idx) => {
-        const parts = line.split(',').map(p => p.trim());
-        if (parts.length < 3) {
-          errors.push(`Line ${idx + 1}: needs at least LastName, FirstName, Grade — got "${line}"`);
-          return;
-        }
-        const [lastName, firstName, gradeRaw, genderRaw] = parts;
-        const grade = parseInt(gradeRaw, 10);
-        if (![6, 7, 8].includes(grade)) {
-          errors.push(`Line ${idx + 1}: grade must be 6, 7, or 8 — got "${gradeRaw}"`);
-          return;
-        }
-        const gender = (genderRaw || "").toUpperCase().startsWith("F") ? "F" : "M";
-        parsed.push({ lastName, firstName, grade, gender });
-      });
-
-      if (errors.length > 0) {
-        showRosterStatus('mr-import-status', 'error', `Found ${errors.length} problem line(s):\n` + errors.slice(0, 8).join('\n'));
-        document.getElementById('mr-preview-table').style.display = 'none';
-        return;
-      }
-
-      const byGrade = { 6: [], 7: [], 8: [] };
-      parsed.forEach(s => byGrade[s.grade].push(s));
-
-      const finalRoster = {};
-      const previewRows = [];
-      [6, 7, 8].forEach(grade => {
-        byGrade[grade].sort((a, b) => a.lastName.localeCompare(b.lastName));
-        byGrade[grade].forEach((s, i) => {
-          const num = String(i + 1).padStart(3, '0');
-          const id = `${grade}-${num}`;
-          finalRoster[id] = { firstName: s.firstName, lastName: s.lastName, grade: s.grade, gender: s.gender };
-          previewRows.push({ id, ...s });
-        });
-      });
-
-      pendingRosterImport = finalRoster;
-
-      const table = document.getElementById('mr-preview-table');
-      table.style.display = 'block';
-      table.innerHTML = '<tr><th>ID</th><th>Last</th><th>First</th><th>Grade</th><th>Gender</th></tr>' +
-        previewRows.map(r => `<tr><td>${r.id}</td><td>${escapeHtml(r.lastName)}</td><td>${escapeHtml(r.firstName)}</td><td>${r.grade}</td><td>${r.gender}</td></tr>`).join('');
-
-      showRosterStatus('mr-import-status', 'success', `Looks good — ${previewRows.length} students parsed (6th: ${byGrade[6].length}, 7th: ${byGrade[7].length}, 8th: ${byGrade[8].length}). Review the preview below, then click Replace Roster.`);
-      document.getElementById('mr-import-btn').disabled = false;
-    };
-
-    window.confirmRosterImport = function() {
-      if (!pendingRosterImport) return;
-      if (!confirm(`This will COMPLETELY REPLACE the Master Roster with ${Object.keys(pendingRosterImport).length} students. Existing conflict groups reference the old IDs and will need to be reviewed afterward. Continue?`)) return;
-
-      const btn = document.getElementById('mr-import-btn');
-      btn.disabled = true;
-      btn.textContent = "Importing...";
-
-      set(ref(db, 'masterRoster'), pendingRosterImport).then(() => {
-        showRosterStatus('mr-import-status', 'success', "Real roster imported successfully. Head to the Conflict Groups tab to review/rebuild groups with the new IDs.");
-        pendingRosterImport = null;
-        document.getElementById('mr-csv-input').value = '';
-        document.getElementById('mr-preview-table').style.display = 'none';
-      }).catch(err => {
-        showRosterStatus('mr-import-status', 'error', "Import failed: " + err.message);
-      }).finally(() => {
-        btn.disabled = false;
-        btn.textContent = "Replace Roster With This List";
-      });
-    };
-
-    function showRosterStatus(elId, type, msg) {
-      const el = document.getElementById(elId);
-      el.className = 'status-msg ' + type;
-      el.textContent = msg;
     }
 
     // ---------------- Conflict Groups ----------------
@@ -862,7 +740,7 @@
 
     window.createConflictGroup = function() {
       const newRef = push(ref(db, 'conflictGroups'));
-      set(newRef, { name: "New Group", studentIds: {} });
+      set(newRef, { name: "", studentIds: {} });
     };
 
     window.deleteConflictGroup = function(groupId) {
@@ -871,7 +749,7 @@
     };
 
     window.renameConflictGroup = function(groupId, newName) {
-      set(ref(db, 'conflictGroups/' + groupId + '/name'), newName.trim() || "Untitled Group");
+      set(ref(db, 'conflictGroups/' + groupId + '/name'), newName.trim());
     };
 
     window.removeConflictMember = function(groupId, studentId) {
@@ -896,25 +774,33 @@
       const group = conflictGroupsData[groupId] || {};
       const alreadyIn = group.studentIds || {};
 
-      let matches = Object.entries(masterRosterData)
+      let matches = Object.entries(rosterKeyed)
         .filter(([id, s]) => !alreadyIn[id])
-        .filter(([id, s]) => (`${s.firstName} ${s.lastName}`.toLowerCase().includes(q)) || id.includes(q));
+        .filter(([id, s]) => {
+          const p = displayNameParts(s);
+          return `${p.first} ${p.last}`.toLowerCase().includes(q) || (s.name || '').toLowerCase().includes(q) || id.toLowerCase().includes(q);
+        });
 
       // Sort alphabetically by name first (not by ID/grade), so a broad query doesn't
       // get dominated by whichever grade happens to sort first.
       const totalMatches = matches.length;
-      matches.sort((a, b) => `${a[1].lastName} ${a[1].firstName}`.localeCompare(`${b[1].lastName} ${b[1].firstName}`));
+      matches.sort((a, b) => {
+        const pa = displayNameParts(a[1]), pb = displayNameParts(b[1]);
+        return `${pa.last} ${pa.first}`.localeCompare(`${pb.last} ${pb.first}`);
+      });
       matches = matches.slice(0, 25);
 
       if (matches.length === 0) {
         resultsEl.innerHTML = '<div class="search-result-item">No matches</div>';
       } else {
-        resultsEl.innerHTML = matches.map(([id, s]) =>
-          `<div class="search-result-item" onclick="window.addConflictMember('${groupId}','${id}')">
-            <span>${escapeHtml(s.firstName)} ${escapeHtml(s.lastName)}</span>
-            <span class="sr-grade">Gr ${s.grade}</span>
-          </div>`
-        ).join('');
+        resultsEl.innerHTML = matches.map(([id, s]) => {
+          const p = displayNameParts(s);
+          const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
+          return `<div class="search-result-item" onclick="window.addConflictMember('${groupId}','${id}')">
+            <span>${escapeHtml(p.first)} ${escapeHtml(p.last)}</span>
+            <span class="sr-grade">${gradeLabel}</span>
+          </div>`;
+        }).join('');
         if (totalMatches > 25) {
           resultsEl.innerHTML += `<div class="search-result-item" style="color:var(--gray-500); font-style:italic; cursor:default;">+${totalMatches - 25} more — type more letters to narrow it down</div>`;
         }
@@ -940,10 +826,12 @@
         const membersHtml = memberIds.length === 0
           ? '<div class="empty-members">No students yet — search below to add.</div>'
           : memberIds.map(id => {
-              const s = masterRosterData[id];
+              const s = rosterKeyed[id];
               if (!s) return '';
+              const p = displayNameParts(s);
+              const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
               return `<span class="member-chip">
-                <span class="grade-tag">Gr ${s.grade}</span> ${escapeHtml(s.firstName)} ${escapeHtml(s.lastName)}
+                <span class="grade-tag">${gradeLabel}</span> ${escapeHtml(p.first)} ${escapeHtml(p.last)}
                 <span class="remove-x" onclick="window.removeConflictMember('${groupId}','${id}')">&times;</span>
               </span>`;
             }).join('');
@@ -951,7 +839,7 @@
         return `
           <div class="group-card">
             <div class="group-card-top">
-              <input class="group-name-input" value="${escapeHtml(group.name || 'Untitled Group')}"
+              <input class="group-name-input" value="${escapeHtml(group.name || '')}" placeholder="Name this group..."
                 onblur="window.renameConflictGroup('${groupId}', this.value)"
                 onkeydown="if(event.key==='Enter'){this.blur();}">
               <button class="del-group-btn" onclick="window.deleteConflictGroup('${groupId}')" title="Delete group">&times;</button>
@@ -974,21 +862,41 @@
 
     // ---------------- Student Management (bathroom/roster) ----------------
     window.saveStudent = async function() {
-      const nameInput = document.getElementById('roster-new-name');
-      const name = nameInput.value.trim();
+      const firstName = document.getElementById('roster-new-first').value.trim();
+      const lastName = document.getElementById('roster-new-last').value.trim();
+      const gradeRaw = document.getElementById('roster-new-grade').value;
+      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
       const gender = document.getElementById('roster-new-gender').value;
       const limit = parseInt(document.getElementById('roster-new-limit').value, 10) || 5;
 
-      if (!name) { alert("Please input a valid student name."); return; }
+      if (!firstName || !lastName) { alert("Please enter both a first and last name."); return; }
 
+      const lastInitial = lastName.charAt(0).toUpperCase();
+      const name = `${firstName} ${lastInitial}.`;
       const newKey = name.replace(/[.#$/\[\]]/g, "_");
+
+      const collision = STUDENTS.some(s => s.name === name && s.name !== editingOriginalName);
+      if (collision) {
+        const proceed = confirm(`A student named "${name}" already exists in the roster. Saving will overwrite their record.\n\nIf this is actually a different student, add a middle initial to the last name to tell them apart, then save.\n\nOverwrite anyway?`);
+        if (!proceed) return;
+      }
+
       try {
-        await set(ref(db, `bathroom/roster/${newKey}`), { name, gender, limit });
+        await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
 
         if (editingOriginalName && editingOriginalName !== name) {
           const oldKey = editingOriginalName.replace(/[.#$/\[\]]/g, "_");
           if (oldKey !== newKey) {
             await remove(ref(db, `bathroom/roster/${oldKey}`));
+
+            // Carry conflict-group membership over to the new key so groups don't silently break
+            const groupsWithOldKey = Object.entries(conflictGroupsData).filter(([gid, g]) => g.studentIds && g.studentIds[oldKey]);
+            if (groupsWithOldKey.length) {
+              await Promise.all(groupsWithOldKey.map(([gid]) => Promise.all([
+                set(ref(db, `conflictGroups/${gid}/studentIds/${newKey}`), true),
+                remove(ref(db, `conflictGroups/${gid}/studentIds/${oldKey}`))
+              ])));
+            }
           }
           const toRename = allHistory.filter(h => h.name === editingOriginalName);
           if (toRename.length) {
@@ -1007,7 +915,9 @@
 
     window.cancelEdit = function() {
       editingOriginalName = null;
-      document.getElementById('roster-new-name').value = '';
+      document.getElementById('roster-new-first').value = '';
+      document.getElementById('roster-new-last').value = '';
+      document.getElementById('roster-new-grade').value = '';
       document.getElementById('roster-new-gender').value = 'g';
       document.getElementById('roster-new-limit').value = '5';
       const btn = document.getElementById('roster-save-btn');
@@ -1016,25 +926,36 @@
       if (hint) hint.style.display = 'none';
     };
 
-    window.editStudent = function(name, gender, limit) {
+    window.editStudent = function(name) {
+      const s = STUDENTS.find(st => st.name === name);
+      if (!s) return;
       editingOriginalName = name;
-      document.getElementById('roster-new-name').value = name;
-      document.getElementById('roster-new-gender').value = gender;
-      document.getElementById('roster-new-limit').value = limit || 5;
+      const nameBits = name.split(' ');
+      document.getElementById('roster-new-first').value = s.firstName || nameBits[0] || '';
+      document.getElementById('roster-new-last').value = s.lastName || (nameBits[1] || '').replace('.', '');
+      document.getElementById('roster-new-grade').value = s.grade || '';
+      document.getElementById('roster-new-gender').value = s.gender || 'g';
+      document.getElementById('roster-new-limit').value = s.limit || 5;
       const btn = document.getElementById('roster-save-btn');
       if (btn) btn.textContent = 'Update Student';
       const hint = document.getElementById('roster-edit-hint');
       if (hint) {
         hint.style.display = 'block';
-        hint.innerHTML = `✏️ Editing <strong>${name}</strong> — <a href="#" onclick="cancelEdit(); return false;">cancel</a>`;
+        hint.innerHTML = `✏️ Editing <strong>${escapeHtml(name)}</strong> — <a href="#" onclick="cancelEdit(); return false;">cancel</a>`;
       }
-      document.getElementById('roster-new-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('roster-new-first').scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     window.removeStudent = async function(name) {
       if (!confirm(`Are you completely sure you want to delete ${name} from the roster? This removes their profile config.`)) return;
       const key = name.replace(/[.#$/\[\]]/g, "_");
       await remove(ref(db, `bathroom/roster/${key}`));
+
+      // Also drop them from any conflict groups so nothing points at a deleted student
+      const groupsWithKey = Object.entries(conflictGroupsData).filter(([gid, g]) => g.studentIds && g.studentIds[key]);
+      if (groupsWithKey.length) {
+        await Promise.all(groupsWithKey.map(([gid]) => remove(ref(db, `conflictGroups/${gid}/studentIds/${key}`))));
+      }
     };
 
     window.processCSV = async function() {
@@ -1073,7 +994,7 @@
           }
 
           const firstCol = rawLines[0].split(',')[0].replace(/"/g, '').trim().toLowerCase();
-          const headerWords = ['name', 'student', 'student name', 'first name', 'firstname', 'last name', 'lastname', 'first', 'last'];
+          const headerWords = ['lastname', 'last name', 'last'];
           if (headerWords.includes(firstCol)) {
             rawLines.shift();
           }
@@ -1085,82 +1006,70 @@
           }
 
           let successCount = 0;
-          let genderReadCount = 0;
-          let genderMatchedCount = 0;
+          let genderGuessedCount = 0;
           let genderUnknownCount = 0;
           const unknownNames = [];
+          const errorLines = [];
 
           for (let i = 0; i < rawLines.length; i++) {
             setStatus(`Processing ${i + 1} of ${rawLines.length}...`);
 
             const cleanLine = rawLines[i].replace(/"/g, '');
-            const parts = cleanLine.split(',');
-            if (!parts.length || !parts[0].trim()) continue;
+            const parts = cleanLine.split(',').map(p => p.trim());
+            if (!parts.length || !parts[0]) continue;
 
-            let rawName = parts[0].trim();
-            let dataIndex = 1;
-
-            if (parts.length > 1) {
-              let nextPart = parts[1].trim().toLowerCase();
-              if (!['g', 'b', 'girl', 'boy', 'm', 'f', 'male', 'female'].includes(nextPart) && isNaN(parseInt(nextPart))) {
-                rawName = parts[1].trim() + " " + parts[0].trim();
-                dataIndex = 2;
-              }
+            if (parts.length < 3) {
+              errorLines.push(`Line ${i + 1}: needs at least LastName, FirstName, Grade — got "${rawLines[i]}"`);
+              continue;
             }
 
-            let nameParts = rawName.split(/\s+/);
-            let name = rawName;
-            let firstName = '';
-
-            if (nameParts.length > 1) {
-              firstName = nameParts[0].toLowerCase();
-              firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-              let lastInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase();
-              name = `${firstName} ${lastInitial}.`;
-            } else if (nameParts.length === 1) {
-              firstName = nameParts[0].toLowerCase();
-              firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-              name = firstName;
+            const [lastNameRaw, firstNameRaw, gradeRaw, genderRaw, limitRaw] = parts;
+            const grade = parseInt(gradeRaw, 10);
+            if (![6, 7, 8].includes(grade)) {
+              errorLines.push(`Line ${i + 1}: grade must be 6, 7, or 8 — got "${gradeRaw}"`);
+              continue;
             }
+
+            const firstName = firstNameRaw.charAt(0).toUpperCase() + firstNameRaw.slice(1).toLowerCase();
+            const lastName = lastNameRaw.charAt(0).toUpperCase() + lastNameRaw.slice(1).toLowerCase();
+            const lastInitial = lastName.charAt(0).toUpperCase();
+            const name = `${firstName} ${lastInitial}.`;
 
             let gender = 'unk';
-            let explicitGender = parts.length > dataIndex ? parts[dataIndex].trim().toLowerCase() : '';
-
-            if (explicitGender.includes('girl') || explicitGender === 'g' || explicitGender === 'f' || explicitGender === 'female') {
+            const explicitGender = (genderRaw || '').trim().toLowerCase();
+            if (['g', 'f', 'girl', 'female'].includes(explicitGender)) {
               gender = 'g';
-              genderReadCount++;
-            } else if (explicitGender.includes('boy') || explicitGender === 'b' || explicitGender === 'm' || explicitGender === 'male') {
+            } else if (['b', 'm', 'boy', 'male'].includes(explicitGender)) {
               gender = 'b';
-              genderReadCount++;
-            } else if (firstName && GENDER_MAP[firstName.toLowerCase()]) {
+            } else if (GENDER_MAP[firstName.toLowerCase()]) {
               gender = GENDER_MAP[firstName.toLowerCase()];
-              genderMatchedCount++;
+              genderGuessedCount++;
             } else {
               gender = 'unk';
               genderUnknownCount++;
               unknownNames.push(name);
             }
 
-            const limitStr = parts.length > dataIndex + 1 ? parts[dataIndex + 1].trim() : '';
-            const limit = parseInt(limitStr, 10);
+            const limit = parseInt(limitRaw, 10);
 
             const key = name.replace(/[.#$/\[\]]/g, '_');
             await set(ref(db, `bathroom/roster/${key}`), {
-              name: name,
-              gender: gender,
+              firstName, lastName, name, grade, gender,
               limit: isNaN(limit) ? 5 : limit
             });
             successCount++;
           }
 
-          setStatus(`✅ Done. Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} — ${genderReadCount} from file, ${genderMatchedCount} matched, ${genderUnknownCount} need review.`, '#1a7a1a');
+          setStatus(`✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''}${errorLines.length ? `, ${errorLines.length} skipped` : ''}.`, errorLines.length ? '#c98a00' : '#1a7a1a');
 
           let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
-          summary += `• Gender read from file: ${genderReadCount}\n`;
-          summary += `• Gender matched from name list: ${genderMatchedCount}\n`;
-          summary += `• Not recognized (marked Unknown): ${genderUnknownCount}\n`;
+          summary += `• Gender guessed from first name: ${genderGuessedCount}\n`;
+          summary += `• Gender not recognized (marked Unknown): ${genderUnknownCount}\n`;
           if (unknownNames.length) {
-            summary += `\n⚠️ These names weren't in the built-in list and were marked Unknown — set them with the Edit button:\n${unknownNames.join(', ')}`;
+            summary += `\n⚠️ These need a gender set manually with the Edit button:\n${unknownNames.join(', ')}`;
+          }
+          if (errorLines.length) {
+            summary += `\n\n❌ ${errorLines.length} line(s) skipped:\n` + errorLines.slice(0, 10).join('\n');
           }
           alert(summary);
 
@@ -1179,8 +1088,18 @@
 
     function renderRosterManager() {
       const container = document.getElementById('roster-container');
-      if (!STUDENTS.length) {
-        container.innerHTML = '<p class="no-data">Roster entry list is clear.</p>';
+      const gradeFilterEl = document.getElementById('rm-grade-filter');
+      const gradeFilter = gradeFilterEl ? gradeFilterEl.value : '';
+
+      let filtered = STUDENTS;
+      if (gradeFilter === 'unassigned') {
+        filtered = STUDENTS.filter(s => !s.grade);
+      } else if (gradeFilter) {
+        filtered = STUDENTS.filter(s => s.grade === parseInt(gradeFilter, 10));
+      }
+
+      if (!filtered.length) {
+        container.innerHTML = '<p class="no-data">No students match this filter.</p>';
         return;
       }
 
@@ -1190,6 +1109,7 @@
           <tr>
             <th class="nosort check-cell"><input type="checkbox" id="rm-select-all" onclick="toggleSelectAllStudents(this)" title="Select all"></th>
             <th class="nosort">Student Name</th>
+            <th class="nosort">Grade</th>
             <th class="nosort">Gender</th>
             <th class="nosort">Weekly Pass Limit</th>
             <th class="nosort">Actions</th>
@@ -1197,19 +1117,21 @@
         </thead>`;
 
       const tbody = document.createElement('tbody');
-      STUDENTS.forEach(s => {
+      filtered.forEach(s => {
         const key = s.name.replace(/[.#$/\[\]]/g, "_");
+        const safeName = s.name.replace(/'/g, "\\'");
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
           <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(s.name)}
           </td>
+          <td>${s.grade ? s.grade + 'th' : '—'}</td>
           <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
           <td class="trips-cell">${s.limit || 5} passes</td>
           <td>
-            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editStudent('${s.name}', '${s.gender}', ${s.limit || 5})">✏️ Edit</button>
-            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${s.name}')">Remove</button>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editStudent('${safeName}')">✏️ Edit</button>
+            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${safeName}')">Remove</button>
           </td>`;
         tbody.appendChild(tr);
       });
@@ -1240,9 +1162,18 @@
       if (!confirm(`Remove ${checked.length} selected student${checked.length === 1 ? '' : 's'} from the roster?\n\nThis removes their profile config and cannot be undone.`)) return;
 
       try {
-        await Promise.all(
-          checked.map(cb => remove(ref(db, `bathroom/roster/${cb.dataset.key}`)))
-        );
+        const keys = checked.map(cb => cb.dataset.key);
+        await Promise.all(keys.map(k => remove(ref(db, `bathroom/roster/${k}`))));
+
+        const cleanupOps = [];
+        keys.forEach(key => {
+          Object.entries(conflictGroupsData).forEach(([gid, g]) => {
+            if (g.studentIds && g.studentIds[key]) {
+              cleanupOps.push(remove(ref(db, `conflictGroups/${gid}/studentIds/${key}`)));
+            }
+          });
+        });
+        if (cleanupOps.length) await Promise.all(cleanupOps);
       } catch (e) {
         console.error(e);
         alert('Error removing students: ' + (e && e.message ? e.message : e));
