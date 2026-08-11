@@ -468,6 +468,10 @@
         <button class="btn btn-outline" id="csv-upload-btn" onclick="processCSV()">Upload CSV</button>
       </div>
       <p id="csv-status"></p>
+      <div style="margin-top:14px;">
+        <button class="btn btn-outline" id="seed-test-btn" onclick="seedTestStudents()">🧪 Load 324 Test Students</button>
+        <span style="font-size:0.75rem; color:var(--gray-500); margin-left:8px;">Adds clearly-fake placeholder students across all 3 grades for testing before the real roster arrives.</span>
+      </div>
     </div>
 
     <div style="border-top:1px solid var(--gray-100); margin: 0 0 22px;"></div>
@@ -670,11 +674,49 @@
     let conflictGroupsData = {};
 
     // --- Built-in first-name → gender list (offline, no external API) ---
+    const BOY_NAMES = `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`.split(/\s+/);
+    const GIRL_NAMES = `aaliyah aanya abby akira alex alexandra alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`.split(/\s+/);
     const GENDER_MAP = {};
-    `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`
-      .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'b'; });
-    `aaliyah aanya abby akira alex alexandra alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`
-      .split(/\s+/).forEach(n => { GENDER_MAP[n] = 'g'; });
+    BOY_NAMES.forEach(n => { GENDER_MAP[n] = 'b'; });
+    GIRL_NAMES.forEach(n => { GENDER_MAP[n] = 'g'; });
+
+    // Obviously-fake surnames (varied first letters) so generated test students get unique
+    // "First L." keys instead of colliding the way the old dummy set did.
+    const TEST_SURNAMES = ["Testerman","Sampleford","Placeholt","Exampleson","Mockery","Dummington","Fakerson","Trialwood","Pilotson","Draftley","Prototypa","Stubbins","Sandboxx","Rehearsal","Practicer","Scratcher","Templeman","Blueprint","Outlinez","Draftsman","Rendition","Simulacra","Testview","Betaford","Alphaton","Previewly","Sketchley","Trialford","Demoson","Sampleworth"];
+
+    window.seedTestStudents = async function() {
+      if (!confirm("This adds 324 clearly-fake test students (108 per grade) to the roster so you can try out grade filtering and Conflict Groups before the real list arrives. You can remove them later by filtering to a grade and using Delete Selected. Continue?")) return;
+
+      const btn = document.getElementById('seed-test-btn');
+      if (btn) { btn.disabled = true; btn.textContent = "Loading..."; }
+
+      const writes = [];
+      [6, 7, 8].forEach((grade, gi) => {
+        for (let i = 0; i < 108; i++) {
+          const isGirl = i % 2 === 0;
+          const namePool = isGirl ? GIRL_NAMES : BOY_NAMES;
+          const firstRaw = namePool[(i + gi * 37) % namePool.length];
+          const firstName = firstRaw.charAt(0).toUpperCase() + firstRaw.slice(1);
+          const lastName = TEST_SURNAMES[(i + gi * 13) % TEST_SURNAMES.length];
+          const lastInitial = lastName.charAt(0).toUpperCase();
+          const name = `${firstName} ${lastInitial}.`;
+          const key = name.replace(/[.#$/\[\]]/g, "_");
+          writes.push(set(ref(db, `bathroom/roster/${key}`), {
+            firstName, lastName, name, grade, gender: isGirl ? 'g' : 'b', limit: 5
+          }));
+        }
+      });
+
+      try {
+        await Promise.all(writes);
+        alert("Test students loaded. A few names may have collided since there's a limited name pool cycling through 324 entries — that mirrors how a real duplicate name would behave, so it's a good way to see the overwrite-warning in action too.");
+      } catch (err) {
+        console.error(err);
+        alert("Error loading test students: " + (err && err.message ? err.message : err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "🧪 Load 324 Test Students"; }
+      }
+    };
 
     function genderInfo(g) {
       if (g === 'b') return { cls: 'boy', label: 'Boy' };
