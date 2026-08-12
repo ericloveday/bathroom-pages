@@ -419,24 +419,20 @@
     function startApp(currentUserEmail) {
       appContent.style.display = 'block';
 
-      // Dynamic Iso Week calculation utility mapping logs back to base Monday dates
-      function getWeekStart(date = new Date()) {
-        const d = new Date(date);
-        const day = d.getDay(); 
-        const diff = day === 0 ? -6 : 1 - day; 
-        d.setDate(d.getDate() + diff);
-        return d.toISOString().split('T')[0];
+      // Returns a YYYY-MM-DD key for grouping history entries by calendar day
+      function getDayKey(date = new Date()) {
+        return date.toISOString().split('T')[0];
       }
 
-      // Historical ledger indexing to compile active tallies specific to targeted frame constraints
-      function getWeeklyCount(name) {
-        const weekStart = getWeekStart();
-        
-        // Count completed trips from history for this week
+      // Counts a student's bathroom trips for today only (limits reset daily now, not weekly)
+      function getDailyCount(name) {
+        const todayKey = getDayKey();
+
+        // Count completed trips from history for today
         let count = state.history.filter(h => {
           if (h.name !== name) return false;
           const d = new Date(h.checkedOutAt);
-          return getWeekStart(d) === weekStart;
+          return getDayKey(d) === todayKey;
         }).length;
 
         // ALSO count if the student is actively checked out right now or in the waiting list
@@ -746,16 +742,16 @@
         if (!name) { el.style.display = 'none'; return; }
         
         const studentData = STUDENTS.find(s => s.name === name);
-        const limit = studentData?.limit || 5;
+        const limit = studentData?.limit || 2;
         
-        const used = getWeeklyCount(name);
+        const used = getDailyCount(name);
         const remaining = limit - used;
         el.style.display = 'block';
         
         if (remaining <= 0) {
           el.className = 'pass-indicator out';
           el.textContent = `⛔ No passes remaining`;
-        } else if (remaining <= 2) {
+        } else if (remaining <= 1) {
           el.className = 'pass-indicator low';
           el.textContent = `⚠️ ${remaining} Pass${remaining === 1 ? '' : 'es'} Remaining`;
         } else {
@@ -774,12 +770,12 @@
         if (!teacher) { showAlert('Please select your current teacher.'); return; }
         if (!name) { showAlert('Please select your name.'); return; }
 
-        const used = getWeeklyCount(name);
+        const used = getDailyCount(name);
         const studentData = STUDENTS.find(s => s.name === name);
-        const limit = studentData?.limit || 5;
+        const limit = studentData?.limit || 2;
         
         if (used >= limit) {
-          showAlert(`${name} has used all ${limit} passes for this week.`);
+          showAlert(`${name} has used all ${limit} passes for today.`);
           playBlockedSound();
           return;
         }
