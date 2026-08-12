@@ -535,8 +535,10 @@
 
         if (autoTeacher) {
           banner.style.display = 'block';
-          banner.className = 'teacher-detect-banner detected';
-          banner.textContent = `✓ Signed in as ${autoTeacher.name}${autoTeacher.grade ? ' — ' + autoTeacher.grade + 'th Grade' : ''}`;
+          banner.className = autoTeacher.grade ? 'teacher-detect-banner detected' : 'teacher-detect-banner fallback';
+          banner.textContent = autoTeacher.grade
+            ? `✓ Signed in as ${autoTeacher.name} — ${autoTeacher.grade}th Grade`
+            : `✓ Signed in as ${autoTeacher.name} — no grade assigned, so ALL grades are showing. Set a grade for ${autoTeacher.name} in Teacher Management to filter this.`;
           if (boyStep) boyStep.style.display = 'none';
           if (girlStep) girlStep.style.display = 'none';
           if (boyLabel) boyLabel.textContent = 'Your Name';
@@ -939,7 +941,7 @@
         }
 
         sel.innerHTML = `<option value="">-- Select your name --</option>`;
-        STUDENTS.filter(s => s.gender === gender && !taken.has(s.name) && (!teacherRecord.grade || !s.grade || s.grade === teacherRecord.grade))
+        STUDENTS.filter(s => s.gender === gender && !taken.has(s.name) && (!teacherRecord.grade || s.grade === teacherRecord.grade))
           .sort((a,b) => a.name.localeCompare(b.name))
           .forEach(s => {
             const opt = document.createElement('option');
