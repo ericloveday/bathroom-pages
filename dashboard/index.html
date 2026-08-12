@@ -435,10 +435,10 @@
     <div id="daily-container"><p class="no-data">No data for this period.</p></div>
   </div>
 
-  <!-- Weekly Pass Usage -->
+  <!-- Daily Pass Usage -->
   <div class="table-card accent-red-border">
-    <h2>🚫 Weekly Pass Usage — Current Week</h2>
-    <div class="card-desc">Students who are close to or over their allocated weekly bathroom limit.</div>
+    <h2>🚫 Daily Pass Usage — Today</h2>
+    <div class="card-desc">Students who are close to or over their allocated daily bathroom limit.</div>
     <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
   </div>
 </div>
@@ -447,11 +447,11 @@
 <div id="view-management" style="display:none;">
   <div class="section-panel accent-blue no-print">
     <h2 style="color: var(--blue);">👥 Roster &amp; Pass Limit Management</h2>
-    <div class="card-desc">This is the one shared roster for all three grades — used for weekly pass limits here and for Conflict Groups. Filter by grade below to make managing 300+ students easier.</div>
+    <div class="card-desc">This is the one shared roster for all three grades — used for daily pass limits here and for Conflict Groups. Filter by grade below to make managing 300+ students easier.</div>
 
     <div class="csv-block" style="margin-top:0; padding-top:0; border-top:none; margin-bottom:22px;">
       <h3>Bulk Upload Students (CSV)</h3>
-      <p>Format: <code>LastName, FirstName, Grade, Gender, Limit</code>. Grade must be 6, 7, or 8. Gender and Limit are optional — gender is guessed from the first name if left blank, limit defaults to 5. Example: <code>Doe, Jane, 7, F, 5</code>. A header row is detected and skipped automatically.</p>
+      <p>Format: <code>LastName, FirstName, Grade, Gender, Limit</code>. Grade must be 6, 7, or 8. Gender and Limit are optional — gender is guessed from the first name if left blank, limit (daily passes) defaults to 2. Example: <code>Doe, Jane, 7, F, 2</code>. A header row is detected and skipped automatically.</p>
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <input type="file" id="csv-upload" accept=".csv" style="padding: 5px; max-width: 300px; width: 100%;">
         <button class="btn btn-outline" id="csv-upload-btn" onclick="processCSV()">Upload CSV</button>
@@ -493,8 +493,8 @@
         </select>
       </div>
       <div class="control-group" style="flex:1;">
-        <label>Weekly Pass Limit</label>
-        <input type="number" id="roster-new-limit" value="5" min="1">
+        <label>Daily Pass Limit</label>
+        <input type="number" id="roster-new-limit" value="2" min="1">
       </div>
       <button class="btn" id="roster-save-btn" style="background:var(--blue);" onclick="saveStudent()">Add Student</button>
     </div>
@@ -509,6 +509,8 @@
           <option value="8">8th</option>
         </select>
         <button class="btn btn-outline" onclick="bulkAssignGrade()">Apply to Selected</button>
+        <input type="number" id="bulk-limit-input" placeholder="Daily limit" min="1" style="width:110px; padding:9px 12px;">
+        <button class="btn btn-outline" onclick="bulkAssignLimit()">Set Limit for Selected</button>
         <span id="rm-selected-count" class="selected-count">0 selected</span>
       </div>
       <div class="control-group" style="min-width:170px;">
@@ -765,7 +767,7 @@
           const name = buildUniqueName(firstName, lastName, usedNames);
           usedNames.add(name.toLowerCase());
           const key = name.replace(/[.#$/\[\]]/g, "_");
-          updates[key] = { firstName, lastName, name, grade, gender: isGirl ? 'g' : 'b', limit: 5 };
+          updates[key] = { firstName, lastName, name, grade, gender: isGirl ? 'g' : 'b', limit: 2 };
         }
       });
 
@@ -1213,7 +1215,7 @@
       const gradeRaw = document.getElementById('roster-new-grade').value;
       const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
       const gender = document.getElementById('roster-new-gender').value;
-      const limit = parseInt(document.getElementById('roster-new-limit').value, 10) || 5;
+      const limit = parseInt(document.getElementById('roster-new-limit').value, 10) || 2;
 
       if (!firstName || !lastName) { alert("Please enter both a first and last name."); return; }
 
@@ -1255,7 +1257,7 @@
       const gradeRaw = document.getElementById('inline-grade').value;
       const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
       const gender = document.getElementById('inline-gender').value;
-      const limit = parseInt(document.getElementById('inline-limit').value, 10) || 5;
+      const limit = parseInt(document.getElementById('inline-limit').value, 10) || 2;
 
       if (!firstName || !lastName) { alert("Please enter both a first and last name."); return; }
 
@@ -1412,7 +1414,7 @@
             const key = name.replace(/[.#$/\[\]]/g, '_');
             updates[key] = {
               firstName, lastName, name, grade, gender,
-              limit: isNaN(limit) ? 5 : limit
+              limit: isNaN(limit) ? 2 : limit
             };
             successCount++;
           }
@@ -1476,7 +1478,7 @@
             <th class="nosort">Student Name</th>
             <th class="nosort">Grade</th>
             <th class="nosort">Gender</th>
-            <th class="nosort">Weekly Pass Limit</th>
+            <th class="nosort">Daily Pass Limit</th>
             <th class="nosort">Actions</th>
           </tr>
         </thead>`;
@@ -1512,7 +1514,7 @@
               </select>
             </td>
             <td>
-              <input type="number" id="inline-limit" value="${s.limit || 5}" min="1" style="width:60px; padding:6px 8px; font-size:0.82rem;">
+              <input type="number" id="inline-limit" value="${s.limit || 2}" min="1" style="width:60px; padding:6px 8px; font-size:0.82rem;">
             </td>
             <td>
               <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineEdit('${key}')">💾 Save</button>
@@ -1526,7 +1528,7 @@
             </td>
             <td>${s.grade ? s.grade + 'th' : '—'}</td>
             <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
-            <td class="trips-cell">${s.limit || 5} passes</td>
+            <td class="trips-cell">${s.limit || 2} passes</td>
             <td>
               <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startInlineEdit('${key}')">✏️ Edit</button>
               <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${safeName}')">Remove</button>
@@ -1553,6 +1555,26 @@
       const master = document.getElementById('rm-select-all');
       const all = document.querySelectorAll('.rm-check').length;
       if (master) master.checked = all > 0 && n === all;
+    };
+
+    window.bulkAssignLimit = async function() {
+      const limitRaw = document.getElementById('bulk-limit-input').value;
+      const limit = parseInt(limitRaw, 10);
+      if (!limit || limit < 1) { alert('Enter a valid daily limit (1 or more) first.'); return; }
+
+      const checked = [...document.querySelectorAll('.rm-check:checked')];
+      if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to update.'); return; }
+      if (!confirm(`Set the daily pass limit to ${limit} for ${checked.length} selected student${checked.length === 1 ? '' : 's'}?`)) return;
+
+      try {
+        const updates = {};
+        checked.forEach(cb => { updates[`${cb.dataset.key}/limit`] = limit; });
+        await update(ref(db, 'bathroom/roster'), updates);
+        document.getElementById('bulk-limit-input').value = '';
+      } catch (e) {
+        console.error(e);
+        alert('Error setting limit: ' + (e && e.message ? e.message : e));
+      }
     };
 
     window.bulkAssignGrade = async function() {
@@ -1833,35 +1855,31 @@
       URL.revokeObjectURL(url);
     };
 
-    function getWeekStart(date = new Date()) {
-      const d = new Date(date);
-      const day = d.getDay();
-      const diff = day === 0 ? -6 : 1 - day;
-      d.setDate(d.getDate() + diff);
-      return d.toISOString().split('T')[0];
+    function getDayKey(date = new Date()) {
+      return date.toISOString().split('T')[0];
     }
 
     function renderPassUsage() {
       const container = document.getElementById('pass-usage-container');
       if(!container) return;
-      const weekStart = getWeekStart();
+      const todayKey = getDayKey();
 
       const counts = {};
       allHistory.forEach(h => {
         const d = new Date(h.checkedOutAt);
-        if (getWeekStart(d) !== weekStart) return;
+        if (getDayKey(d) !== todayKey) return;
         counts[h.name] = (counts[h.name] || 0) + 1;
       });
 
       const flagged = STUDENTS.map(s => {
         const used = counts[s.name] || 0;
-        const limit = s.limit || 5;
-        return { ...s, used, remaining: limit - used };
+        const limit = s.limit || 2;
+        return { ...s, used, limit, remaining: limit - used };
       }).filter(s => s.used >= Math.ceil(s.limit * 0.6) || s.used > 0)
         .sort((a, b) => b.used - a.used);
 
       if (!flagged.length) {
-        container.innerHTML = '<p class="no-data">No active pass usage this week. 🎉</p>';
+        container.innerHTML = '<p class="no-data">No active pass usage today. 🎉</p>';
         return;
       }
 
