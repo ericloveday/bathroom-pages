@@ -1,1956 +1,1081 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bathroom Checkout Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --red: #ce1f07;
-    --red-dark: #a01a05;
-    --black: #111111;
-    --white: #ffffff;
-    --gray-50: #f7f7f8;
-    --gray-100: #eeeeee;
-    --gray-300: #cccccc;
-    --gray-500: #888888;
-    --gray-700: #444444;
-    --amber: #c98a00;
-    --blue: #1a6fb5;
-    --green: #1f7a3d;
-    --boy: #1a6fb5;
-    --girl: #b5006e;
-    --radius: 10px;
-    --shadow: 0 2px 10px rgba(0,0,0,0.08);
-    --shadow-lg: 0 8px 30px rgba(0,0,0,0.14);
-    --history-bg: #f5f5f5;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bathroom Check-Out System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #ce1f07;
+      --red-dark: #a01a05;
+      --black: #111111;
+      --white: #ffffff;
+      --gray-50: #f7f7f8;
+      --gray-100: #eeeeee;
+      --gray-300: #cccccc;
+      --gray-500: #888888;
+      --gray-700: #444444;
+      --amber: #c98a00;
+      --green: #1f7a3d;
+      --radius: 10px;
+      --shadow: 0 2px 10px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.14);
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+      --boy-primary: #1a6fb5;
+      --boy-light: #eaf3fb;
+      --boy-dark: #145a92;
 
-  body {
-    background: var(--gray-50);
-    font-family: 'Montserrat', sans-serif;
-    color: var(--black);
-    min-height: 100vh;
-  }
+      --girl-primary: #b5006e;
+      --girl-light: #fbe9f2;
+      --girl-dark: #8f0058;
 
-  /* ---------------- Top bar ---------------- */
-  .topbar {
-    background: var(--black);
-    color: var(--white);
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .topbar h1 { font-size: 18px; font-weight: 800; margin: 0; }
-  .topbar h1 span { color: var(--red); }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-  #user-badge { font-size: 12.5px; color: rgba(255,255,255,0.7); }
-  #signout-btn {
-    background: transparent; border: 1px solid rgba(255,255,255,0.4); color: var(--white);
-    padding: 6px 12px; border-radius: 6px; font-family: 'Montserrat', sans-serif; font-size: 12px;
-    font-weight: 600; cursor: pointer;
-  }
-  #signout-btn:hover { background: rgba(255,255,255,0.1); }
-  .subtitle-bar { max-width: 1300px; margin: 0 auto; padding: 14px 20px 0; color: var(--gray-700); font-size: 12.5px; }
+      /* kept for compatibility with existing selectors below */
+      --bg: var(--gray-50);
+      --card-bg: var(--white);
+      --text: var(--black);
+      --muted: var(--gray-500);
+      --border: var(--gray-100);
+      --wait-bg: var(--gray-50);
+      --wait-border: var(--gray-300);
+    }
 
-  /* ---------------- Sign-In Screen ---------------- */
-  #signin-screen {
-    position: fixed; inset: 0; background: var(--gray-50); z-index: 100000;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; padding: 20px;
-  }
-  #signin-screen h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; color: var(--black); text-transform: none; }
-  #signin-screen p { font-size: 0.9rem; color: var(--gray-700); margin-bottom: 24px; max-width: 400px; line-height: 1.5; }
-  .google-btn {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 12px 22px; background: var(--white); color: #1f1f1f;
-    border: 1px solid var(--gray-300); border-radius: 8px; font-family: 'Montserrat', sans-serif;
-    font-size: 0.92rem; font-weight: 600; cursor: pointer; box-shadow: var(--shadow);
-  }
-  .google-btn:hover { box-shadow: var(--shadow-lg); }
-  .signin-error {
-    margin-top: 16px; padding: 10px 14px; background: #fdf1ef; border: 1px solid var(--red);
-    color: var(--red-dark); border-radius: 8px; font-size: 0.85rem; display: none; max-width: 400px;
-  }
-  .signin-note { margin-top: 18px; font-size: 0.75rem; color: var(--gray-500); }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 15px; display: flex; flex-direction: column; gap: 15px; min-height: 100vh; overflow-x: hidden; }
 
-  #app-content { display: none; max-width: 1300px; margin: 0 auto; padding: 20px 20px 60px; }
+    /* ---------------- Sign-In Screen ---------------- */
+    #signin-screen {
+      position: fixed; inset: 0; background: var(--gray-50); z-index: 100000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .signin-card {
+      background: transparent; border: none; box-shadow: none;
+      padding: 20px; max-width: 400px; width: 90%; text-align: center;
+    }
+    .signin-card h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; color: var(--black); }
+    .signin-card p { font-size: 0.9rem; color: var(--gray-700); margin-bottom: 24px; line-height: 1.5; }
+    .google-btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 12px; background: var(--white); color: #1f1f1f;
+      border: 1px solid var(--gray-300); border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; box-shadow: var(--shadow); transition: box-shadow 0.2s ease;
+    }
+    .google-btn:hover { box-shadow: var(--shadow-lg); }
+    .signin-error {
+      margin-top: 16px; padding: 10px 14px; background: #fdf1ef; border: 1px solid var(--red);
+      color: var(--red-dark); border-radius: 6px; font-size: 0.85rem; display: none;
+    }
+    .signin-note { margin-top: 18px; font-size: 0.75rem; color: var(--gray-500); }
 
-  .header-block { margin-bottom: 20px; }
-  .header-block h2 { font-size: 1.1rem; font-weight: 800; color: var(--black); }
+    /* Top Banner / Rules */
+    .rules-banner {
+      max-width: 1300px;
+      width: 100%;
+      margin: 0 auto;
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--red);
+    }
+    .rules-banner h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; color: var(--black); display: flex; align-items: center; gap: 8px; font-weight: 800; }
+    .rules-banner ul { list-style-position: inside; color: var(--gray-700); font-size: 0.88rem; line-height: 1.6; }
+    .rules-banner li { margin-bottom: 4px; }
 
-  .tab-btns { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .tab-btn {
-    padding: 8px 18px;
-    border-radius: 7px;
-    border: none;
-    background: var(--gray-100);
-    color: var(--gray-700);
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .tab-btn.active { background: var(--black); color: var(--white); }
-  .tab-btn:hover:not(.active) { color: var(--black); }
+    header { display: flex; justify-content: space-between; align-items: center; background: var(--black); padding: 14px 24px; border-radius: var(--radius); gap: 12px; flex-wrap: wrap; max-width: 1300px; width: 100%; margin: 0 auto; }
+    h1 { font-size: 18px; font-weight: 800; color: var(--white); }
+    h1 span { color: var(--red); }
+    #clock { font-size: 1.1rem; font-weight: 700; font-family: monospace; color: #4ade80; background: #022c22; padding: 4px 10px; border-radius: 6px; border: 1px solid #064e3b; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    #user-badge { font-size: 12.5px; color: rgba(255,255,255,0.7); }
+    #signout-btn {
+      font-size: 12px; font-weight: 600; color: var(--white); background: transparent;
+      border: 1px solid rgba(255,255,255,0.4); padding: 6px 12px; border-radius: 6px; cursor: pointer;
+    }
+    #signout-btn:hover { background: rgba(255,255,255,0.1); }
 
-  .controls {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
+    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; align-items: start; max-width: 1300px; width: 100%; margin: 0 auto; }
+    .panel { background: var(--card-bg); border-radius: var(--radius); border: none; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow); }
 
-  .control-group { display: flex; flex-direction: column; gap: 5px; }
-  .control-group label { font-size: 0.68rem; font-weight: 700; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.4px; }
+    .panel-header { padding: 16px 18px; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center; }
+    .panel-title { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; }
+    .panel-count { font-size: 1.3rem; font-weight: 800; padding: 2px 12px; border-radius: 20px; min-width: 40px; text-align: center; }
+    .panel-meta { font-size: 0.75rem; color: var(--gray-700); margin-top: 2px; font-weight: 500; }
 
-  select, input[type="date"], input[type="text"], input[type="number"], input[type="file"] {
-    padding: 9px 14px;
-    border-radius: 7px;
-    border: 1.5px solid var(--gray-300);
-    background: var(--white);
-    color: var(--black);
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.88rem;
-    cursor: pointer;
-  }
+    .panel.boys { border-top: 4px solid var(--boy-primary); }
+    .panel.boys .panel-header { background: var(--boy-light); }
+    .panel.boys .panel-title, .panel.boys .panel-count { color: var(--boy-dark); }
+    .panel.boys .panel-count { background: var(--boy-primary); color: #fff; }
 
-  select:focus, input[type="date"]:focus, input[type="text"]:focus, input[type="number"]:focus { outline: none; border-color: var(--red); }
+    .panel.girls { border-top: 4px solid var(--girl-primary); }
+    .panel.girls .panel-header { background: var(--girl-light); }
+    .panel.girls .panel-title, .panel.girls .panel-count { color: var(--girl-dark); }
+    .panel.girls .panel-count { background: var(--girl-primary); color: #fff; }
 
-  textarea {
-    width: 100%; min-height: 150px; font-family: 'Montserrat', sans-serif; font-size: 13.5px;
-    padding: 12px; border: 1.5px solid var(--gray-300); border-radius: 8px; resize: vertical;
-  }
-  textarea:focus { outline: none; border-color: var(--red); }
+    .panel.waiting-panel { border-top: 4px solid var(--gray-300); }
+    .panel.waiting-panel .panel-header { background: var(--gray-50); }
+    .panel.waiting-panel .panel-title, .panel.waiting-panel .panel-count { color: var(--gray-700); }
+    .panel.waiting-panel .panel-count { background: var(--gray-500); color: #fff; }
 
-  .btn {
-    padding: 10px 20px;
-    background: var(--red);
-    color: var(--white);
-    border: none;
-    border-radius: 8px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    align-self: flex-end;
-  }
-  .btn:hover { background: var(--red-dark); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .panel-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+    .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--gray-700); letter-spacing: 0.4px; margin-bottom: 4px; }
+    
+    .teacher-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .teacher-group { margin-bottom: 10px; }
+    .teacher-group:last-child { margin-bottom: 0; }
+    .teacher-group-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--gray-500); letter-spacing: 0.4px; margin-bottom: 6px; }
+    .teacher-radio-label { position: relative; background: var(--white); border: 1.5px solid var(--gray-300); padding: 10px; text-align: center; border-radius: 7px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: var(--text); cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; justify-content: center; min-height: 40px; }
+    .teacher-radio-label input { position: absolute; opacity: 0; width: 0; height: 0; }
+    
+    .panel.boys .teacher-radio-label:has(input:checked) { background: var(--boy-primary); border-color: var(--boy-primary); color: #fff; }
+    .panel.girls .teacher-radio-label:has(input:checked) { background: var(--girl-primary); border-color: var(--girl-primary); color: #fff; }
+    
+    .teacher-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .teacher-select-row:last-child { margin-bottom: 0; }
+    .teacher-select-label { font-size: 0.72rem; font-weight: 700; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.3px; min-width: 86px; flex-shrink: 0; }
+    .teacher-select-row select { flex: 1; margin: 0; }
 
-  .btn-outline {
-    background: transparent;
-    border: 1.5px solid var(--gray-300);
-    color: var(--gray-700);
-  }
-  .btn-outline:hover { border-color: var(--red); color: var(--red); background: transparent; }
+    .teacher-detect-banner { max-width: 1300px; width: 100%; margin: 0 auto; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; text-align: center; }
+    .teacher-detect-banner.detected { background: #eef8f0; color: var(--green); border: 1px solid #cfeada; }
+    .teacher-detect-banner.fallback { background: #fdf7e8; color: var(--amber); border: 1px solid #f3e2b0; }
 
-  /* Summary cards */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px;
-    margin-bottom: 24px;
-  }
-  .summary-card {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 18px 20px;
-    text-align: center;
-  }
-  .summary-card .val { font-size: 2rem; font-weight: 800; color: var(--red); line-height: 1; margin-bottom: 4px; }
-  .summary-card .lbl { font-size: 0.72rem; font-weight: 600; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.4px; }
+    select { width: 100%; background: var(--white); color: var(--black); border: 1.5px solid var(--gray-300); padding: 10px; border-radius: 7px; font-size: 0.9rem; cursor: pointer; appearance: none; outline: none; }
+    select:focus { border-color: var(--red); }
+    .select-wrapper { position: relative; }
+    .select-wrapper::after { content: "▼"; font-size: 0.7rem; color: var(--gray-500); position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
 
-  /* Table */
-  .table-card {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 22px;
-    margin-bottom: 24px;
-    overflow-x: auto;
-  }
-  .table-card h2 { font-size: 1rem; font-weight: 800; margin-bottom: 4px; color: var(--black); }
-  .table-card .card-desc { font-size: 0.82rem; color: var(--gray-700); margin-bottom: 16px; }
+    .pass-indicator { font-size: 0.8rem; font-weight: 600; padding: 6px 10px; border-radius: 6px; margin-top: -4px; text-align: center; display: none; }
+    .pass-indicator.ok { background: #eef8f0; color: var(--green); border: 1px solid #cfeada; }
+    .pass-indicator.low { background: #fdf7e8; color: var(--amber); border: 1px solid #f3e2b0; }
+    .pass-indicator.out { background: #fdf1ef; color: var(--red); border: 1px solid #f2c4bb; animation: pulse 2s infinite; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    .btn { width: 100%; font-size: 0.88rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 12px; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.1s ease, filter 0.15s ease; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; }
+    .btn:active { transform: scale(0.98); }
+    .boys .btn { background: var(--boy-primary); }
+    .girls .btn { background: var(--girl-primary); }
+    .btn:hover { filter: brightness(0.92); }
 
-  thead th {
-    text-align: left;
-    padding: 10px 12px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    color: var(--gray-700);
-    background: var(--gray-50);
-    border-bottom: 2px solid var(--gray-100);
-    cursor: pointer;
-    white-space: nowrap;
-    user-select: none;
-  }
-  thead th:hover { color: var(--red); }
-  thead th.sorted { color: var(--red); }
-  thead th.nosort { cursor: default; }
-  thead th.nosort:hover { color: var(--gray-700); }
+    .status-area { background: var(--gray-50); border-radius: 8px; padding: 12px; border: 1px solid var(--gray-100); display: flex; flex-direction: column; gap: 8px; min-height: 70px; justify-content: center; }
+    .empty-msg { font-size: 0.85rem; color: var(--gray-500); text-align: center; font-style: italic; }
 
-  tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.1s; }
-  tbody tr:hover { background: var(--gray-50); }
-  tbody tr:last-child { border-bottom: none; }
-  tbody td { padding: 10px 12px; }
+    .student-card { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 7px; border: 1px solid transparent; }
+    .student-card.boy { background: var(--boy-light); border-color: var(--boy-primary); }
+    .student-card.girl { background: var(--girl-light); border-color: var(--girl-primary); }
+    .student-card.wait { background: var(--wait-bg); border-color: var(--wait-border); }
+    
+    .student-name { font-weight: 700; font-size: 0.95rem; color: var(--black); }
+    .student-card-right { display: flex; align-items: center; gap: 10px; }
+    
+    .student-time { font-family: monospace; font-size: 0.9rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+    .student-time.boy-time { background: var(--boy-primary); color: #fff; }
+    .student-time.girl-time { background: var(--girl-primary); color: #fff; }
+    .student-time.wait-time { background: var(--gray-300); color: var(--black); }
 
-  .student-name-cell { font-weight: 700; }
-  .gender-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
-  .gender-dot.boy { background: var(--boy); }
-  .gender-dot.girl { background: var(--girl); }
-  .gender-dot.unknown { background: var(--gray-500); }
+    .btn-sm { width: auto; padding: 5px 10px; font-size: 0.75rem; border-radius: 5px; }
+    .boy-btn { background: var(--boy-primary); }
+    .girl-btn { background: var(--girl-primary); }
 
-  .val-cell { font-weight: 700; color: var(--red); }
-  .trips-cell { font-weight: 600; color: var(--black); }
+    .history-panel { background: var(--card-bg); border-radius: var(--radius); border: none; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; max-width: 1300px; width: 100%; margin-left: auto; margin-right: auto; }
+    .history-header { padding: 14px 18px; border-bottom: 1px solid var(--gray-100); background: var(--gray-50); display: flex; justify-content: space-between; align-items: center; }
+    .history-title { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--gray-700); letter-spacing: 0.4px; }
+    .history-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; }
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--gray-100); font-size: 0.85rem; }
+    .history-item:last-child { border-bottom: none; }
+    .history-item .name { font-weight: 600; color: var(--black); }
+    .history-item .ts { font-size: 0.75rem; color: var(--gray-500); margin-top: 1px; }
+    .history-item .dur { font-family: monospace; font-weight: 700; color: var(--green); background: #eef8f0; padding: 2px 8px; border-radius: 20px; }
 
-  .check-cell { width: 36px; text-align: center; }
-  .check-cell input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--red); }
+    .alert-banner { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--red); color: white; padding: 12px 24px; border-radius: 8px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 9999; display: none; text-align: center; max-width: 90%; font-size: 0.92rem; }
+    #loading { position: fixed; inset: 0; background: var(--gray-50); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; }
+    .spinner { width: 40px; height: 40px; border: 4px solid var(--gray-100); border-top-color: var(--red); border-radius: 50%; animation: spin 1s linear infinite; }
+    #confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 9998; width: 100%; height: 100%; }
 
-  .daily-section { margin-top: 8px; }
-  .day-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; font-size: 0.82rem; margin-bottom: 4px; }
-  .day-row:nth-child(odd) { background: var(--history-bg); }
-  .day-label { font-weight: 600; color: var(--gray-700); }
-  .day-val { font-weight: 700; color: var(--red); }
+    #app-content { max-width: 1300px; margin: 0 auto; width: 100%; display: none; flex-direction: column; gap: 15px; }
 
-  #loading {
-    position: fixed; inset: 0; background: var(--gray-50);
-    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 9999;
-  }
-  #loading p { color: var(--gray-700); font-size: 1rem; font-weight: 600; }
-  .spinner { width: 40px; height: 40px; border: 4px solid var(--gray-100); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+  </style>
 
-  .empty-msg { color: var(--gray-500); font-style: italic; font-size: 0.9rem; padding: 12px 0; }
-  .no-data { text-align: center; padding: 40px; color: var(--gray-500); font-style: italic; }
-
-  .section-panel {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 22px;
-    margin-bottom: 24px;
-    border-left: 4px solid var(--gray-300);
-  }
-  .section-panel.accent-blue { border-left-color: var(--blue); }
-  .section-panel.accent-amber { border-left-color: var(--amber); }
-  .section-panel.accent-red { border-left-color: var(--red); }
-  .section-panel h2 { font-size: 1rem; font-weight: 800; margin-bottom: 4px; }
-  .section-panel .card-desc { font-size: 0.82rem; color: var(--gray-700); margin-bottom: 16px; }
-
-  .inline-form-row {
-    display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end;
-    background: var(--gray-50); padding: 16px; border-radius: 8px;
-  }
-  .inline-form-row label { color: var(--gray-700); }
-
-  .edit-hint { display: none; margin-bottom: 14px; font-size: 0.82rem; color: var(--amber); font-weight: 600; }
-  .edit-hint a { color: var(--blue); }
-
-  .bulk-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-  .bulk-bar .btn { background: var(--red); }
-  .selected-count { color: var(--gray-500); font-size: 0.82rem; font-weight: 600; }
-
-  .csv-block { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--gray-100); }
-  .csv-block h3 { color: var(--gray-700); margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; }
-  .csv-block p { font-size: 0.75rem; color: var(--gray-500); margin-bottom: 10px; }
-  .csv-block code { background: var(--gray-100); padding: 1px 5px; border-radius: 4px; }
-  #csv-status { font-size: 0.8rem; color: var(--gray-500); margin-top: 12px; min-height: 1.2em; }
-
-  /* --- Master Roster tab --- */
-  .counts-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
-  .count-box { background: var(--gray-50); border-radius: 10px; padding: 14px; text-align: center; }
-  .count-box .num { font-size: 24px; font-weight: 800; }
-  .count-box .lbl { font-size: 11px; color: var(--gray-700); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
-  .format-note { font-size: 12px; color: var(--gray-500); margin-top: 8px; line-height: 1.5; }
-  .status-msg { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; display: none; white-space: pre-line; }
-  .status-msg.success { background: #eef8f0; color: var(--green); display: block; }
-  .status-msg.error { background: #fdf1ef; color: var(--red); display: block; }
-  .status-msg.warn { background: #fdf7e8; color: var(--amber); display: block; }
-  .preview-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12.5px; max-height: 280px; overflow-y: auto; display: block; }
-  .preview-table th { text-align: left; padding: 6px 8px; background: var(--gray-50); position: sticky; top: 0; }
-  .preview-table td { padding: 6px 8px; border-bottom: 1px solid var(--gray-100); }
-
-  /* --- Conflict Groups tab --- */
-  .roster-status { font-size: 12.5px; color: var(--gray-500); margin-bottom: 16px; }
-  .roster-status.warn { color: var(--amber); font-weight: 600; }
-  .groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-  .group-card { background: var(--white); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); }
-  .group-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
-  .group-name-input { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 15px; border: none; border-bottom: 2px solid transparent; padding: 2px 0; width: 100%; background: transparent; }
-  .group-name-input:focus { outline: none; border-bottom-color: var(--red); }
-  .del-group-btn { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 4px; }
-  .del-group-btn:hover { color: var(--red); }
-  .member-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--gray-50); border: 1px solid var(--gray-100); border-radius: 20px; padding: 5px 10px 5px 12px; font-size: 12.5px; font-weight: 600; margin: 0 6px 6px 0; }
-  .member-chip .grade-tag { font-size: 10px; font-weight: 800; color: var(--red); }
-  .member-chip .remove-x { cursor: pointer; color: var(--gray-500); font-weight: 800; padding-left: 2px; }
-  .member-chip .remove-x:hover { color: var(--red); }
-  .members-box { min-height: 34px; margin-bottom: 10px; }
-  .empty-members { color: var(--gray-500); font-size: 12.5px; }
-  .add-student-wrap { position: relative; }
-  .add-student-input { width: 100%; font-family: 'Montserrat', sans-serif; font-size: 13px; padding: 9px 11px; border: 1.5px solid var(--gray-300); border-radius: 7px; }
-  .add-student-input:focus { outline: none; border-color: var(--red); }
-  .search-results { position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1px solid var(--gray-300); border-radius: 8px; box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; z-index: 20; display: none; }
-  .search-result-item { padding: 9px 12px; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
-  .search-result-item:hover { background: var(--gray-50); }
-  .search-result-item .sr-grade { font-size: 11px; font-weight: 700; color: var(--gray-500); }
-  .empty-groups-state { text-align: center; padding: 60px 20px; color: var(--gray-500); }
-
-  /* Print styles */
-  @media print {
-    body { background: white; padding: 10px; }
-    .topbar, .subtitle-bar, .controls, .tab-btns, .btn, .no-print { display: none !important; }
-    .table-card { border: 1px solid #ccc; box-shadow: none; }
-    .summary-card { border: 1px solid #ccc; box-shadow: none; }
-  }
-</style>
 </head>
 <body>
 
-<div id="signin-screen">
-  <h1>Bathroom Checkout Dashboard</h1>
-  <p>Sign in with your Cornerstone Google account to continue.</p>
-  <button class="google-btn" id="google-signin-btn">
-    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.82 2.73v2.27h2.94c1.72-1.59 2.68-3.93 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.94-2.27c-.8.55-1.84.85-3.02.85-2.34 0-4.32-1.58-5.03-3.7H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.7c-.18-.55-.28-1.13-.28-1.7s.1-1.15.28-1.7V4.96H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.04l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.6-2.6C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
-    Sign in with Google
-  </button>
-  <div class="signin-error" id="signin-error"></div>
-  <p class="signin-note">Restricted to @cornerstonek12.org accounts</p>
-</div>
-
-<div id="loading">
-  <div class="spinner"></div>
-  <p>Loading report data...</p>
-</div>
-
-<div class="topbar">
-  <h1>Bathroom <span>Checkout</span></h1>
-  <div class="header-right no-print">
-    <span id="user-badge"></span>
-    <button id="signout-btn" onclick="doSignOut()">Sign Out</button>
-  </div>
-</div>
-<div class="subtitle-bar no-print">Connected to live Firebase data</div>
-
-<div id="app-content">
-
-<!-- MAIN VIEW TABS -->
-<div class="tab-btns no-print">
-  <button class="tab-btn active" id="tab-view-reports" onclick="switchMainTab('reports')">📊 Reports</button>
-  <button class="tab-btn" id="tab-view-management" onclick="switchMainTab('management')">👥 Student Management</button>
-  <button class="tab-btn" id="tab-view-teachers" onclick="switchMainTab('teachers')">👩‍🏫 Teachers</button>
-  <button class="tab-btn" id="tab-view-conflicts" onclick="switchMainTab('conflicts')">🚫 Conflict Groups</button>
-  <button class="tab-btn" id="tab-view-history" onclick="switchMainTab('history')">🗑 History Management</button>
-</div>
-
-<!-- ================= REPORTS VIEW ================= -->
-<div id="view-reports">
-  <!-- Date Tabs + report actions -->
-  <div style="display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
-    <div class="tab-btns" style="margin-bottom:0;">
-      <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
-      <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
-      <button class="tab-btn" id="tab-custom" onclick="switchTab('custom')">Custom Range</button>
-    </div>
-    <div id="report-actions" style="display:flex; gap:10px; align-items:center;">
-      <button class="btn btn-outline" onclick="window.print()">🖨 Print</button>
-      <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+  <div id="signin-screen">
+    <div class="signin-card">
+      <h1>Bathroom Check-Out</h1>
+      <p>Sign in with your Cornerstone Google account to continue.</p>
+      <button class="google-btn" id="google-signin-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.82 2.73v2.27h2.94c1.72-1.59 2.68-3.93 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.94-2.27c-.8.55-1.84.85-3.02.85-2.34 0-4.32-1.58-5.03-3.7H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.7c-.18-.55-.28-1.13-.28-1.7s.1-1.15.28-1.7V4.96H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.04l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.6-2.6C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+        Sign in with Google
+      </button>
+      <div class="signin-error" id="signin-error"></div>
+      <p class="signin-note">Restricted to @cornerstonek12.org accounts</p>
     </div>
   </div>
 
-  <!-- Controls -->
-  <div class="controls" id="controls-weekly">
-    <div class="control-group">
-      <label>Week</label>
-      <select id="week-select" onchange="renderReport()"></select>
+  <div id="loading">
+    <div class="spinner"></div>
+    <p style="font-weight: 600; font-size: 1rem; letter-spacing: 0.5px; color: var(--muted);">Connecting to Database...</p>
+  </div>
+
+  <div id="alert" class="alert-banner"></div>
+  
+  <canvas id="confetti-canvas"></canvas>
+
+  <div id="app-content">
+
+  <div class="rules-banner">
+    <h2>⚠️ Bathroom Rules</h2>
+    <ul>
+      <li>Students get 5 opportunities to use the bathroom during core classes per week.</li>
+      <li>No one may use the bathroom while the teacher is talking or teaching.</li>
+      <li>You must wait for independent working time.</li>
+      <li>Do not go to the bathroom without permission.</li>
+    </ul>
+  </div>
+
+  <header>
+    <h1>Bathroom <span>Check-Out</span></h1>
+    <div class="header-right">
+      <span id="user-badge"></span>
+      <button id="signout-btn" onclick="doSignOut()">Sign Out</button>
+      <div id="clock">00:00 AM</div>
     </div>
-    <div class="control-group">
-      <label>Teacher</label>
-      <select id="weekly-teacher-filter" onchange="renderReport()">
-        <option value="">All Teachers</option>
-      </select>
+  </header>
+
+  <div id="teacher-detect-banner" style="display:none;"></div>
+
+  <div class="dashboard">
+    
+    <div class="panel boys">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Boys Check Out</div>
+          <div class="panel-meta" id="boy-out-meta">Select a teacher below to see status</div>
+        </div>
+        <div class="panel-count" id="boy-out-count">?</div>
+      </div>
+      <div class="panel-body">
+        <div id="boy-teacher-step">
+          <div class="section-label">1. Current Teacher</div>
+          <div id="boy-teacher-grid">
+          </div>
+        </div>
+
+        <div class="section-label" id="boy-name-label" style="margin-top: 4px;">2. Your Name</div>
+        <div class="select-wrapper">
+          <select id="boy-select" onchange="updatePassIndicator('b')">
+            <option value="">-- Select your name --</option>
+          </select>
+        </div>
+
+        <div id="boy-pass-indicator" class="pass-indicator"></div>
+        
+        <button class="btn" onclick="checkOut('b')">Check Out ♂</button>
+        
+        <div class="section-label" style="margin-top: 6px;">Currently Out</div>
+        <div class="status-area" id="boy-out">
+          <p class="empty-msg">Select your teacher to see who's out.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel girls">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Girls Check Out</div>
+          <div class="panel-meta" id="girl-out-meta">Select a teacher below to see status</div>
+        </div>
+        <div class="panel-count" id="girl-out-count">?</div>
+      </div>
+      <div class="panel-body">
+        <div id="girl-teacher-step">
+          <div class="section-label">1. Current Teacher</div>
+          <div id="girl-teacher-grid">
+          </div>
+        </div>
+
+        <div class="section-label" id="girl-name-label" style="margin-top: 4px;">2. Your Name</div>
+        <div class="select-wrapper">
+          <select id="girl-select" onchange="updatePassIndicator('g')">
+            <option value="">-- Select your name --</option>
+          </select>
+        </div>
+
+        <div id="girl-pass-indicator" class="pass-indicator"></div>
+        
+        <button class="btn" onclick="checkOut('g')">Check Out ♀</button>
+        
+        <div class="section-label" style="margin-top: 6px;">Currently Out</div>
+        <div class="status-area" id="girl-out">
+          <p class="empty-msg">Select your teacher to see who's out.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel waiting-panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Waiting List</div>
+          <div class="panel-meta">Moves up instantly when spots clear</div>
+        </div>
+        <div class="panel-count" id="wait-count">0</div>
+      </div>
+      <div class="panel-body" style="gap: 8px;">
+        <div class="status-area" id="waiting-list" style="min-height: 290px; justify-content: start; gap: 8px;">
+          <p class="empty-msg">No students waiting.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="history-panel">
+    <div class="history-header">
+      <div class="history-title">Recent Activity Log (Last 50 Runs)</div>
+    </div>
+    <div class="history-list" id="history-list">
+      <p class="empty-msg" style="padding: 20px;">No logs recorded yet.</p>
     </div>
   </div>
 
-  <div class="controls" id="controls-monthly" style="display:none;">
-    <div class="control-group">
-      <label>Month</label>
-      <select id="month-select" onchange="renderReport()"></select>
-    </div>
-    <div class="control-group">
-      <label>Teacher</label>
-      <select id="monthly-teacher-filter" onchange="renderReport()">
-        <option value="">All Teachers</option>
-      </select>
-    </div>
-  </div>
+  </div><!-- /#app-content -->
 
-  <div class="controls" id="controls-custom" style="display:none;">
-    <div class="control-group">
-      <label>Start Date</label>
-      <input type="date" id="custom-start">
-    </div>
-    <div class="control-group">
-      <label>End Date</label>
-      <input type="date" id="custom-end">
-    </div>
-    <div class="control-group">
-      <label>Teacher</label>
-      <select id="custom-teacher-filter">
-        <option value="">All Teachers</option>
-      </select>
-    </div>
-    <button class="btn" onclick="renderReport()">Generate</button>
-  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getDatabase, ref, onValue, set, push, remove, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <!-- Summary -->
-  <div class="summary-grid" id="summary-grid"></div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBsja7ruNaLkTDTxyga9qd9TZG2Zz5AjHA",
+      authDomain: "bathroom-check-out.firebaseapp.com",
+      databaseURL: "https://bathroom-check-out-default-rtdb.firebaseio.com",
+      projectId: "bathroom-check-out",
+      storageBucket: "bathroom-check-out.firebasestorage.app",
+      messagingSenderId: "385219454253",
+      appId: "1:385219454253:web:970acbfe28672f73c45fa4"
+    };
 
-  <!-- Student Table -->
-  <div class="table-card" id="main-table-card">
-    <h2 id="table-title">Student Summary</h2>
-    <div id="table-container"><p class="no-data">No data for this period.</p></div>
-  </div>
+    const ALLOWED_DOMAIN = "cornerstonek12.org";
 
-  <!-- Daily Breakdown -->
-  <div class="table-card" id="daily-table-card">
-    <h2>Daily Breakdown</h2>
-    <div id="daily-container"><p class="no-data">No data for this period.</p></div>
-  </div>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
 
-  <!-- Weekly Pass Usage -->
-  <div class="table-card accent-red-border">
-    <h2>🚫 Weekly Pass Usage — Current Week</h2>
-    <div class="card-desc">Students who are close to or over their allocated weekly bathroom limit.</div>
-    <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
-  </div>
-</div>
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
 
-<!-- =============== STUDENT MANAGEMENT VIEW =============== -->
-<div id="view-management" style="display:none;">
-  <div class="section-panel accent-blue no-print">
-    <h2 style="color: var(--blue);">👥 Roster &amp; Pass Limit Management</h2>
-    <div class="card-desc">This is the one shared roster for all three grades — used for weekly pass limits here and for Conflict Groups. Filter by grade below to make managing 300+ students easier.</div>
+    const signinScreen = document.getElementById('signin-screen');
+    const appContent = document.getElementById('app-content');
+    const loadingScreen = document.getElementById('loading');
+    const signinError = document.getElementById('signin-error');
+    const userBadge = document.getElementById('user-badge');
 
-    <div class="csv-block" style="margin-top:0; padding-top:0; border-top:none; margin-bottom:22px;">
-      <h3>Bulk Upload Students (CSV)</h3>
-      <p>Format: <code>LastName, FirstName, Grade, Gender, Limit</code>. Grade must be 6, 7, or 8. Gender and Limit are optional — gender is guessed from the first name if left blank, limit defaults to 5. Example: <code>Doe, Jane, 7, F, 5</code>. A header row is detected and skipped automatically.</p>
-      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <input type="file" id="csv-upload" accept=".csv" style="padding: 5px; max-width: 300px; width: 100%;">
-        <button class="btn btn-outline" id="csv-upload-btn" onclick="processCSV()">Upload CSV</button>
-      </div>
-      <p id="csv-status"></p>
-      <div style="margin-top:14px;">
-        <button class="btn btn-outline" id="seed-test-btn" onclick="seedTestStudents()">🧪 Load 324 Test Students</button>
-        <button class="btn btn-outline" id="remove-test-btn" onclick="removeTestStudents()">🧹 Remove Test Students</button>
-        <span style="font-size:0.75rem; color:var(--gray-500); margin-left:8px;">Adds/removes clearly-fake placeholder students for testing before the real roster arrives.</span>
-      </div>
-    </div>
-
-    <div style="border-top:1px solid var(--gray-100); margin: 0 0 22px;"></div>
-
-    <div class="inline-form-row">
-      <div class="control-group" style="flex:1; min-width:130px;">
-        <label>First Name</label>
-        <input type="text" id="roster-new-first" placeholder="e.g., Jane">
-      </div>
-      <div class="control-group" style="flex:1; min-width:130px;">
-        <label>Last Name</label>
-        <input type="text" id="roster-new-last" placeholder="e.g., Doe">
-      </div>
-      <div class="control-group" style="flex:1;">
-        <label>Grade</label>
-        <select id="roster-new-grade">
-          <option value="">Unassigned</option>
-          <option value="6">6th</option>
-          <option value="7">7th</option>
-          <option value="8">8th</option>
-        </select>
-      </div>
-      <div class="control-group" style="flex:1;">
-        <label>Gender Orientation</label>
-        <select id="roster-new-gender">
-          <option value="g">Girl</option>
-          <option value="b">Boy</option>
-          <option value="unk">Unknown</option>
-        </select>
-      </div>
-      <div class="control-group" style="flex:1;">
-        <label>Weekly Pass Limit</label>
-        <input type="number" id="roster-new-limit" value="5" min="1">
-      </div>
-      <button class="btn" id="roster-save-btn" style="background:var(--blue);" onclick="saveStudent()">Add Student</button>
-    </div>
-
-    <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:14px;">
-      <div class="bulk-bar" style="margin-bottom:0;">
-        <button class="btn" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
-        <select id="bulk-grade-select" style="padding:9px 12px;">
-          <option value="">Assign grade...</option>
-          <option value="6">6th</option>
-          <option value="7">7th</option>
-          <option value="8">8th</option>
-        </select>
-        <button class="btn btn-outline" onclick="bulkAssignGrade()">Apply to Selected</button>
-        <span id="rm-selected-count" class="selected-count">0 selected</span>
-      </div>
-      <div class="control-group" style="min-width:170px;">
-        <label>Filter by Grade</label>
-        <select id="rm-grade-filter" onchange="renderRosterManager()">
-          <option value="">All Grades</option>
-          <option value="6">6th Grade</option>
-          <option value="7">7th Grade</option>
-          <option value="8">8th Grade</option>
-          <option value="unassigned">Unassigned</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="roster-container"><p class="no-data">Loading student directory...</p></div>
-  </div>
-</div>
-
-<!-- =============== TEACHER MANAGEMENT VIEW =============== -->
-<div id="view-teachers" style="display:none;">
-  <div class="section-panel accent-blue no-print">
-    <h2 style="color: var(--blue);">👩‍🏫 Teacher Management</h2>
-    <div class="card-desc">Manage the 12 teachers students pick from at the kiosk. Assign each teacher a grade so the kiosk can group the picker, and add their email so the kiosk can auto-detect who's signed in and skip the picker entirely (first initial + last name, e.g. eloveday@cornerstonek12.org).</div>
-
-    <div class="inline-form-row">
-      <div class="control-group" style="flex:1.5; min-width:140px;">
-        <label>Teacher Name</label>
-        <input type="text" id="teacher-new-name" placeholder="e.g., Hartley">
-      </div>
-      <div class="control-group" style="flex:2; min-width:180px;">
-        <label>Email</label>
-        <input type="text" id="teacher-new-email" placeholder="e.g., jhartley@cornerstonek12.org">
-      </div>
-      <div class="control-group" style="flex:1;">
-        <label>Grade</label>
-        <select id="teacher-new-grade">
-          <option value="">Unassigned</option>
-          <option value="6">6th</option>
-          <option value="7">7th</option>
-          <option value="8">8th</option>
-        </select>
-      </div>
-      <button class="btn" style="background:var(--blue);" onclick="saveTeacher()">Add Teacher</button>
-    </div>
-
-    <div id="teacher-list-container"><p class="no-data">Loading teachers...</p></div>
-  </div>
-</div>
-
-<!-- =============== CONFLICT GROUPS VIEW =============== -->
-<div id="view-conflicts" style="display:none;">
-  <div class="section-panel accent-red no-print">
-    <h2>🚫 Conflict Groups</h2>
-    <div class="card-desc">A conflict group is a set of students who can't be signed out at the same time — across any grade or teacher. When one is signed out, the others in their group are blocked until that student returns.</div>
-    <div class="roster-status" id="cg-roster-status">Loading roster…</div>
-  </div>
-
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
-    <h2 style="font-size:17px; font-weight:800;">Groups</h2>
-    <button class="btn" onclick="createConflictGroup()">+ New Group</button>
-  </div>
-
-  <div class="groups-grid" id="cg-groups-grid"></div>
-  <div class="empty-groups-state" id="cg-empty-groups" style="display:none;">No conflict groups yet. Click "+ New Group" to create one.</div>
-</div>
-
-<!-- =============== HISTORY MANAGEMENT VIEW =============== -->
-<div id="view-history" style="display:none;">
-  <div class="section-panel accent-amber no-print">
-    <h2 style="color: var(--amber);">⚠ History Management</h2>
-    <div class="card-desc">Find and delete individual history entries — useful if a student forgot to check back in. Check multiple rows and use <strong>Delete Selected</strong> for bulk cleanup. Deletions are permanent.</div>
-    <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end;">
-      <div class="control-group" style="flex:1; min-width:180px;">
-        <label>Filter by Student</label>
-        <select id="dm-student-filter" onchange="renderDataManager()">
-          <option value="">-- All Students --</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label>Filter by Date</label>
-        <input type="date" id="dm-date-filter" onchange="renderDataManager()">
-      </div>
-      <button class="btn btn-outline" onclick="document.getElementById('dm-student-filter').value=''; document.getElementById('dm-date-filter').value=''; renderDataManager()">Clear Filters</button>
-    </div>
-
-    <div class="bulk-bar">
-      <button class="btn" onclick="deleteSelected()">🗑 Delete Selected</button>
-      <span id="dm-selected-count" class="selected-count">0 selected</span>
-    </div>
-
-    <div id="dm-container"><p class="no-data">No entries found.</p></div>
-  </div>
-</div>
-
-</div><!-- /#app-content -->
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getDatabase, ref, onValue, get, remove, set, update, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyBsja7ruNaLkTDTxyga9qd9TZG2Zz5AjHA",
-    authDomain: "bathroom-check-out.firebaseapp.com",
-    databaseURL: "https://bathroom-check-out-default-rtdb.firebaseio.com",
-    projectId: "bathroom-check-out",
-    storageBucket: "bathroom-check-out.firebasestorage.app",
-    messagingSenderId: "385219454253",
-    appId: "1:385219454253:web:970acbfe28672f73c45fa4"
-  };
-
-  const ALLOWED_DOMAIN = "cornerstonek12.org";
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
-
-  const signinScreen = document.getElementById('signin-screen');
-  const appContent = document.getElementById('app-content');
-  const loadingScreen = document.getElementById('loading');
-  const signinError = document.getElementById('signin-error');
-  const userBadge = document.getElementById('user-badge');
-  const topbar = document.querySelector('.topbar');
-  const subtitleBar = document.querySelector('.subtitle-bar');
-
-  function showSigninError(msg) {
-    signinError.textContent = msg;
-    signinError.style.display = 'block';
-  }
-
-  document.getElementById('google-signin-btn').addEventListener('click', () => {
-    signinError.style.display = 'none';
-    signInWithPopup(auth, provider).catch(err => {
-      console.error(err);
-      showSigninError('Sign-in failed. Please try again.');
-    });
-  });
-
-  window.doSignOut = function() {
-    signOut(auth);
-  };
-
-  let appStarted = false;
-
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      signinScreen.style.display = 'flex';
-      appContent.style.display = 'none';
-      topbar.style.display = 'none';
-      subtitleBar.style.display = 'none';
-      loadingScreen.style.display = 'none';
-      return;
+    function showSigninError(msg) {
+      signinError.textContent = msg;
+      signinError.style.display = 'block';
     }
 
-    const email = user.email || "";
-    if (!email.endsWith("@" + ALLOWED_DOMAIN)) {
-      showSigninError(`This tool is restricted to @${ALLOWED_DOMAIN} accounts. You signed in as ${email}.`);
+    document.getElementById('google-signin-btn').addEventListener('click', () => {
+      signinError.style.display = 'none';
+      signInWithPopup(auth, provider).catch(err => {
+        console.error(err);
+        showSigninError('Sign-in failed. Please try again.');
+      });
+    });
+
+    window.doSignOut = function() {
       signOut(auth);
-      return;
-    }
-
-    signinScreen.style.display = 'none';
-    topbar.style.display = 'flex';
-    subtitleBar.style.display = 'block';
-    loadingScreen.style.display = 'flex';
-    userBadge.textContent = email;
-
-    if (!appStarted) {
-      appStarted = true;
-      startApp();
-    }
-  });
-
-  function startApp() {
-    appContent.style.display = 'block';
-
-    let allHistory = [];
-    let STUDENTS = [];
-    let currentTab = 'weekly';
-    let sortCol = 'totalMins';
-    let sortAsc = false;
-    let editingKey = null; // tracks which roster row (if any) is being edited inline
-
-    // Conflict Groups state (shares the same roster as Student Management)
-    let rosterKeyed = {};
-    let conflictGroupsData = {};
-    let teachersData = {}; // { key: {name, grade} } — feeds the kiosk picker and the Reports teacher filters
-    let editingTeacherKey = null; // tracks which teacher row (if any) is being edited inline
-
-    // --- Built-in first-name → gender list (offline, no external API) ---
-    const BOY_NAMES = `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`.split(/\s+/);
-    const GIRL_NAMES = `aaliyah aanya abby akira alex alexandra alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`.split(/\s+/);
-    const GENDER_MAP = {};
-    BOY_NAMES.forEach(n => { GENDER_MAP[n] = 'b'; });
-    GIRL_NAMES.forEach(n => { GENDER_MAP[n] = 'g'; });
-
-    // Obviously-fake surnames (varied first letters) so generated test students get unique
-    // "First L." keys instead of colliding the way the old dummy set did.
-    const TEST_SURNAMES = ["Testerman","Sampleford","Placeholt","Exampleson","Mockery","Dummington","Fakerson","Trialwood","Pilotson","Draftley","Prototypa","Stubbins","Sandboxx","Rehearsal","Practicer","Scratcher","Templeman","Blueprint","Outlinez","Draftsman","Rendition","Simulacra","Testview","Betaford","Alphaton","Previewly","Sketchley","Trialford","Demoson","Sampleworth"];
-
-    // Builds a display name/key that's guaranteed not to collide with an existing student.
-    // Starts at "First L." (just the last initial, for privacy) and reveals more of the
-    // last name only if needed to stay unique. Falls back to "(2)", "(3)" etc. for the
-    // rare case of two students with the truly identical first+last name.
-    function buildUniqueName(firstName, lastName, existingNamesLower) {
-      const tryName = (suffixLen) => {
-        if (suffixLen >= lastName.length) return `${firstName} ${lastName}`;
-        return `${firstName} ${lastName.slice(0, suffixLen)}.`;
-      };
-
-      let len = 1;
-      let candidate = tryName(len);
-      while (existingNamesLower.has(candidate.toLowerCase()) && len < lastName.length) {
-        len++;
-        candidate = tryName(len);
-      }
-
-      if (existingNamesLower.has(candidate.toLowerCase())) {
-        let n = 2;
-        const base = candidate;
-        while (existingNamesLower.has(`${base} (${n})`.toLowerCase())) n++;
-        candidate = `${base} (${n})`;
-      }
-      return candidate;
-    }
-
-    window.seedTestStudents = async function() {
-      if (!confirm("This adds 324 clearly-fake test students (108 per grade) to the roster so you can try out grade filtering and Conflict Groups before the real list arrives. You can remove them later with the Remove Test Students button. Continue?")) return;
-
-      const btn = document.getElementById('seed-test-btn');
-      if (btn) { btn.disabled = true; btn.textContent = "Loading..."; }
-
-      const updates = {};
-      const usedNames = new Set(STUDENTS.map(s => s.name.toLowerCase()));
-      [6, 7, 8].forEach((grade, gi) => {
-        for (let i = 0; i < 108; i++) {
-          const isGirl = i % 2 === 0;
-          const namePool = isGirl ? GIRL_NAMES : BOY_NAMES;
-          const firstRaw = namePool[(i + gi * 37) % namePool.length];
-          const firstName = firstRaw.charAt(0).toUpperCase() + firstRaw.slice(1);
-          const lastName = TEST_SURNAMES[(i + gi * 13) % TEST_SURNAMES.length];
-          const name = buildUniqueName(firstName, lastName, usedNames);
-          usedNames.add(name.toLowerCase());
-          const key = name.replace(/[.#$/\[\]]/g, "_");
-          updates[key] = { firstName, lastName, name, grade, gender: isGirl ? 'g' : 'b', limit: 5 };
-        }
-      });
-
-      const uniqueCount = Object.keys(updates).length;
-
-      try {
-        // Single atomic multi-location write instead of 324 separate set() calls —
-        // avoids firing the roster listener (and a full table re-render) 324 times in a row.
-        await update(ref(db, 'bathroom/roster'), updates);
-        alert(`Test students loaded — all ${uniqueCount} are unique. Names that would have collided on "First L." automatically got more of the last name added to tell them apart.`);
-      } catch (err) {
-        console.error(err);
-        alert("Error loading test students: " + (err && err.message ? err.message : err));
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "🧪 Load 324 Test Students"; }
-      }
     };
 
-    // Reads bathroom/roster directly from Firebase (not from the on-screen STUDENTS array,
-    // in case the table itself isn't showing everything that's actually in the database)
-    // and removes anyone whose last name matches the placeholder test-surname list.
-    window.removeTestStudents = async function() {
-      if (!confirm("This removes all test students (the ones with placeholder surnames like Testerman, Sampleford, etc.) from the roster. Continue?")) return;
+    let appStarted = false;
 
-      const btn = document.getElementById('remove-test-btn');
-      if (btn) { btn.disabled = true; btn.textContent = "Removing..."; }
-
-      try {
-        const snap = await get(ref(db, 'bathroom/roster'));
-        const data = snap.val() || {};
-        const deletions = {};
-        let count = 0;
-        Object.entries(data).forEach(([key, s]) => {
-          if (s && TEST_SURNAMES.includes(s.lastName)) {
-            deletions[key] = null;
-            count++;
-          }
-        });
-
-        if (count === 0) {
-          alert("No test students found in the database to remove.");
-        } else {
-          await update(ref(db, 'bathroom/roster'), deletions);
-          alert(`Removed ${count} test student${count !== 1 ? 's' : ''} from the database.`);
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Error removing test students: " + (err && err.message ? err.message : err));
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "🧹 Remove Test Students"; }
-      }
-    };
-
-    function genderInfo(g) {
-      if (g === 'b') return { cls: 'boy', label: 'Boy' };
-      if (g === 'g') return { cls: 'girl', label: 'Girl' };
-      return { cls: 'unknown', label: 'Unknown' };
-    }
-
-    window.switchMainTab = function(view) {
-      const views = ['reports', 'management', 'teachers', 'conflicts', 'history'];
-      views.forEach(v => {
-        document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
-        document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
-      });
-    };
-
-    onValue(ref(db, 'bathroom/roster'), (snapshot) => {
-      const data = snapshot.val();
-      rosterKeyed = data || {};
-      STUDENTS = data ? Object.values(data).sort((a,b) => (a.name || '').localeCompare(b.name || '')) : [];
-      renderReport();
-      window.renderRosterManager();
-      renderPassUsage();
-      renderConflictGroups();
-      updateConflictRosterStatus();
-    });
-
-    onValue(ref(db, 'bathroom/history'), (snapshot) => {
-      const data = snapshot.val() || {};
-      allHistory = Object.entries(data).map(([k,v]) => ({...v, _key: k})).sort((a,b) => b.checkedOutAt - a.checkedOutAt);
-      populateSelectors();
-      renderReport();
-      populateStudentFilter();
-      renderDataManager();
-      renderPassUsage();
-      loadingScreen.style.display = 'none';
-    });
-
-    // Falls back gracefully for legacy roster entries that only have a combined "name" field
-    function displayNameParts(s) {
-      if (s.firstName && s.lastName) return { first: s.firstName, last: s.lastName };
-      const bits = (s.name || '').split(' ');
-      return { first: bits[0] || s.name || 'Unknown', last: (bits[1] || '').replace('.', '') };
-    }
-
-    function updateConflictRosterStatus() {
-      const cgStatusEl = document.getElementById('cg-roster-status');
-      if (!cgStatusEl) return;
-      const count = STUDENTS.length;
-      if (count === 0) {
-        cgStatusEl.className = 'roster-status warn';
-        cgStatusEl.textContent = 'No students loaded yet — add or upload students on the Student Management tab first.';
-      } else {
-        cgStatusEl.className = 'roster-status';
-        cgStatusEl.textContent = `Roster loaded: ${count} students.`;
-      }
-    }
-
-    // ---------------- Teacher Management ----------------
-    onValue(ref(db, 'bathroom/teachers'), (snapshot) => {
-      teachersData = snapshot.val() || {};
-      renderTeacherList();
-      populateTeacherFilterDropdowns();
-    });
-
-    window.saveTeacher = async function() {
-      const name = document.getElementById('teacher-new-name').value.trim();
-      const email = document.getElementById('teacher-new-email').value.trim().toLowerCase();
-      const gradeRaw = document.getElementById('teacher-new-grade').value;
-      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
-
-      if (!name) { alert("Please enter a teacher name."); return; }
-
-      const key = name.replace(/[.#$/\[\]]/g, "_");
-      const collision = Object.values(teachersData).some(t => t.name === name);
-      if (collision) {
-        const proceed = confirm(`A teacher named "${name}" already exists. Saving will overwrite their record. Continue?`);
-        if (!proceed) return;
-      }
-
-      try {
-        await set(ref(db, `bathroom/teachers/${key}`), { name, email: email || null, grade });
-        document.getElementById('teacher-new-name').value = '';
-        document.getElementById('teacher-new-email').value = '';
-        document.getElementById('teacher-new-grade').value = '';
-      } catch(e) {
-        console.error(e);
-        alert("Error saving teacher: " + (e && e.message ? e.message : e));
-      }
-    };
-
-    window.startTeacherEdit = function(key) {
-      editingTeacherKey = key;
-      renderTeacherList();
-    };
-
-    window.cancelTeacherEdit = function() {
-      editingTeacherKey = null;
-      renderTeacherList();
-    };
-
-    window.saveInlineTeacherEdit = async function(oldKey) {
-      const name = document.getElementById('inline-teacher-name').value.trim();
-      const email = document.getElementById('inline-teacher-email').value.trim().toLowerCase();
-      const gradeRaw = document.getElementById('inline-teacher-grade').value;
-      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
-
-      if (!name) { alert("Please enter a teacher name."); return; }
-
-      const newKey = name.replace(/[.#$/\[\]]/g, "_");
-      const collision = newKey !== oldKey && Object.values(teachersData).some(t => t.name === name);
-      if (collision) {
-        const proceed = confirm(`A teacher named "${name}" already exists. Saving will overwrite their record. Continue?`);
-        if (!proceed) return;
-      }
-
-      try {
-        await set(ref(db, `bathroom/teachers/${newKey}`), { name, email: email || null, grade });
-        if (newKey !== oldKey) {
-          await remove(ref(db, `bathroom/teachers/${oldKey}`));
-        }
-        editingTeacherKey = null;
-        renderTeacherList();
-      } catch(e) {
-        console.error(e);
-        alert("Error saving teacher: " + (e && e.message ? e.message : e));
-      }
-    };
-
-    window.removeTeacher = async function(key, name) {
-      if (!confirm(`Remove ${name} from the teacher list? Any of their current bathroom slots or history stay intact — this only removes them from the kiosk picker and filters.`)) return;
-      await remove(ref(db, `bathroom/teachers/${key}`));
-    };
-
-    function renderTeacherList() {
-      const container = document.getElementById('teacher-list-container');
-      if (!container) return;
-      const entries = Object.entries(teachersData).sort((a,b) => a[1].name.localeCompare(b[1].name));
-
-      if (!entries.length) {
-        container.innerHTML = '<p class="no-data">No teachers added yet.</p>';
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        signinScreen.style.display = 'flex';
+        appContent.style.display = 'none';
+        loadingScreen.style.display = 'none';
         return;
       }
 
-      const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th class="nosort">Name</th>
-            <th class="nosort">Email</th>
-            <th class="nosort">Grade</th>
-            <th class="nosort">Actions</th>
-          </tr>
-        </thead>`;
-
-      const tbody = document.createElement('tbody');
-      entries.forEach(([key, t]) => {
-        const tr = document.createElement('tr');
-        const safeName = t.name.replace(/'/g, "\\'");
-
-        if (key === editingTeacherKey) {
-          tr.innerHTML = `
-            <td><input type="text" id="inline-teacher-name" value="${escapeHtml(t.name)}" style="padding:6px 8px; font-size:0.82rem; width:100%;"></td>
-            <td><input type="text" id="inline-teacher-email" value="${escapeHtml(t.email || '')}" style="padding:6px 8px; font-size:0.82rem; width:100%;"></td>
-            <td>
-              <select id="inline-teacher-grade" style="padding:6px 8px; font-size:0.82rem;">
-                <option value="" ${!t.grade ? 'selected' : ''}>Unassigned</option>
-                <option value="6" ${t.grade === 6 ? 'selected' : ''}>6th</option>
-                <option value="7" ${t.grade === 7 ? 'selected' : ''}>7th</option>
-                <option value="8" ${t.grade === 8 ? 'selected' : ''}>8th</option>
-              </select>
-            </td>
-            <td>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineTeacherEdit('${key}')">💾 Save</button>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="cancelTeacherEdit()">Cancel</button>
-            </td>`;
-        } else {
-          tr.innerHTML = `
-            <td class="student-name-cell">${escapeHtml(t.name)}</td>
-            <td style="color:var(--gray-700); font-size:0.82rem;">${t.email ? escapeHtml(t.email) : '—'}</td>
-            <td>${t.grade ? t.grade + 'th' : '—'}</td>
-            <td>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startTeacherEdit('${key}')">✏️ Edit</button>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeTeacher('${key}','${safeName}')">Remove</button>
-            </td>`;
-        }
-        tbody.appendChild(tr);
-      });
-
-      table.appendChild(tbody);
-      container.innerHTML = '';
-      container.appendChild(table);
-    }
-
-    // Keeps the Reports/History teacher filter dropdowns in sync with the managed teacher list,
-    // instead of the old hardcoded 4-name option list.
-    function populateTeacherFilterDropdowns() {
-      const names = Object.values(teachersData).map(t => t.name).sort((a,b) => a.localeCompare(b));
-      ['weekly-teacher-filter', 'monthly-teacher-filter', 'custom-teacher-filter'].forEach(id => {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-        const current = sel.value;
-        sel.innerHTML = '<option value="">All Teachers</option>' +
-          names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
-        if (names.includes(current)) sel.value = current;
-      });
-    }
-
-    // ---------------- Conflict Groups ----------------
-    onValue(ref(db, 'conflictGroups'), (snapshot) => {
-      conflictGroupsData = snapshot.val() || {};
-      renderConflictGroups();
-    });
-
-    window.createConflictGroup = function() {
-      const newRef = push(ref(db, 'conflictGroups'));
-      set(newRef, { name: "", studentIds: {} });
-    };
-
-    window.deleteConflictGroup = function(groupId) {
-      if (!confirm("Delete this conflict group? This can't be undone.")) return;
-      remove(ref(db, 'conflictGroups/' + groupId));
-    };
-
-    window.renameConflictGroup = function(groupId, newName) {
-      set(ref(db, 'conflictGroups/' + groupId + '/name'), newName.trim());
-    };
-
-    window.removeConflictMember = function(groupId, studentId) {
-      remove(ref(db, 'conflictGroups/' + groupId + '/studentIds/' + studentId));
-    };
-
-    window.addConflictMember = function(groupId, studentId) {
-      set(ref(db, 'conflictGroups/' + groupId + '/studentIds/' + studentId), true);
-      closeConflictSearch();
-    };
-
-    function closeConflictSearch() {
-      document.querySelectorAll('.search-results').forEach(el => { el.style.display = 'none'; });
-      document.querySelectorAll('.add-student-input').forEach(el => { el.value = ''; });
-    }
-
-    window.handleConflictSearchInput = function(groupId, value) {
-      const resultsEl = document.getElementById('cg-results-' + groupId);
-      const q = value.trim().toLowerCase();
-      if (!q) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
-
-      const group = conflictGroupsData[groupId] || {};
-      const alreadyIn = group.studentIds || {};
-
-      let matches = Object.entries(rosterKeyed)
-        .filter(([id, s]) => !alreadyIn[id])
-        .filter(([id, s]) => {
-          const p = displayNameParts(s);
-          return `${p.first} ${p.last}`.toLowerCase().includes(q) || (s.name || '').toLowerCase().includes(q) || id.toLowerCase().includes(q);
-        });
-
-      // Sort alphabetically by name first (not by ID/grade), so a broad query doesn't
-      // get dominated by whichever grade happens to sort first.
-      const totalMatches = matches.length;
-      matches.sort((a, b) => {
-        const pa = displayNameParts(a[1]), pb = displayNameParts(b[1]);
-        return `${pa.last} ${pa.first}`.localeCompare(`${pb.last} ${pb.first}`);
-      });
-      matches = matches.slice(0, 25);
-
-      if (matches.length === 0) {
-        resultsEl.innerHTML = '<div class="search-result-item">No matches</div>';
-      } else {
-        resultsEl.innerHTML = matches.map(([id, s]) => {
-          const p = displayNameParts(s);
-          const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
-          return `<div class="search-result-item" onclick="window.addConflictMember('${groupId}','${id}')">
-            <span>${escapeHtml(p.first)} ${escapeHtml(p.last)}</span>
-            <span class="sr-grade">${gradeLabel}</span>
-          </div>`;
-        }).join('');
-        if (totalMatches > 25) {
-          resultsEl.innerHTML += `<div class="search-result-item" style="color:var(--gray-500); font-style:italic; cursor:default;">+${totalMatches - 25} more — type more letters to narrow it down</div>`;
-        }
-      }
-      resultsEl.style.display = 'block';
-    };
-
-    function renderConflictGroups() {
-      const grid = document.getElementById('cg-groups-grid');
-      const emptyEl = document.getElementById('cg-empty-groups');
-      if (!grid) return;
-      const entries = Object.entries(conflictGroupsData);
-
-      if (entries.length === 0) {
-        grid.innerHTML = '';
-        emptyEl.style.display = 'block';
+      const email = user.email || "";
+      if (!email.endsWith("@" + ALLOWED_DOMAIN)) {
+        showSigninError(`This tool is restricted to @${ALLOWED_DOMAIN} accounts. You signed in as ${email}.`);
+        signOut(auth);
         return;
       }
-      emptyEl.style.display = 'none';
 
-      grid.innerHTML = entries.map(([groupId, group]) => {
-        const memberIds = Object.keys(group.studentIds || {});
-        const membersHtml = memberIds.length === 0
-          ? '<div class="empty-members">No students yet — search below to add.</div>'
-          : memberIds.map(id => {
-              const s = rosterKeyed[id];
-              if (!s) return '';
-              const p = displayNameParts(s);
-              const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
-              return `<span class="member-chip">
-                <span class="grade-tag">${gradeLabel}</span> ${escapeHtml(p.first)} ${escapeHtml(p.last)}
-                <span class="remove-x" onclick="window.removeConflictMember('${groupId}','${id}')">&times;</span>
-              </span>`;
-            }).join('');
+      signinScreen.style.display = 'none';
+      loadingScreen.style.display = 'flex';
+      userBadge.textContent = email;
 
-        return `
-          <div class="group-card">
-            <div class="group-card-top">
-              <input class="group-name-input" value="${escapeHtml(group.name || '')}" placeholder="Name this group..."
-                onblur="window.renameConflictGroup('${groupId}', this.value)"
-                onkeydown="if(event.key==='Enter'){this.blur();}">
-              <button class="del-group-btn" onclick="window.deleteConflictGroup('${groupId}')" title="Delete group">&times;</button>
-            </div>
-            <div class="members-box">${membersHtml}</div>
-            <div class="add-student-wrap">
-              <input class="add-student-input" id="cg-input-${groupId}" placeholder="Search name to add..."
-                oninput="window.handleConflictSearchInput('${groupId}', this.value)">
-              <div class="search-results" id="cg-results-${groupId}"></div>
-            </div>
-          </div>`;
-      }).join('');
-    }
-
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.add-student-wrap')) {
-        closeConflictSearch();
+      if (!appStarted) {
+        appStarted = true;
+        startApp(email);
       }
     });
 
-    // ---------------- Student Management (bathroom/roster) ----------------
-    window.saveStudent = async function() {
-      const firstName = document.getElementById('roster-new-first').value.trim();
-      const lastName = document.getElementById('roster-new-last').value.trim();
-      const gradeRaw = document.getElementById('roster-new-grade').value;
-      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
-      const gender = document.getElementById('roster-new-gender').value;
-      const limit = parseInt(document.getElementById('roster-new-limit').value, 10) || 5;
+    function startApp(currentUserEmail) {
+      appContent.style.display = 'block';
 
-      if (!firstName || !lastName) { alert("Please enter both a first and last name."); return; }
-
-      const usedNames = new Set(STUDENTS.map(s => s.name.toLowerCase()));
-      const name = buildUniqueName(firstName, lastName, usedNames);
-      const newKey = name.replace(/[.#$/\[\]]/g, "_");
-
-      try {
-        await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
-        if (name !== `${firstName} ${lastName.charAt(0).toUpperCase()}.`) {
-          alert(`Saved as "${name}" — another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
-        }
-        document.getElementById('roster-new-first').value = '';
-        document.getElementById('roster-new-last').value = '';
-        document.getElementById('roster-new-grade').value = '';
-        document.getElementById('roster-new-gender').value = 'g';
-        document.getElementById('roster-new-limit').value = '5';
-      } catch(e) {
-        console.error(e);
-        alert("Error saving student: " + (e && e.message ? e.message : e));
+      // Dynamic Iso Week calculation utility mapping logs back to base Monday dates
+      function getWeekStart(date = new Date()) {
+        const d = new Date(date);
+        const day = d.getDay(); 
+        const diff = day === 0 ? -6 : 1 - day; 
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().split('T')[0];
       }
-    };
 
-    // ---------------- Inline row editing (Student Management table) ----------------
+      // Historical ledger indexing to compile active tallies specific to targeted frame constraints
+      function getWeeklyCount(name) {
+        const weekStart = getWeekStart();
+        
+        // Count completed trips from history for this week
+        let count = state.history.filter(h => {
+          if (h.name !== name) return false;
+          const d = new Date(h.checkedOutAt);
+          return getWeekStart(d) === weekStart;
+        }).length;
 
-    window.startInlineEdit = function(key) {
-      editingKey = key;
-      window.renderRosterManager();
-    };
-
-    window.cancelInlineEdit = function() {
-      editingKey = null;
-      window.renderRosterManager();
-    };
-
-    window.saveInlineEdit = async function(oldKey) {
-      const firstName = document.getElementById('inline-first').value.trim();
-      const lastName = document.getElementById('inline-last').value.trim();
-      const gradeRaw = document.getElementById('inline-grade').value;
-      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
-      const gender = document.getElementById('inline-gender').value;
-      const limit = parseInt(document.getElementById('inline-limit').value, 10) || 5;
-
-      if (!firstName || !lastName) { alert("Please enter both a first and last name."); return; }
-
-      const originalStudent = STUDENTS.find(s => s.name.replace(/[.#$/\[\]]/g, "_") === oldKey);
-      const originalName = originalStudent ? originalStudent.name : null;
-
-      const usedNames = new Set(STUDENTS.filter(s => s.name !== originalName).map(s => s.name.toLowerCase()));
-      const name = buildUniqueName(firstName, lastName, usedNames);
-      const newKey = name.replace(/[.#$/\[\]]/g, "_");
-
-      try {
-        await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
-        if (name !== `${firstName} ${lastName.charAt(0).toUpperCase()}.` && name !== originalName) {
-          alert(`Saved as "${name}" — another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
+        // ALSO count if the student is actively checked out right now or in the waiting list
+        const isCurrentlyOut = Object.values(state.slots).some(slot => slot && slot.name === name);
+        const isCurrentlyWaiting = state.waiting.some(s => s.name === name);
+        
+        if (isCurrentlyOut || isCurrentlyWaiting) {
+          count += 1;
         }
 
-        if (newKey !== oldKey) {
-          await remove(ref(db, `bathroom/roster/${oldKey}`));
-
-          // Carry conflict-group membership over to the new key so groups don't silently break
-          const groupsWithOldKey = Object.entries(conflictGroupsData).filter(([gid, g]) => g.studentIds && g.studentIds[oldKey]);
-          if (groupsWithOldKey.length) {
-            await Promise.all(groupsWithOldKey.map(([gid]) => Promise.all([
-              set(ref(db, `conflictGroups/${gid}/studentIds/${newKey}`), true),
-              remove(ref(db, `conflictGroups/${gid}/studentIds/${oldKey}`))
-            ])));
-          }
-
-          if (originalName) {
-            const toRename = allHistory.filter(h => h.name === originalName);
-            if (toRename.length) {
-              await Promise.all(toRename.map(h => update(ref(db, `bathroom/history/${h._key}`), { name })));
-            }
-          }
-        }
-
-        editingKey = null;
-        window.renderRosterManager();
-      } catch(e) {
-        console.error(e);
-        alert("Error saving student: " + (e && e.message ? e.message : e));
-      }
-    };
-
-    window.removeStudent = async function(name) {
-      if (!confirm(`Are you completely sure you want to delete ${name} from the roster? This removes their profile config.`)) return;
-      const key = name.replace(/[.#$/\[\]]/g, "_");
-      await remove(ref(db, `bathroom/roster/${key}`));
-
-      // Also drop them from any conflict groups so nothing points at a deleted student
-      const groupsWithKey = Object.entries(conflictGroupsData).filter(([gid, g]) => g.studentIds && g.studentIds[key]);
-      if (groupsWithKey.length) {
-        await Promise.all(groupsWithKey.map(([gid]) => remove(ref(db, `conflictGroups/${gid}/studentIds/${key}`))));
-      }
-    };
-
-    window.processCSV = async function() {
-      const fileInput = document.getElementById('csv-upload');
-      const statusEl = document.getElementById('csv-status');
-      const uploadBtn = document.getElementById('csv-upload-btn');
-      const file = fileInput.files[0];
-
-      if (!file) {
-        alert("Please select a CSV file first.");
-        return;
+        return count;
       }
 
-      const setStatus = (msg, color) => {
-        statusEl.textContent = msg;
-        statusEl.style.color = color || '#888';
-      };
+      // Verified Database Structural Student Roster Dataset
+      let STUDENTS = [];
+      let rosterKeyed = {}; // same roster, keyed by sanitized name — needed to resolve conflict-group member IDs back to names
+      let conflictGroupsData = {}; // "can't be out at the same time" groups, managed on the Student Management dashboard
 
-      const reader = new FileReader();
+      let state = { slots: {}, waiting: [], history: [] };
+      let TEACHERS = []; // populated live from bathroom/teachers — no longer hardcoded
+      let TEACHER_RECORDS = []; // [{name, grade}, ...] — grade used to group the kiosk picker
+      let lastBathroomData = {}; // most recent raw snapshot of the 'bathroom' node, re-applied whenever the teacher list changes
 
-      reader.onerror = function() {
-        setStatus("❌ Could not read the file. Try re-saving it as a .csv and upload again.", '#cc0000');
-      };
-
-      reader.onload = async function(e) {
-        uploadBtn.disabled = true;
-        try {
-          const text = e.target.result;
-
-          let rawLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
-
-          if (!rawLines.length) {
-            setStatus("❌ The file appears to be empty — no rows found.", '#cc0000');
-            uploadBtn.disabled = false;
-            return;
-          }
-
-          const firstCol = rawLines[0].split(',')[0].replace(/"/g, '').trim().toLowerCase();
-          const headerWords = ['lastname', 'last name', 'last'];
-          if (headerWords.includes(firstCol)) {
-            rawLines.shift();
-          }
-
-          if (!rawLines.length) {
-            setStatus("❌ Only a header row was found — no student data to import.", '#cc0000');
-            uploadBtn.disabled = false;
-            return;
-          }
-
-          let successCount = 0;
-          let genderGuessedCount = 0;
-          let genderUnknownCount = 0;
-          let adjustedNameCount = 0;
-          const unknownNames = [];
-          const errorLines = [];
-          const updates = {};
-          const usedNames = new Set(STUDENTS.map(s => s.name.toLowerCase()));
-
-          for (let i = 0; i < rawLines.length; i++) {
-            const cleanLine = rawLines[i].replace(/"/g, '');
-            const parts = cleanLine.split(',').map(p => p.trim());
-            if (!parts.length || !parts[0]) continue;
-
-            if (parts.length < 3) {
-              errorLines.push(`Line ${i + 1}: needs at least LastName, FirstName, Grade — got "${rawLines[i]}"`);
-              continue;
-            }
-
-            const [lastNameRaw, firstNameRaw, gradeRaw, genderRaw, limitRaw] = parts;
-            const grade = parseInt(gradeRaw, 10);
-            if (![6, 7, 8].includes(grade)) {
-              errorLines.push(`Line ${i + 1}: grade must be 6, 7, or 8 — got "${gradeRaw}"`);
-              continue;
-            }
-
-            const firstName = firstNameRaw.charAt(0).toUpperCase() + firstNameRaw.slice(1).toLowerCase();
-            const lastName = lastNameRaw.charAt(0).toUpperCase() + lastNameRaw.slice(1).toLowerCase();
-            const defaultName = `${firstName} ${lastName.charAt(0).toUpperCase()}.`;
-            const name = buildUniqueName(firstName, lastName, usedNames);
-            usedNames.add(name.toLowerCase());
-            if (name !== defaultName) adjustedNameCount++;
-
-            let gender = 'unk';
-            const explicitGender = (genderRaw || '').trim().toLowerCase();
-            if (['g', 'f', 'girl', 'female'].includes(explicitGender)) {
-              gender = 'g';
-            } else if (['b', 'm', 'boy', 'male'].includes(explicitGender)) {
-              gender = 'b';
-            } else if (GENDER_MAP[firstName.toLowerCase()]) {
-              gender = GENDER_MAP[firstName.toLowerCase()];
-              genderGuessedCount++;
-            } else {
-              gender = 'unk';
-              genderUnknownCount++;
-              unknownNames.push(name);
-            }
-
-            const limit = parseInt(limitRaw, 10);
-
-            const key = name.replace(/[.#$/\[\]]/g, '_');
-            updates[key] = {
-              firstName, lastName, name, grade, gender,
-              limit: isNaN(limit) ? 5 : limit
-            };
-            successCount++;
-          }
-
-          setStatus(`Writing ${successCount} student${successCount !== 1 ? 's' : ''}...`);
-          if (successCount > 0) {
-            await update(ref(db, 'bathroom/roster'), updates);
-          }
-
-          setStatus(`✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''}${errorLines.length ? `, ${errorLines.length} skipped` : ''}.`, errorLines.length ? '#c98a00' : '#1a7a1a');
-
-          let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
-          if (adjustedNameCount > 0) {
-            summary += `• ${adjustedNameCount} name${adjustedNameCount !== 1 ? 's' : ''} auto-adjusted to include more of the last name, since "First L." was already taken by someone else — no one was overwritten.\n`;
-          }
-          summary += `• Gender guessed from first name: ${genderGuessedCount}\n`;
-          summary += `• Gender not recognized (marked Unknown): ${genderUnknownCount}\n`;
-          if (unknownNames.length) {
-            summary += `\n⚠️ These need a gender set manually with the Edit button:\n${unknownNames.join(', ')}`;
-          }
-          if (errorLines.length) {
-            summary += `\n\n❌ ${errorLines.length} line(s) skipped:\n` + errorLines.slice(0, 10).join('\n');
-          }
-          alert(summary);
-
-          fileInput.value = "";
-        } catch (err) {
-          console.error(err);
-          setStatus("❌ Something went wrong during import. Check the browser console for details.", '#cc0000');
-        } finally {
-          uploadBtn.disabled = false;
-        }
-      };
-
-      setStatus("Reading file...");
-      reader.readAsText(file);
-    };
-
-    window.renderRosterManager = function() {
-      const container = document.getElementById('roster-container');
-      const gradeFilterEl = document.getElementById('rm-grade-filter');
-      const gradeFilter = gradeFilterEl ? gradeFilterEl.value : '';
-
-      let filtered = STUDENTS;
-      if (gradeFilter === 'unassigned') {
-        filtered = STUDENTS.filter(s => !s.grade);
-      } else if (gradeFilter) {
-        filtered = STUDENTS.filter(s => s.grade === parseInt(gradeFilter, 10));
+      // --- Clock Component Runtime ---
+      function updateClock() {
+        const now = new Date();
+        let h = now.getHours(), m = now.getMinutes();
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        document.getElementById('clock').textContent =
+          `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ampm}`;
       }
+      setInterval(updateClock, 1000);
+      updateClock();
 
-      if (!filtered.length) {
-        container.innerHTML = '<p class="no-data">No students match this filter.</p>';
-        return;
+      // --- Duration Parsers ---
+      function formatDuration(seconds) {
+        const m = Math.floor(seconds / 60);
+        return m < 1 ? '<1m' : `${m}m`;
       }
+      function getElapsed(since) { return Math.floor((Date.now() - since) / 1000); }
 
-      const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th class="nosort check-cell"><input type="checkbox" id="rm-select-all" onclick="toggleSelectAllStudents(this)" title="Select all"></th>
-            <th class="nosort">Student Name</th>
-            <th class="nosort">Grade</th>
-            <th class="nosort">Gender</th>
-            <th class="nosort">Weekly Pass Limit</th>
-            <th class="nosort">Actions</th>
-          </tr>
-        </thead>`;
-
-      const tbody = document.createElement('tbody');
-      filtered.forEach(s => {
-        const key = s.name.replace(/[.#$/\[\]]/g, "_");
-        const safeName = s.name.replace(/'/g, "\\'");
-        const tr = document.createElement('tr');
-
-        if (key === editingKey) {
-          tr.innerHTML = `
-            <td class="check-cell"></td>
-            <td>
-              <div style="display:flex; gap:6px;">
-                <input type="text" id="inline-first" value="${escapeHtml(s.firstName || s.name.split(' ')[0] || '')}" placeholder="First" style="width:80px; padding:6px 8px; font-size:0.82rem;">
-                <input type="text" id="inline-last" value="${escapeHtml(s.lastName || (s.name.split(' ')[1] || '').replace('.', ''))}" placeholder="Last" style="width:80px; padding:6px 8px; font-size:0.82rem;">
-              </div>
-            </td>
-            <td>
-              <select id="inline-grade" style="padding:6px 8px; font-size:0.82rem;">
-                <option value="" ${!s.grade ? 'selected' : ''}>Unassigned</option>
-                <option value="6" ${s.grade === 6 ? 'selected' : ''}>6th</option>
-                <option value="7" ${s.grade === 7 ? 'selected' : ''}>7th</option>
-                <option value="8" ${s.grade === 8 ? 'selected' : ''}>8th</option>
-              </select>
-            </td>
-            <td>
-              <select id="inline-gender" style="padding:6px 8px; font-size:0.82rem;">
-                <option value="g" ${s.gender === 'g' ? 'selected' : ''}>Girl</option>
-                <option value="b" ${s.gender === 'b' ? 'selected' : ''}>Boy</option>
-                <option value="unk" ${s.gender === 'unk' ? 'selected' : ''}>Unknown</option>
-              </select>
-            </td>
-            <td>
-              <input type="number" id="inline-limit" value="${s.limit || 5}" min="1" style="width:60px; padding:6px 8px; font-size:0.82rem;">
-            </td>
-            <td>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineEdit('${key}')">💾 Save</button>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="cancelInlineEdit()">Cancel</button>
-            </td>`;
-        } else {
-          tr.innerHTML = `
-            <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
-            <td class="student-name-cell">
-              <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(s.name)}
-            </td>
-            <td>${s.grade ? s.grade + 'th' : '—'}</td>
-            <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
-            <td class="trips-cell">${s.limit || 5} passes</td>
-            <td>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startInlineEdit('${key}')">✏️ Edit</button>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${safeName}')">Remove</button>
-            </td>`;
-        }
-        tbody.appendChild(tr);
-      });
-
-      table.appendChild(tbody);
-      container.innerHTML = '';
-      container.appendChild(table);
-      updateStudentSelectedCount();
-    }
-
-    window.toggleSelectAllStudents = function(master) {
-      document.querySelectorAll('.rm-check').forEach(cb => { cb.checked = master.checked; });
-      updateStudentSelectedCount();
-    };
-
-    window.updateStudentSelectedCount = function() {
-      const n = document.querySelectorAll('.rm-check:checked').length;
-      const countEl = document.getElementById('rm-selected-count');
-      if (countEl) countEl.textContent = `${n} selected`;
-      const master = document.getElementById('rm-select-all');
-      const all = document.querySelectorAll('.rm-check').length;
-      if (master) master.checked = all > 0 && n === all;
-    };
-
-    window.bulkAssignGrade = async function() {
-      const gradeRaw = document.getElementById('bulk-grade-select').value;
-      if (!gradeRaw) { alert('Pick a grade from the dropdown first.'); return; }
-      const grade = parseInt(gradeRaw, 10);
-
-      const checked = [...document.querySelectorAll('.rm-check:checked')];
-      if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to assign.'); return; }
-      if (!confirm(`Assign Grade ${grade} to ${checked.length} selected student${checked.length === 1 ? '' : 's'}?`)) return;
-
-      try {
-        const updates = {};
-        checked.forEach(cb => { updates[`${cb.dataset.key}/grade`] = grade; });
-        await update(ref(db, 'bathroom/roster'), updates);
-        document.getElementById('bulk-grade-select').value = '';
-      } catch (e) {
-        console.error(e);
-        alert('Error assigning grade: ' + (e && e.message ? e.message : e));
-      }
-    };
-
-    window.deleteSelectedStudents = async function() {
-      const checked = [...document.querySelectorAll('.rm-check:checked')];
-      if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to remove.'); return; }
-      if (!confirm(`Remove ${checked.length} selected student${checked.length === 1 ? '' : 's'} from the roster?\n\nThis removes their profile config and cannot be undone.`)) return;
-
-      try {
-        const keys = checked.map(cb => cb.dataset.key);
-        await Promise.all(keys.map(k => remove(ref(db, `bathroom/roster/${k}`))));
-
-        const cleanupOps = [];
-        keys.forEach(key => {
-          Object.entries(conflictGroupsData).forEach(([gid, g]) => {
-            if (g.studentIds && g.studentIds[key]) {
-              cleanupOps.push(remove(ref(db, `conflictGroups/${gid}/studentIds/${key}`)));
-            }
+      // Synchronized loop driving dynamic live UI tickers
+      setInterval(() => {
+        TEACHERS.forEach(t => {
+          ['b','g'].forEach(g => {
+            const el = document.getElementById(`timer-${t}-${g}`);
+            const entry = state.slots[`${t}_${g}`];
+            if (el && entry) el.textContent = formatDuration(getElapsed(entry.checkoutTime));
           });
         });
-        if (cleanupOps.length) await Promise.all(cleanupOps);
-      } catch (e) {
-        console.error(e);
-        alert('Error removing students: ' + (e && e.message ? e.message : e));
-      }
-    }
+        state.waiting.forEach((s, i) => {
+          const el = document.getElementById(`wait-timer-${i}`);
+          if (el) el.textContent = 'Waiting ' + formatDuration(getElapsed(s.addedTime));
+        });
+      }, 1000);
 
-    function startOfWeek(date) {
-      const d = new Date(date);
-      const day = d.getDay();
-      d.setDate(d.getDate() - day);
-      d.setHours(0,0,0,0);
-      return d;
-    }
+      const TEACHER_GRADE_GROUPS = [6, 7, 8, 'other']; // shared order for rendering + lookups
+      let autoTeacher = null; // {name, grade} when the signed-in email matches a teacher — bypasses the picker entirely
 
-    function endOfWeek(date) {
-      const d = startOfWeek(date);
-      d.setDate(d.getDate() + 6);
-      d.setHours(23,59,59,999);
-      return d;
-    }
-
-    function formatDate(ts) {
-      return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    function formatDateShort(ts) {
-      return new Date(ts).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-    }
-
-    function isoDate(date) {
-      return date.toISOString().split('T')[0];
-    }
-
-    function populateSelectors() {
-      const weekSel = document.getElementById('week-select');
-      if(!weekSel) return;
-      const weekSet = new Set();
-      allHistory.forEach(h => {
-        const ws = isoDate(startOfWeek(new Date(h.checkedOutAt)));
-        weekSet.add(ws);
-      });
-      weekSet.add(isoDate(startOfWeek(new Date())));
-      const weeks = [...weekSet].sort().reverse();
-      weekSel.innerHTML = weeks.map(w => {
-        const start = new Date(w + 'T12:00:00');
-        const end = endOfWeek(start);
-        return `<option value="${w}">${formatDate(start)} – ${formatDate(end)}</option>`;
-      }).join('');
-
-      const monthSel = document.getElementById('month-select');
-      const monthSet = new Set();
-      allHistory.forEach(h => {
-        const d = new Date(h.checkedOutAt);
-        monthSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-      });
-      const now = new Date();
-      monthSet.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
-      const months = [...monthSet].sort().reverse();
-      monthSel.innerHTML = months.map(m => {
-        const [y, mo] = m.split('-');
-        const label = new Date(y, mo-1, 1).toLocaleDateString([], { month: 'long', year: 'numeric' });
-        return `<option value="${m}">${label}</option>`;
-      }).join('');
-
-      const today = isoDate(new Date());
-      const weekAgo = isoDate(new Date(Date.now() - 7*24*60*60*1000));
-      document.getElementById('custom-start').value = weekAgo;
-      document.getElementById('custom-end').value = today;
-    }
-
-    function getTeacherFilter() {
-      if (currentTab === 'weekly') return document.getElementById('weekly-teacher-filter').value;
-      if (currentTab === 'monthly') return document.getElementById('monthly-teacher-filter').value;
-      return document.getElementById('custom-teacher-filter').value;
-    }
-
-    function getDateRange() {
-      if (currentTab === 'weekly') {
-        const val = document.getElementById('week-select').value;
-        if(!val) return null;
-        const start = new Date(val + 'T12:00:00');
-        return { start: startOfWeek(start).getTime(), end: endOfWeek(start).getTime(), label: `Week of ${formatDate(startOfWeek(start))}` };
-      } else if (currentTab === 'monthly') {
-        const val = document.getElementById('month-select').value;
-        if(!val) return null;
-        const [y, m] = val.split('-').map(Number);
-        const start = new Date(y, m-1, 1, 0, 0, 0, 0);
-        const end = new Date(y, m, 0, 23, 59, 59, 999);
-        return { start: start.getTime(), end: end.getTime(), label: start.toLocaleDateString([], { month: 'long', year: 'numeric' }) };
-      } else {
-        const s = document.getElementById('custom-start').value;
-        const e = document.getElementById('custom-end').value;
-        if (!s || !e) return null;
-        const start = new Date(s + 'T00:00:00').getTime();
-        const end = new Date(e + 'T23:59:59').getTime();
-        return { start, end, label: `${s} to ${e}` };
-      }
-    }
-
-    window.renderReport = function() {
-      const range = getDateRange();
-      if (!range) return;
-      const teacherFilter = getTeacherFilter();
-
-      let filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
-      if (teacherFilter) filtered = filtered.filter(h => (h.teacher || 'Loveday') === teacherFilter);
-
-      const totalTrips = filtered.length;
-      const totalMins = filtered.reduce((sum, h) => sum + Math.floor(h.duration / 60), 0);
-      const uniqueStudents = new Set(filtered.map(h => h.name)).size;
-      const avgMins = totalTrips > 0 ? Math.round(totalMins / totalTrips) : 0;
-
-      document.getElementById('summary-grid').innerHTML = `
-        <div class="summary-card"><div class="val">${totalTrips}</div><div class="lbl">Total Trips</div></div>
-        <div class="summary-card"><div class="val">${totalMins}m</div><div class="lbl">Total Time</div></div>
-        <div class="summary-card"><div class="val">${uniqueStudents}</div><div class="lbl">Students Out</div></div>
-        <div class="summary-card"><div class="val">${avgMins}m</div><div class="lbl">Avg Trip</div></div>
-      `;
-
-      document.getElementById('table-title').textContent = `Student Summary — ${range.label}`;
-
-      const studentMap = {};
-      STUDENTS.forEach(s => {
-        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {} };
-      });
-
-      filtered.forEach(h => {
-        if (!studentMap[h.name]) return;
-        const s = studentMap[h.name];
-        s.trips++;
-        s.totalMins += Math.floor(h.duration / 60);
-        const day = new Date(h.checkedOutAt).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-        const dayKey = isoDate(new Date(h.checkedOutAt));
-        if (!s.days[dayKey]) s.days[dayKey] = { label: day, trips: 0, mins: 0 };
-        s.days[dayKey].trips++;
-        s.days[dayKey].mins += Math.floor(h.duration / 60);
-      });
-
-      let rows = Object.values(studentMap).filter(s => s.trips > 0);
-
-      rows.sort((a, b) => {
-        const av = a[sortCol], bv = b[sortCol];
-        return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
-      });
-
-      if (!rows.length) {
-        document.getElementById('table-container').innerHTML = '<p class="no-data">No bathroom trips recorded for this period.</p>';
-        document.getElementById('daily-container').innerHTML = '<p class="no-data">No data for this period.</p>';
-        return;
+      function getSelectedTeacher(gender) {
+        if (autoTeacher) return autoTeacher.name;
+        const prefix = gender === 'b' ? 'boy' : 'girl';
+        for (const g of TEACHER_GRADE_GROUPS) {
+          const sel = document.getElementById(`${prefix}-teacher-${g}`);
+          if (sel && sel.value) return sel.value;
+        }
+        return null;
       }
 
-      const thead = `
-        <thead>
-          <tr>
-            <th onclick="sortBy('name')" class="${sortCol==='name'?'sorted':''}">Student ${sortCol==='name'?(sortAsc?'↑':'↓'):''}</th>
-            <th onclick="sortBy('trips')" class="${sortCol==='trips'?'sorted':''}">Trips ${sortCol==='trips'?(sortAsc?'↑':'↓'):''}</th>
-            <th onclick="sortBy('totalMins')" class="${sortCol==='totalMins'?'sorted':''}">Total Time ${sortCol==='totalMins'?(sortAsc?'↑':'↓'):''}</th>
-          </tr>
-        </thead>`;
+      function getSelectedTeacherRecord(gender) {
+        if (autoTeacher) return autoTeacher;
+        const name = getSelectedTeacher(gender);
+        if (!name) return null;
+        return TEACHER_RECORDS.find(t => t.name === name) || null;
+      }
 
-      const tbody = `<tbody>${rows.map(s => `
-        <tr>
-          <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
-          </td>
-          <td class="trips-cell">${s.trips}</td>
-          <td class="val-cell">${s.totalMins}m</td>
-        </tr>`).join('')}</tbody>`;
+      // Checks the signed-in email against the teacher list. If it matches, the teacher-picking
+      // step is hidden entirely and the name list goes straight to that teacher's grade.
+      function applyTeacherDetection() {
+        if (!currentUserEmail || !TEACHER_RECORDS.length) return;
+        const match = TEACHER_RECORDS.find(t => t.email && t.email.toLowerCase() === currentUserEmail.toLowerCase());
+        autoTeacher = match || null;
+        renderTeacherDetectionUI();
+        renderCurrentlyOut();
+        renderDropdowns();
+      }
 
-      document.getElementById('table-container').innerHTML = `<table>${thead}${tbody}</table>`;
+      function renderTeacherDetectionUI() {
+        const banner = document.getElementById('teacher-detect-banner');
+        const boyStep = document.getElementById('boy-teacher-step');
+        const girlStep = document.getElementById('girl-teacher-step');
+        const boyLabel = document.getElementById('boy-name-label');
+        const girlLabel = document.getElementById('girl-name-label');
+        if (!banner) return;
 
-      const dayMap = {};
-      filtered.forEach(h => {
-        const dayKey = isoDate(new Date(h.checkedOutAt));
-        const label = formatDateShort(h.checkedOutAt);
-        if (!dayMap[dayKey]) dayMap[dayKey] = { label, trips: 0, mins: 0, students: new Set() };
-        dayMap[dayKey].trips++;
-        dayMap[dayKey].mins += Math.floor(h.duration / 60);
-        dayMap[dayKey].students.add(h.name);
+        if (autoTeacher) {
+          banner.style.display = 'block';
+          banner.className = autoTeacher.grade ? 'teacher-detect-banner detected' : 'teacher-detect-banner fallback';
+          banner.textContent = autoTeacher.grade
+            ? `✓ Signed in as ${autoTeacher.name} — ${autoTeacher.grade}th Grade`
+            : `✓ Signed in as ${autoTeacher.name} — no grade assigned, so ALL grades are showing. Set a grade for ${autoTeacher.name} in Teacher Management to filter this.`;
+          if (boyStep) boyStep.style.display = 'none';
+          if (girlStep) girlStep.style.display = 'none';
+          if (boyLabel) boyLabel.textContent = 'Your Name';
+          if (girlLabel) girlLabel.textContent = 'Your Name';
+        } else {
+          banner.style.display = 'block';
+          banner.className = 'teacher-detect-banner fallback';
+          banner.textContent = `Your sign-in doesn't match a saved teacher — pick your teacher below.`;
+          if (boyStep) boyStep.style.display = '';
+          if (girlStep) girlStep.style.display = '';
+          if (boyLabel) boyLabel.textContent = '2. Your Name';
+          if (girlLabel) girlLabel.textContent = '2. Your Name';
+        }
+      }
+
+      // ---------------- Conflict Groups helpers ----------------
+      // Returns the set of student names currently occupying a bathroom slot, given a slots object.
+      function getOutNamesFromSlots(slotsObj) {
+        return new Set(Object.values(slotsObj || {}).filter(Boolean).map(s => s.name));
+      }
+
+      // Returns the name of the groupmate currently out that's blocking this student, or null if
+      // none. Used both to decide whether to block, and to log who the blocker was for the report
+      // (that name is never shown to the student — only recorded for the dashboard log).
+      function findBlockingGroupmate(studentName, outNames) {
+        const key = studentName.replace(/[.#$/\[\]]/g, "_");
+        const myGroups = Object.values(conflictGroupsData).filter(g => g.studentIds && g.studentIds[key]);
+        if (!myGroups.length) return null;
+
+        for (const group of myGroups) {
+          const memberKeys = Object.keys(group.studentIds || {});
+          for (const mKey of memberKeys) {
+            if (mKey === key) continue;
+            const member = rosterKeyed[mKey];
+            if (member && outNames.has(member.name)) return member.name;
+          }
+        }
+        return null;
+      }
+
+      // Checks whether the given student belongs to any conflict group where another
+      // member is currently in outNames (i.e. currently checked out somewhere).
+      function hasConflictingGroupmateOut(studentName, outNames) {
+        return !!findBlockingGroupmate(studentName, outNames);
+      }
+
+      // Short two-tone "denied" chime — generated in-browser so there's no audio file to host.
+      function playBlockedSound() {
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          const ctx = new AudioCtx();
+          const now = ctx.currentTime;
+          [600, 340].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const start = now + i * 0.16;
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.exponentialRampToValueAtTime(0.28, start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + 0.17);
+          });
+        } catch (e) {
+          console.error('Could not play alert sound', e);
+        }
+      }
+
+      // --- Dynamic Roster Pull ---
+      onValue(ref(db, 'bathroom/roster'), (snapshot) => {
+        const data = snapshot.val() || {};
+        rosterKeyed = data;
+        STUDENTS = Object.values(data).sort((a,b) => a.name.localeCompare(b.name));
+        renderDropdowns();
       });
 
-      const days = Object.entries(dayMap).sort((a,b) => b[0].localeCompare(a[0]));
-
-      document.getElementById('daily-container').innerHTML = days.map(([key, d]) => `
-        <div class="day-row">
-          <div>
-            <span class="day-label">${d.label}</span>
-            <span style="color:var(--gray-500); font-size:0.78rem; margin-left:8px;">${d.students.size} student${d.students.size!==1?'s':''}</span>
-          </div>
-          <div>
-            <span class="trips-cell" style="margin-right:16px; font-size:0.82rem;">${d.trips} trip${d.trips!==1?'s':''}</span>
-            <span class="day-val">${d.mins}m</span>
-          </div>
-        </div>`).join('');
-    };
-
-    window.sortBy = function(col) {
-      if (sortCol === col) sortAsc = !sortAsc;
-      else { sortCol = col; sortAsc = false; }
-      renderReport();
-    };
-
-    window.switchTab = function(tab) {
-      currentTab = tab;
-      ['weekly','monthly','custom'].forEach(t => {
-        document.getElementById(`controls-${t}`).style.display = t === tab ? 'flex' : 'none';
-        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      // --- Conflict Groups Pull (managed on the Student Management dashboard) ---
+      onValue(ref(db, 'conflictGroups'), (snapshot) => {
+        conflictGroupsData = snapshot.val() || {};
       });
-      renderReport();
-    };
 
-    window.exportCSV = function() {
-      const range = getDateRange();
-      if (!range) return;
-      const filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
+      // --- Teacher list Pull (managed on the Teacher Management dashboard tab) ---
+      onValue(ref(db, 'bathroom/teachers'), (snapshot) => {
+        const data = snapshot.val() || {};
+        TEACHER_RECORDS = Object.values(data).sort((a,b) => a.name.localeCompare(b.name));
+        TEACHERS = TEACHER_RECORDS.map(t => t.name);
+        renderTeacherGrids();
+        applyTeacherDetection();
+        rebuildSlotsAndRender(); // teacher list changed, so which slot keys exist may have changed too
+      });
 
-      const rows = [['Student', 'Gender', 'Teacher', 'Date', 'Time Out', 'Duration (min)']];
-      filtered.forEach(h => {
-        const d = new Date(h.checkedOutAt);
-        const student = STUDENTS.find(s => s.name === h.name);
-        rows.push([
-          h.name,
-          student ? (genderInfo(student.gender).label) : '',
-          h.teacher || 'Loveday',
-          isoDate(d),
-          d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          Math.floor(h.duration / 60)
+      // --- Database Streams Pipeline Listener ---
+      onValue(ref(db, 'bathroom'), (snapshot) => {
+        lastBathroomData = snapshot.val() || {};
+        rebuildSlotsAndRender();
+      });
+
+      // Rebuilds state.slots/waiting/history from the last known 'bathroom' snapshot and the
+      // current TEACHERS list, then re-renders. Called whenever either changes, since the two
+      // Firebase listeners above fire independently and in no guaranteed order.
+      function rebuildSlotsAndRender() {
+        const data = lastBathroomData;
+        state.slots = {};
+        TEACHERS.forEach(t => {
+          ['b','g'].forEach(g => {
+            const key = `${t}_${g}`;
+            state.slots[key] = data.slots?.[key] || null;
+          });
+        });
+        state.waiting = data.waiting ? Object.values(data.waiting).sort((a,b) => a.addedTime - b.addedTime) : [];
+        state.history = data.history ? Object.values(data.history).sort((a,b) => b.checkedOutAt - a.checkedOutAt) : [];
+        renderAll();
+        loadingScreen.style.display = 'none';
+      }
+
+      // Teacher pickers are dynamically generated dropdowns (one per grade), so listen via
+      // delegation on the document instead of querySelectorAll at startup.
+      document.addEventListener('change', (e) => {
+        if (e.target.classList && e.target.classList.contains('teacher-select')) {
+          const gender = e.target.dataset.gender;
+          const changedGrade = e.target.dataset.grade;
+          const prefix = gender === 'b' ? 'boy' : 'girl';
+
+          if (e.target.value) {
+            // Only one teacher can be selected at a time per gender — clear the other grade dropdowns
+            TEACHER_GRADE_GROUPS.forEach(g => {
+              if (String(g) === String(changedGrade)) return;
+              const other = document.getElementById(`${prefix}-teacher-${g}`);
+              if (other) other.value = '';
+            });
+          }
+
+          // Grade context changed, so the previously-selected name (and its pass indicator) may no
+          // longer be valid — clear both and let the student re-pick from the newly filtered list.
+          const nameSel = document.getElementById(`${prefix}-select`);
+          if (nameSel) nameSel.value = '';
+          const indicator = document.getElementById(`${prefix}-pass-indicator`);
+          if (indicator) indicator.style.display = 'none';
+
+          renderCurrentlyOut();
+          renderDropdowns();
+        }
+      });
+
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || "";
+        return div.innerHTML;
+      }
+
+      // Renders one compact dropdown per grade (instead of a grid of 12+ buttons) for each of the
+      // boy/girl panels, so a student picks their grade's teacher directly without scrolling a big list.
+      function renderTeacherGrids() {
+        ['boy', 'girl'].forEach(prefix => {
+          const gridEl = document.getElementById(`${prefix}-teacher-grid`);
+          if (!gridEl) return;
+          const gender = prefix === 'boy' ? 'b' : 'g';
+
+          if (!TEACHER_RECORDS.length) {
+            gridEl.innerHTML = '<p class="empty-msg">No teachers set up yet — ask your teacher to check the dashboard.</p>';
+            return;
+          }
+
+          const groups = { 6: [], 7: [], 8: [], other: [] };
+          TEACHER_RECORDS.forEach(t => {
+            if ([6, 7, 8].includes(t.grade)) groups[t.grade].push(t);
+            else groups.other.push(t);
+          });
+
+          // Preserve current selections across re-renders (e.g. when the teacher list itself changes)
+          const previousSelections = {};
+          TEACHER_GRADE_GROUPS.forEach(g => {
+            const el = document.getElementById(`${prefix}-teacher-${g}`);
+            previousSelections[g] = el ? el.value : '';
+          });
+
+          let html = '';
+          TEACHER_GRADE_GROUPS.forEach(g => {
+            const list = groups[g];
+            if (!list.length) return;
+            const label = g === 'other' ? 'Other' : `${g}th Grade`;
+            html += `
+              <div class="teacher-select-row">
+                <label class="teacher-select-label">${label}</label>
+                <select id="${prefix}-teacher-${g}" class="teacher-select" data-gender="${gender}" data-grade="${g}">
+                  <option value="">-- none --</option>
+                  ${list.map(t => `<option value="${escapeHtml(t.name)}" ${previousSelections[g] === t.name ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
+                </select>
+              </div>`;
+          });
+
+          gridEl.innerHTML = html;
+        });
+      }
+
+      // --- Dynamic Balance Counter Display Rendering Engine ---
+      window.updatePassIndicator = function(gender) {
+        const prefix = gender === 'b' ? 'boy' : 'girl';
+        const name = document.getElementById(`${prefix}-select`).value;
+        const el = document.getElementById(`${prefix}-pass-indicator`);
+        if (!name) { el.style.display = 'none'; return; }
+        
+        const studentData = STUDENTS.find(s => s.name === name);
+        const limit = studentData?.limit || 5;
+        
+        const used = getWeeklyCount(name);
+        const remaining = limit - used;
+        el.style.display = 'block';
+        
+        if (remaining <= 0) {
+          el.className = 'pass-indicator out';
+          el.textContent = `⛔ No passes remaining`;
+        } else if (remaining <= 2) {
+          el.className = 'pass-indicator low';
+          el.textContent = `⚠️ ${remaining} Pass${remaining === 1 ? '' : 'es'} Remaining`;
+        } else {
+          el.className = 'pass-indicator ok';
+          el.textContent = `✓ ${remaining} Passes Remaining`;
+        }
+      };
+
+      // --- Dispatch Logic Action Handlers ---
+      window.checkOut = async function(gender) {
+        const prefix = gender === 'b' ? 'boy' : 'girl';
+        const sel = document.getElementById(`${prefix}-select`);
+        const name = sel.value;
+        const teacher = getSelectedTeacher(gender);
+
+        if (!teacher) { showAlert('Please select your current teacher.'); return; }
+        if (!name) { showAlert('Please select your name.'); return; }
+
+        const used = getWeeklyCount(name);
+        const studentData = STUDENTS.find(s => s.name === name);
+        const limit = studentData?.limit || 5;
+        
+        if (used >= limit) {
+          showAlert(`${name} has used all ${limit} passes for this week.`);
+          playBlockedSound();
+          return;
+        }
+
+        // Conflict Groups check: block if a groupmate (any grade, any teacher) is currently out
+        const blockingGroupmate = findBlockingGroupmate(name, getOutNamesFromSlots(state.slots));
+        if (blockingGroupmate) {
+          showAlert(`${name}, someone in your group is currently out. Please wait until they return.`);
+          playBlockedSound();
+          // Logged for the dashboard's Blocked Attempts report — the groupmate's name is recorded
+          // here for that report only, never shown to the student on this screen.
+          push(ref(db, 'bathroom/conflictBlocks'), {
+            name, teacher, gender,
+            blockedGroupmate: blockingGroupmate,
+            blockedAt: Date.now()
+          }).catch(e => console.error('Could not log blocked attempt', e));
+          return;
+        }
+
+        const snap = await get(ref(db, 'bathroom'));
+        const data = snap.val() || {};
+        const slots = data.slots || {};
+        const waiting = data.waiting ? Object.values(data.waiting) : [];
+
+        const alreadyOut = Object.values(slots).some(s => s && s.name === name);
+        const alreadyWaiting = waiting.find(s => s.name === name);
+        if (alreadyOut || alreadyWaiting) { showAlert(`${name} is already out or waiting.`); sel.value=''; return; }
+
+        const slotKey = `${teacher}_${gender}`;
+        if (!slots[slotKey]) {
+          await set(ref(db, `bathroom/slots/${slotKey}`), { name, gender, teacher, checkoutTime: Date.now() });
+        } else {
+          await push(ref(db, 'bathroom/waiting'), { name, gender, teacher, addedTime: Date.now() });
+          showAlert(`${teacher}'s ${gender === 'b' ? 'boys' : 'girls'} spot is taken. ${name} added to the waiting list!`);
+        }
+        sel.value = '';
+        const indicator = document.getElementById(`${prefix}-pass-indicator`);
+        if (indicator) indicator.style.display = 'none';
+        renderCurrentlyOut();
+      };
+
+      // --- Process Check-In & Bubble Waiting Queues ---
+      window.checkIn = async function(teacher, gender) {
+        const snap = await get(ref(db, 'bathroom'));
+        const data = snap.val() || {};
+        const slotKey = `${teacher}_${gender}`;
+        const entry = data.slots?.[slotKey];
+        if (!entry) return;
+
+        await push(ref(db, 'bathroom/history'), {
+          name: entry.name, gender, teacher,
+          checkedOutAt: entry.checkoutTime,
+          duration: getElapsed(entry.checkoutTime)
+        });
+
+        await set(ref(db, `bathroom/slots/${slotKey}`), null);
+        launchConfetti();
+
+        const waiting = data.waiting
+          ? Object.entries(data.waiting).map(([k,v]) => ({...v, _key: k})).sort((a,b) => a.addedTime - b.addedTime)
+          : [];
+
+        // Figure out who's still out once this slot is cleared, so we can skip promoting
+        // anyone whose conflict-group member is currently out in a DIFFERENT slot.
+        const slotsAfterClear = { ...(data.slots || {}), [slotKey]: null };
+        const outNamesAfterClear = getOutNamesFromSlots(slotsAfterClear);
+
+        const candidates = waiting.filter(s => s.gender === gender && s.teacher === teacher);
+        const next = candidates.find(cand => !hasConflictingGroupmateOut(cand.name, outNamesAfterClear));
+
+        if (next) {
+          await set(ref(db, `bathroom/slots/${slotKey}`), { name: next.name, gender, teacher, checkoutTime: Date.now() });
+          await remove(ref(db, `bathroom/waiting/${next._key}`));
+          showAlert(`${next.name} — it's your turn! You've been checked out.`);
+        }
+      };
+
+      window.removeFromWaiting = async function(key) {
+        await remove(ref(db, `bathroom/waiting/${key}`));
+      };
+
+      // --- Core Master Rendering Layer Controls ---
+      function renderAll() {
+        renderCurrentlyOut();
+        renderWaiting();
+        renderHistory();
+        renderDropdowns();
+      }
+
+      function renderCurrentlyOut() {
+        ['b','g'].forEach(gender => {
+          const prefix = gender === 'b' ? 'boy' : 'girl';
+          const teacher = getSelectedTeacher(gender);
+          const container = document.getElementById(`${prefix}-out`);
+          const countEl = document.getElementById(`${prefix}-out-count`);
+          const metaEl = document.getElementById(`${prefix}-out-meta`);
+          const cls = gender === 'b' ? 'boy' : 'girl';
+          const timeClass = gender === 'b' ? 'boy-time' : 'girl-time';
+
+          if (!teacher) {
+            countEl.textContent = '?';
+            metaEl.textContent = 'Select a teacher below to see status';
+            container.innerHTML = '<p class="empty-msg">Select your teacher to see who\'s out.</p>';
+            return;
+          }
+
+          const slotKey = `${teacher}_${gender}`;
+          const entry = state.slots[slotKey];
+          const waitCount = state.waiting.filter(s => s.teacher === teacher && s.gender === gender).length;
+
+          countEl.textContent = entry ? '1' : '0';
+          metaEl.textContent = `${teacher} · 1 spot${waitCount > 0 ? ` · ${waitCount} waiting` : ''}`;
+          container.innerHTML = '';
+
+          if (!entry) {
+            container.innerHTML = `<p class="empty-msg">No ${gender === 'b' ? 'boy' : 'girl'} out from ${teacher}.</p>`;
+            return;
+          }
+
+          container.innerHTML = `
+            <div class="student-card ${cls}">
+              <div>
+                <div class="student-name">${entry.name}</div>
+                <div style="font-size:0.75rem;color:var(--muted);margin-top:2px;">${teacher}</div>
+              </div>
+              <div class="student-card-right">
+                <div class="student-time ${timeClass}" id="timer-${teacher}-${gender}">${formatDuration(getElapsed(entry.checkoutTime))}</div>
+                <button class="btn btn-sm ${cls}-btn" onclick="checkIn('${teacher}','${gender}')">Check In</button>
+              </div>
+            </div>`;
+        });
+      }
+
+      function renderWaiting() {
+        const container = document.getElementById('waiting-list');
+        document.getElementById('wait-count').textContent = state.waiting.length;
+        if (!state.waiting.length) {
+          container.innerHTML = '<p class="empty-msg">No students waiting.</p>';
+          return;
+        }
+
+        get(ref(db, 'bathroom/waiting')).then(snap => {
+          const raw = snap.val() || {};
+          const entries = Object.entries(raw).map(([k,v]) => ({...v, _key: k})).sort((a,b) => a.addedTime - b.addedTime);
+          container.innerHTML = '';
+          entries.forEach((entry, i) => {
+            const label = entry.gender === 'b' ? '♂' : '♀';
+            const div = document.createElement('div');
+            div.className = 'student-card wait';
+            div.innerHTML = `
+              <div>
+                <div class="student-name">#${i+1} ${label} ${entry.name}</div>
+                <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">${entry.teacher}</div>
+              </div>
+              <div class="student-card-right">
+                <div class="student-time wait-time" id="wait-timer-${i}">Waiting ${formatDuration(getElapsed(entry.addedTime))}</div>
+                <button class="btn btn-sm" style="background:#999;" onclick="removeFromWaiting('${entry._key}')">Remove</button>
+              </div>`;
+            container.appendChild(div);
+          });
+        });
+      }
+
+      function renderHistory() {
+        const container = document.getElementById('history-list');
+        if (!state.history.length) { container.innerHTML = '<p class="empty-msg">No history yet.</p>'; return; }
+        container.innerHTML = '';
+        state.history.slice(0, 50).forEach(h => {
+          const d = new Date(h.checkedOutAt);
+          const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+          const div = document.createElement('div');
+          div.className = 'history-item';
+          div.innerHTML = `
+            <div>
+              <div class="name">${h.name}</div>
+              <div class="ts">${timeStr} on ${dateStr} · ${h.teacher || 'Loveday'}</div>
+            </div>
+            <div class="dur">${formatDuration(h.duration)}</div>`;
+          container.appendChild(div);
+        });
+      }
+
+      function renderDropdowns() {
+        const allOut = new Set([
+          ...Object.values(state.slots).filter(Boolean).map(s => s.name),
+          ...state.waiting.map(s => s.name)
         ]);
-      });
-
-      const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `bathroom-report-${range.label.replace(/\s+/g,'-')}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    function getWeekStart(date = new Date()) {
-      const d = new Date(date);
-      const day = d.getDay();
-      const diff = day === 0 ? -6 : 1 - day;
-      d.setDate(d.getDate() + diff);
-      return d.toISOString().split('T')[0];
-    }
-
-    function renderPassUsage() {
-      const container = document.getElementById('pass-usage-container');
-      if(!container) return;
-      const weekStart = getWeekStart();
-
-      const counts = {};
-      allHistory.forEach(h => {
-        const d = new Date(h.checkedOutAt);
-        if (getWeekStart(d) !== weekStart) return;
-        counts[h.name] = (counts[h.name] || 0) + 1;
-      });
-
-      const flagged = STUDENTS.map(s => {
-        const used = counts[s.name] || 0;
-        const limit = s.limit || 5;
-        return { ...s, used, remaining: limit - used };
-      }).filter(s => s.used >= Math.ceil(s.limit * 0.6) || s.used > 0)
-        .sort((a, b) => b.used - a.used);
-
-      if (!flagged.length) {
-        container.innerHTML = '<p class="no-data">No active pass usage this week. 🎉</p>';
-        return;
+        renderDropdown('b', allOut);
+        renderDropdown('g', allOut);
       }
 
-      const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th class="nosort">Student</th>
-            <th class="nosort">Used</th>
-            <th class="nosort">Remaining</th>
-            <th class="nosort">Status</th>
-          </tr>
-        </thead>`;
+      function renderDropdown(gender, taken) {
+        const prefix = gender === 'b' ? 'boy' : 'girl';
+        const sel = document.getElementById(`${prefix}-select`);
+        const current = sel.value;
 
-      const tbody = document.createElement('tbody');
-      flagged.forEach(s => {
-        const status = s.remaining <= 0
-          ? '<span style="color:var(--red);font-weight:700;">⛔ Out of passes</span>'
-          : `<span style="color:var(--amber);font-weight:700;">⚠️ ${s.remaining} left</span>`;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
-          </td>
-          <td class="trips-cell">${s.used} / ${s.limit}</td>
-          <td class="val-cell">${Math.max(0, s.remaining)}</td>
-          <td>${status}</td>`;
-        tbody.appendChild(tr);
-      });
+        const teacherRecord = getSelectedTeacherRecord(gender);
+        if (!teacherRecord) {
+          sel.innerHTML = `<option value="">-- Select your teacher first --</option>`;
+          return;
+        }
 
-      table.appendChild(tbody);
-      container.innerHTML = '';
-      container.appendChild(table);
-    }
-
-    function populateStudentFilter() {
-      const sel = document.getElementById('dm-student-filter');
-      if(!sel) return;
-      const prev = sel.value;
-      const names = [...new Set(allHistory.map(h => h.name))].sort();
-      sel.innerHTML = '<option value="">-- All Students --</option>';
-      names.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        sel.appendChild(opt);
-      });
-      sel.value = prev;
-    }
-
-    window.toggleSelectAll = function(master) {
-      document.querySelectorAll('.dm-check').forEach(cb => { cb.checked = master.checked; });
-      updateSelectedCount();
-    };
-
-    window.updateSelectedCount = function() {
-      const n = document.querySelectorAll('.dm-check:checked').length;
-      const countEl = document.getElementById('dm-selected-count');
-      if (countEl) countEl.textContent = `${n} selected`;
-      const master = document.getElementById('dm-select-all');
-      const all = document.querySelectorAll('.dm-check').length;
-      if (master) master.checked = all > 0 && n === all;
-    };
-
-    window.deleteSelected = async function() {
-      const checked = [...document.querySelectorAll('.dm-check:checked')];
-      if (!checked.length) { alert('No entries are selected. Check the boxes for the rows you want to delete.'); return; }
-      if (!confirm(`Delete ${checked.length} selected entr${checked.length === 1 ? 'y' : 'ies'}?\n\nThis cannot be undone.`)) return;
-
-      try {
-        await Promise.all(
-          checked.map(cb => remove(ref(db, `bathroom/history/${cb.dataset.key}`)))
-        );
-      } catch (e) {
-        console.error(e);
-        alert('Error deleting entries: ' + (e && e.message ? e.message : e));
-      }
-    };
-
-    window.renderDataManager = function() {
-      const studentFilter = document.getElementById('dm-student-filter').value;
-      const dateFilter = document.getElementById('dm-date-filter').value;
-
-      let entries = [...allHistory];
-      if (studentFilter) entries = entries.filter(h => h.name === studentFilter);
-      if (dateFilter) entries = entries.filter(h => isoDate(new Date(h.checkedOutAt)) === dateFilter);
-
-      const container = document.getElementById('dm-container');
-      if (!entries.length) {
-        container.innerHTML = '<p class="no-data">No entries match your filters.</p>';
-        updateSelectedCount();
-        return;
+        sel.innerHTML = `<option value="">-- Select your name --</option>`;
+        STUDENTS.filter(s => s.gender === gender && !taken.has(s.name) && (!teacherRecord.grade || s.grade === teacherRecord.grade))
+          .sort((a,b) => a.name.localeCompare(b.name))
+          .forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.name;
+            opt.textContent = s.name;
+            sel.appendChild(opt);
+          });
+        if (current && !taken.has(current)) sel.value = current;
       }
 
-      container.innerHTML = '';
-      const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th class="nosort check-cell"><input type="checkbox" id="dm-select-all" onclick="toggleSelectAll(this)" title="Select all"></th>
-            <th class="nosort">Student</th>
-            <th class="nosort">Teacher</th>
-            <th class="nosort">Date</th>
-            <th class="nosort">Time Out</th>
-            <th class="nosort">Duration</th>
-            <th class="nosort">Action</th>
-          </tr>
-        </thead>`;
-
-      const tbody = document.createElement('tbody');
-      entries.forEach(h => {
-        const d = new Date(h.checkedOutAt);
-        const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const dur = Math.floor(h.duration / 60);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="check-cell"><input type="checkbox" class="dm-check" data-key="${h._key}" onclick="updateSelectedCount()"></td>
-          <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(h.gender).cls}"></span>${h.name}
-          </td>
-          <td>${h.teacher || 'Loveday'}</td>
-          <td>${dateStr}</td>
-          <td>${timeStr}</td>
-          <td class="val-cell">${dur < 1 ? '<1m' : dur + 'm'}</td>
-          <td>
-            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${h.name}', '${timeStr} on ${dateStr}')">Delete</button>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-
-      table.appendChild(tbody);
-      container.appendChild(table);
-      updateSelectedCount();
-    };
-
-    window.deleteEntry = async function(key, name, label) {
-      if (!confirm(`Delete this entry?\n\n${name} — ${label}\n\nThis cannot be undone.`)) return;
-      try {
-        await remove(ref(db, `bathroom/history/${key}`));
-      } catch(e) {
-        alert('Error deleting entry. Please try again.');
+      function showAlert(msg) {
+        const el = document.getElementById('alert');
+        el.textContent = msg;
+        el.style.display = 'block';
+        clearTimeout(window._alertTimer);
+        window._alertTimer = setTimeout(() => el.style.display = 'none', 3500);
       }
-    };
 
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str || "";
-      return div.innerHTML;
-    }
-  } // end startApp
-</script>
+      // --- Canvas Particle Engine Animation Runtime ---
+      function launchConfetti() {
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const colors = ['#cc0000','#1a6fb5','#b5006e','#e6a817','#22c55e','#ffffff','#f97316','#a855f7'];
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+
+        const pieces = Array.from({ length: 180 }, () => {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 18 + 6;
+          return {
+            x: cx, y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            w: Math.random() * 12 + 5,
+            h: Math.random() * 7 + 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rot: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.3,
+            gravity: 0.4 + Math.random() * 0.3,
+            drag: 0.97,
+            shape: Math.random() > 0.5 ? 'rect' : 'circle',
+          };
+        });
+
+        let frame;
+        let start = null;
+        const duration = 4500;
+
+        function animate(ts) {
+          if (!start) start = ts;
+          const elapsed = ts - start;
+          const progress = elapsed / duration;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          pieces.forEach(p => {
+            p.vx *= p.drag;
+            p.vy *= p.drag;
+            p.vy += p.gravity;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rot += p.rotSpeed;
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = Math.max(0, 1 - progress * 1.2);
+            if (p.shape === 'circle') {
+              ctx.beginPath();
+              ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            }
+            ctx.restore();
+          });
+
+          if (elapsed < duration) {
+            frame = requestAnimationFrame(animate);
+          } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
+
+        if (frame) cancelAnimationFrame(frame);
+        requestAnimationFrame(animate);
+      }
+    } // end startApp
+  </script>
 </body>
 </html>
