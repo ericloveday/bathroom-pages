@@ -132,7 +132,14 @@
     .panel.boys .teacher-radio-label:has(input:checked) { background: var(--boy-primary); border-color: var(--boy-primary); color: #fff; }
     .panel.girls .teacher-radio-label:has(input:checked) { background: var(--girl-primary); border-color: var(--girl-primary); color: #fff; }
     
-    .teacher-radio-label:hover { border-color: var(--gray-500); background: var(--gray-50); }
+    .teacher-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .teacher-select-row:last-child { margin-bottom: 0; }
+    .teacher-select-label { font-size: 0.72rem; font-weight: 700; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.3px; min-width: 86px; flex-shrink: 0; }
+    .teacher-select-row select { flex: 1; margin: 0; }
+
+    .teacher-detect-banner { max-width: 1300px; width: 100%; margin: 0 auto; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; text-align: center; }
+    .teacher-detect-banner.detected { background: #eef8f0; color: var(--green); border: 1px solid #cfeada; }
+    .teacher-detect-banner.fallback { background: #fdf7e8; color: var(--amber); border: 1px solid #f3e2b0; }
 
     select { width: 100%; background: var(--white); color: var(--black); border: 1.5px solid var(--gray-300); padding: 10px; border-radius: 7px; font-size: 0.9rem; cursor: pointer; appearance: none; outline: none; }
     select:focus { border-color: var(--red); }
@@ -237,6 +244,8 @@
     </div>
   </header>
 
+  <div id="teacher-detect-banner" style="display:none;"></div>
+
   <div class="dashboard">
     
     <div class="panel boys">
@@ -248,11 +257,13 @@
         <div class="panel-count" id="boy-out-count">?</div>
       </div>
       <div class="panel-body">
-        <div class="section-label">1. Current Teacher</div>
-        <div id="boy-teacher-grid">
+        <div id="boy-teacher-step">
+          <div class="section-label">1. Current Teacher</div>
+          <div id="boy-teacher-grid">
+          </div>
         </div>
-        
-        <div class="section-label" style="margin-top: 4px;">2. Your Name</div>
+
+        <div class="section-label" id="boy-name-label" style="margin-top: 4px;">2. Your Name</div>
         <div class="select-wrapper">
           <select id="boy-select" onchange="updatePassIndicator('b')">
             <option value="">-- Select your name --</option>
@@ -279,11 +290,13 @@
         <div class="panel-count" id="girl-out-count">?</div>
       </div>
       <div class="panel-body">
-        <div class="section-label">1. Current Teacher</div>
-        <div id="girl-teacher-grid">
+        <div id="girl-teacher-step">
+          <div class="section-label">1. Current Teacher</div>
+          <div id="girl-teacher-grid">
+          </div>
         </div>
-        
-        <div class="section-label" style="margin-top: 4px;">2. Your Name</div>
+
+        <div class="section-label" id="girl-name-label" style="margin-top: 4px;">2. Your Name</div>
         <div class="select-wrapper">
           <select id="girl-select" onchange="updatePassIndicator('g')">
             <option value="">-- Select your name --</option>
@@ -399,11 +412,11 @@
 
       if (!appStarted) {
         appStarted = true;
-        startApp();
+        startApp(email);
       }
     });
 
-    function startApp() {
+    function startApp(currentUserEmail) {
       appContent.style.display = 'block';
 
       // Dynamic Iso Week calculation utility mapping logs back to base Monday dates
@@ -481,10 +494,62 @@
         });
       }, 1000);
 
+      const TEACHER_GRADE_GROUPS = [6, 7, 8, 'other']; // shared order for rendering + lookups
+      let autoTeacher = null; // {name, grade} when the signed-in email matches a teacher — bypasses the picker entirely
+
       function getSelectedTeacher(gender) {
+        if (autoTeacher) return autoTeacher.name;
         const prefix = gender === 'b' ? 'boy' : 'girl';
-        const el = document.querySelector(`input[name="${prefix}-teacher"]:checked`);
-        return el ? el.value : null;
+        for (const g of TEACHER_GRADE_GROUPS) {
+          const sel = document.getElementById(`${prefix}-teacher-${g}`);
+          if (sel && sel.value) return sel.value;
+        }
+        return null;
+      }
+
+      function getSelectedTeacherRecord(gender) {
+        if (autoTeacher) return autoTeacher;
+        const name = getSelectedTeacher(gender);
+        if (!name) return null;
+        return TEACHER_RECORDS.find(t => t.name === name) || null;
+      }
+
+      // Checks the signed-in email against the teacher list. If it matches, the teacher-picking
+      // step is hidden entirely and the name list goes straight to that teacher's grade.
+      function applyTeacherDetection() {
+        if (!currentUserEmail || !TEACHER_RECORDS.length) return;
+        const match = TEACHER_RECORDS.find(t => t.email && t.email.toLowerCase() === currentUserEmail.toLowerCase());
+        autoTeacher = match || null;
+        renderTeacherDetectionUI();
+        renderCurrentlyOut();
+        renderDropdowns();
+      }
+
+      function renderTeacherDetectionUI() {
+        const banner = document.getElementById('teacher-detect-banner');
+        const boyStep = document.getElementById('boy-teacher-step');
+        const girlStep = document.getElementById('girl-teacher-step');
+        const boyLabel = document.getElementById('boy-name-label');
+        const girlLabel = document.getElementById('girl-name-label');
+        if (!banner) return;
+
+        if (autoTeacher) {
+          banner.style.display = 'block';
+          banner.className = 'teacher-detect-banner detected';
+          banner.textContent = `✓ Signed in as ${autoTeacher.name}${autoTeacher.grade ? ' — ' + autoTeacher.grade + 'th Grade' : ''}`;
+          if (boyStep) boyStep.style.display = 'none';
+          if (girlStep) girlStep.style.display = 'none';
+          if (boyLabel) boyLabel.textContent = 'Your Name';
+          if (girlLabel) girlLabel.textContent = 'Your Name';
+        } else {
+          banner.style.display = 'block';
+          banner.className = 'teacher-detect-banner fallback';
+          banner.textContent = `Your sign-in doesn't match a saved teacher — pick your teacher below.`;
+          if (boyStep) boyStep.style.display = '';
+          if (girlStep) girlStep.style.display = '';
+          if (boyLabel) boyLabel.textContent = '2. Your Name';
+          if (girlLabel) girlLabel.textContent = '2. Your Name';
+        }
       }
 
       // ---------------- Conflict Groups helpers ----------------
@@ -530,6 +595,7 @@
         TEACHER_RECORDS = Object.values(data).sort((a,b) => a.name.localeCompare(b.name));
         TEACHERS = TEACHER_RECORDS.map(t => t.name);
         renderTeacherGrids();
+        applyTeacherDetection();
         rebuildSlotsAndRender(); // teacher list changed, so which slot keys exist may have changed too
       });
 
@@ -557,11 +623,32 @@
         loadingScreen.style.display = 'none';
       }
 
-      // Teacher radios are generated dynamically now, so listen via delegation on the document
-      // instead of querySelectorAll at startup (which would miss anything rendered later).
+      // Teacher pickers are dynamically generated dropdowns (one per grade), so listen via
+      // delegation on the document instead of querySelectorAll at startup.
       document.addEventListener('change', (e) => {
-        if (e.target.classList && e.target.classList.contains('teacher-radio')) {
+        if (e.target.classList && e.target.classList.contains('teacher-select')) {
+          const gender = e.target.dataset.gender;
+          const changedGrade = e.target.dataset.grade;
+          const prefix = gender === 'b' ? 'boy' : 'girl';
+
+          if (e.target.value) {
+            // Only one teacher can be selected at a time per gender — clear the other grade dropdowns
+            TEACHER_GRADE_GROUPS.forEach(g => {
+              if (String(g) === String(changedGrade)) return;
+              const other = document.getElementById(`${prefix}-teacher-${g}`);
+              if (other) other.value = '';
+            });
+          }
+
+          // Grade context changed, so the previously-selected name (and its pass indicator) may no
+          // longer be valid — clear both and let the student re-pick from the newly filtered list.
+          const nameSel = document.getElementById(`${prefix}-select`);
+          if (nameSel) nameSel.value = '';
+          const indicator = document.getElementById(`${prefix}-pass-indicator`);
+          if (indicator) indicator.style.display = 'none';
+
           renderCurrentlyOut();
+          renderDropdowns();
         }
       });
 
@@ -571,14 +658,13 @@
         return div.innerHTML;
       }
 
-      // Renders the boy/girl teacher pickers, grouped by grade so a student can find their
-      // own teacher quickly out of 12+ names instead of scanning one long flat list.
+      // Renders one compact dropdown per grade (instead of a grid of 12+ buttons) for each of the
+      // boy/girl panels, so a student picks their grade's teacher directly without scrolling a big list.
       function renderTeacherGrids() {
         ['boy', 'girl'].forEach(prefix => {
           const gridEl = document.getElementById(`${prefix}-teacher-grid`);
           if (!gridEl) return;
-          const radioName = `${prefix}-teacher`;
-          const previouslyChecked = document.querySelector(`input[name="${radioName}"]:checked`)?.value;
+          const gender = prefix === 'boy' ? 'b' : 'g';
 
           if (!TEACHER_RECORDS.length) {
             gridEl.innerHTML = '<p class="empty-msg">No teachers set up yet — ask your teacher to check the dashboard.</p>';
@@ -591,18 +677,26 @@
             else groups.other.push(t);
           });
 
+          // Preserve current selections across re-renders (e.g. when the teacher list itself changes)
+          const previousSelections = {};
+          TEACHER_GRADE_GROUPS.forEach(g => {
+            const el = document.getElementById(`${prefix}-teacher-${g}`);
+            previousSelections[g] = el ? el.value : '';
+          });
+
           let html = '';
-          [6, 7, 8, 'other'].forEach(g => {
+          TEACHER_GRADE_GROUPS.forEach(g => {
             const list = groups[g];
             if (!list.length) return;
-            const label = g === 'other' ? '' : `<div class="teacher-group-label">${g}th Grade</div>`;
-            html += `<div class="teacher-group">${label}<div class="teacher-grid">` +
-              list.map(t => `
-                <label class="teacher-radio-label">
-                  <input type="radio" name="${radioName}" value="${escapeHtml(t.name)}" class="teacher-radio" ${previouslyChecked === t.name ? 'checked' : ''}>
-                  ${escapeHtml(t.name)}
-                </label>`).join('') +
-              `</div></div>`;
+            const label = g === 'other' ? 'Other' : `${g}th Grade`;
+            html += `
+              <div class="teacher-select-row">
+                <label class="teacher-select-label">${label}</label>
+                <select id="${prefix}-teacher-${g}" class="teacher-select" data-gender="${gender}" data-grade="${g}">
+                  <option value="">-- none --</option>
+                  ${list.map(t => `<option value="${escapeHtml(t.name)}" ${previousSelections[g] === t.name ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
+                </select>
+              </div>`;
           });
 
           gridEl.innerHTML = html;
@@ -837,8 +931,15 @@
         const prefix = gender === 'b' ? 'boy' : 'girl';
         const sel = document.getElementById(`${prefix}-select`);
         const current = sel.value;
+
+        const teacherRecord = getSelectedTeacherRecord(gender);
+        if (!teacherRecord) {
+          sel.innerHTML = `<option value="">-- Select your teacher first --</option>`;
+          return;
+        }
+
         sel.innerHTML = `<option value="">-- Select your name --</option>`;
-        STUDENTS.filter(s => s.gender === gender && !taken.has(s.name))
+        STUDENTS.filter(s => s.gender === gender && !taken.has(s.name) && (!teacherRecord.grade || !s.grade || s.grade === teacherRecord.grade))
           .sort((a,b) => a.name.localeCompare(b.name))
           .forEach(s => {
             const opt = document.createElement('option');
