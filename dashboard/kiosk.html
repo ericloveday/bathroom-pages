@@ -944,9 +944,13 @@
         STUDENTS.filter(s => s.gender === gender && !taken.has(s.name) && (!teacherRecord.grade || s.grade === teacherRecord.grade))
           .sort((a,b) => a.name.localeCompare(b.name))
           .forEach(s => {
+            const limit = s.limit || 5;
+            const remaining = limit - getWeeklyCount(s.name);
             const opt = document.createElement('option');
             opt.value = s.name;
-            opt.textContent = s.name;
+            opt.textContent = remaining <= 0
+              ? `${s.name} — ⛔ 0 left`
+              : `${s.name} — ${remaining} left`;
             sel.appendChild(opt);
           });
         if (current && !taken.has(current)) sel.value = current;
