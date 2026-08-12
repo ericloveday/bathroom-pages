@@ -1052,6 +1052,7 @@
         }
 
         editingKey = null;
+        window.renderRosterManager();
       } catch(e) {
         console.error(e);
         alert("Error saving student: " + (e && e.message ? e.message : e));
@@ -1248,10 +1249,10 @@
         if (key === editingKey) {
           tr.innerHTML = `
             <td class="check-cell"></td>
-            <td colspan="2">
+            <td>
               <div style="display:flex; gap:6px;">
-                <input type="text" id="inline-first" value="${escapeHtml(s.firstName || s.name.split(' ')[0] || '')}" placeholder="First" style="width:90px; padding:6px 8px; font-size:0.82rem;">
-                <input type="text" id="inline-last" value="${escapeHtml(s.lastName || (s.name.split(' ')[1] || '').replace('.', ''))}" placeholder="Last" style="width:90px; padding:6px 8px; font-size:0.82rem;">
+                <input type="text" id="inline-first" value="${escapeHtml(s.firstName || s.name.split(' ')[0] || '')}" placeholder="First" style="width:80px; padding:6px 8px; font-size:0.82rem;">
+                <input type="text" id="inline-last" value="${escapeHtml(s.lastName || (s.name.split(' ')[1] || '').replace('.', ''))}" placeholder="Last" style="width:80px; padding:6px 8px; font-size:0.82rem;">
               </div>
             </td>
             <td>
