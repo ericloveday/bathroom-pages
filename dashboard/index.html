@@ -524,12 +524,16 @@
 <div id="view-teachers" style="display:none;">
   <div class="section-panel accent-blue no-print">
     <h2 style="color: var(--blue);">👩‍🏫 Teacher Management</h2>
-    <div class="card-desc">Manage the 12 teachers students pick from at the kiosk. Assign each teacher a grade so the kiosk can group the picker and make it faster for students to find their own teacher.</div>
+    <div class="card-desc">Manage the 12 teachers students pick from at the kiosk. Assign each teacher a grade so the kiosk can group the picker, and add their email so the kiosk can auto-detect who's signed in and skip the picker entirely (first initial + last name, e.g. eloveday@cornerstonek12.org).</div>
 
     <div class="inline-form-row">
-      <div class="control-group" style="flex:2; min-width:160px;">
+      <div class="control-group" style="flex:1.5; min-width:140px;">
         <label>Teacher Name</label>
         <input type="text" id="teacher-new-name" placeholder="e.g., Hartley">
+      </div>
+      <div class="control-group" style="flex:2; min-width:180px;">
+        <label>Email</label>
+        <input type="text" id="teacher-new-email" placeholder="e.g., jhartley@cornerstonek12.org">
       </div>
       <div class="control-group" style="flex:1;">
         <label>Grade</label>
@@ -864,6 +868,7 @@
 
     window.saveTeacher = async function() {
       const name = document.getElementById('teacher-new-name').value.trim();
+      const email = document.getElementById('teacher-new-email').value.trim().toLowerCase();
       const gradeRaw = document.getElementById('teacher-new-grade').value;
       const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
 
@@ -877,8 +882,9 @@
       }
 
       try {
-        await set(ref(db, `bathroom/teachers/${key}`), { name, grade });
+        await set(ref(db, `bathroom/teachers/${key}`), { name, email: email || null, grade });
         document.getElementById('teacher-new-name').value = '';
+        document.getElementById('teacher-new-email').value = '';
         document.getElementById('teacher-new-grade').value = '';
       } catch(e) {
         console.error(e);
@@ -898,6 +904,7 @@
 
     window.saveInlineTeacherEdit = async function(oldKey) {
       const name = document.getElementById('inline-teacher-name').value.trim();
+      const email = document.getElementById('inline-teacher-email').value.trim().toLowerCase();
       const gradeRaw = document.getElementById('inline-teacher-grade').value;
       const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
 
@@ -911,7 +918,7 @@
       }
 
       try {
-        await set(ref(db, `bathroom/teachers/${newKey}`), { name, grade });
+        await set(ref(db, `bathroom/teachers/${newKey}`), { name, email: email || null, grade });
         if (newKey !== oldKey) {
           await remove(ref(db, `bathroom/teachers/${oldKey}`));
         }
@@ -943,6 +950,7 @@
         <thead>
           <tr>
             <th class="nosort">Name</th>
+            <th class="nosort">Email</th>
             <th class="nosort">Grade</th>
             <th class="nosort">Actions</th>
           </tr>
@@ -956,6 +964,7 @@
         if (key === editingTeacherKey) {
           tr.innerHTML = `
             <td><input type="text" id="inline-teacher-name" value="${escapeHtml(t.name)}" style="padding:6px 8px; font-size:0.82rem; width:100%;"></td>
+            <td><input type="text" id="inline-teacher-email" value="${escapeHtml(t.email || '')}" style="padding:6px 8px; font-size:0.82rem; width:100%;"></td>
             <td>
               <select id="inline-teacher-grade" style="padding:6px 8px; font-size:0.82rem;">
                 <option value="" ${!t.grade ? 'selected' : ''}>Unassigned</option>
@@ -971,6 +980,7 @@
         } else {
           tr.innerHTML = `
             <td class="student-name-cell">${escapeHtml(t.name)}</td>
+            <td style="color:var(--gray-700); font-size:0.82rem;">${t.email ? escapeHtml(t.email) : '—'}</td>
             <td>${t.grade ? t.grade + 'th' : '—'}</td>
             <td>
               <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startTeacherEdit('${key}')">✏️ Edit</button>
