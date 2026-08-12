@@ -502,6 +502,13 @@
     <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:14px;">
       <div class="bulk-bar" style="margin-bottom:0;">
         <button class="btn" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
+        <select id="bulk-grade-select" style="padding:9px 12px;">
+          <option value="">Assign grade...</option>
+          <option value="6">6th</option>
+          <option value="7">7th</option>
+          <option value="8">8th</option>
+        </select>
+        <button class="btn btn-outline" onclick="bulkAssignGrade()">Apply to Selected</button>
         <span id="rm-selected-count" class="selected-count">0 selected</span>
       </div>
       <div class="control-group" style="min-width:170px;">
@@ -1484,6 +1491,26 @@
       const master = document.getElementById('rm-select-all');
       const all = document.querySelectorAll('.rm-check').length;
       if (master) master.checked = all > 0 && n === all;
+    };
+
+    window.bulkAssignGrade = async function() {
+      const gradeRaw = document.getElementById('bulk-grade-select').value;
+      if (!gradeRaw) { alert('Pick a grade from the dropdown first.'); return; }
+      const grade = parseInt(gradeRaw, 10);
+
+      const checked = [...document.querySelectorAll('.rm-check:checked')];
+      if (!checked.length) { alert('No students are selected. Check the boxes for the students you want to assign.'); return; }
+      if (!confirm(`Assign Grade ${grade} to ${checked.length} selected student${checked.length === 1 ? '' : 's'}?`)) return;
+
+      try {
+        const updates = {};
+        checked.forEach(cb => { updates[`${cb.dataset.key}/grade`] = grade; });
+        await update(ref(db, 'bathroom/roster'), updates);
+        document.getElementById('bulk-grade-select').value = '';
+      } catch (e) {
+        console.error(e);
+        alert('Error assigning grade: ' + (e && e.message ? e.message : e));
+      }
     };
 
     window.deleteSelectedStudents = async function() {
