@@ -560,22 +560,55 @@
         return new Set(Object.values(slotsObj || {}).filter(Boolean).map(s => s.name));
       }
 
-      // Checks whether the given student belongs to any conflict group where another
-      // member is currently in outNames (i.e. currently checked out somewhere).
-      function hasConflictingGroupmateOut(studentName, outNames) {
+      // Returns the name of the groupmate currently out that's blocking this student, or null if
+      // none. Used both to decide whether to block, and to log who the blocker was for the report
+      // (that name is never shown to the student — only recorded for the dashboard log).
+      function findBlockingGroupmate(studentName, outNames) {
         const key = studentName.replace(/[.#$/\[\]]/g, "_");
         const myGroups = Object.values(conflictGroupsData).filter(g => g.studentIds && g.studentIds[key]);
-        if (!myGroups.length) return false;
+        if (!myGroups.length) return null;
 
         for (const group of myGroups) {
           const memberKeys = Object.keys(group.studentIds || {});
           for (const mKey of memberKeys) {
             if (mKey === key) continue;
             const member = rosterKeyed[mKey];
-            if (member && outNames.has(member.name)) return true;
+            if (member && outNames.has(member.name)) return member.name;
           }
         }
-        return false;
+        return null;
+      }
+
+      // Checks whether the given student belongs to any conflict group where another
+      // member is currently in outNames (i.e. currently checked out somewhere).
+      function hasConflictingGroupmateOut(studentName, outNames) {
+        return !!findBlockingGroupmate(studentName, outNames);
+      }
+
+      // Short two-tone "denied" chime — generated in-browser so there's no audio file to host.
+      function playBlockedSound() {
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          const ctx = new AudioCtx();
+          const now = ctx.currentTime;
+          [600, 340].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const start = now + i * 0.16;
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.exponentialRampToValueAtTime(0.28, start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + 0.17);
+          });
+        } catch (e) {
+          console.error('Could not play alert sound', e);
+        }
       }
 
       // --- Dynamic Roster Pull ---
@@ -747,12 +780,22 @@
         
         if (used >= limit) {
           showAlert(`${name} has used all ${limit} passes for this week.`);
+          playBlockedSound();
           return;
         }
 
         // Conflict Groups check: block if a groupmate (any grade, any teacher) is currently out
-        if (hasConflictingGroupmateOut(name, getOutNamesFromSlots(state.slots))) {
+        const blockingGroupmate = findBlockingGroupmate(name, getOutNamesFromSlots(state.slots));
+        if (blockingGroupmate) {
           showAlert(`${name}, someone in your group is currently out. Please wait until they return.`);
+          playBlockedSound();
+          // Logged for the dashboard's Blocked Attempts report — the groupmate's name is recorded
+          // here for that report only, never shown to the student on this screen.
+          push(ref(db, 'bathroom/conflictBlocks'), {
+            name, teacher, gender,
+            blockedGroupmate: blockingGroupmate,
+            blockedAt: Date.now()
+          }).catch(e => console.error('Could not log blocked attempt', e));
           return;
         }
 
