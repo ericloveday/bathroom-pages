@@ -355,6 +355,7 @@
 <div class="tab-btns no-print">
   <button class="tab-btn active" id="tab-view-reports" onclick="switchMainTab('reports')">📊 Reports</button>
   <button class="tab-btn" id="tab-view-management" onclick="switchMainTab('management')">👥 Student Management</button>
+  <button class="tab-btn" id="tab-view-teachers" onclick="switchMainTab('teachers')">👩‍🏫 Teachers</button>
   <button class="tab-btn" id="tab-view-conflicts" onclick="switchMainTab('conflicts')">🚫 Conflict Groups</button>
   <button class="tab-btn" id="tab-view-history" onclick="switchMainTab('history')">🗑 History Management</button>
 </div>
@@ -384,10 +385,6 @@
       <label>Teacher</label>
       <select id="weekly-teacher-filter" onchange="renderReport()">
         <option value="">All Teachers</option>
-        <option>Hartley</option>
-        <option>Loveday</option>
-        <option>Scales</option>
-        <option>Zinsmeister</option>
       </select>
     </div>
   </div>
@@ -401,10 +398,6 @@
       <label>Teacher</label>
       <select id="monthly-teacher-filter" onchange="renderReport()">
         <option value="">All Teachers</option>
-        <option>Hartley</option>
-        <option>Loveday</option>
-        <option>Scales</option>
-        <option>Zinsmeister</option>
       </select>
     </div>
   </div>
@@ -422,10 +415,6 @@
       <label>Teacher</label>
       <select id="custom-teacher-filter">
         <option value="">All Teachers</option>
-        <option>Hartley</option>
-        <option>Loveday</option>
-        <option>Scales</option>
-        <option>Zinsmeister</option>
       </select>
     </div>
     <button class="btn" onclick="renderReport()">Generate</button>
@@ -528,6 +517,33 @@
     </div>
 
     <div id="roster-container"><p class="no-data">Loading student directory...</p></div>
+  </div>
+</div>
+
+<!-- =============== TEACHER MANAGEMENT VIEW =============== -->
+<div id="view-teachers" style="display:none;">
+  <div class="section-panel accent-blue no-print">
+    <h2 style="color: var(--blue);">👩‍🏫 Teacher Management</h2>
+    <div class="card-desc">Manage the 12 teachers students pick from at the kiosk. Assign each teacher a grade so the kiosk can group the picker and make it faster for students to find their own teacher.</div>
+
+    <div class="inline-form-row">
+      <div class="control-group" style="flex:2; min-width:160px;">
+        <label>Teacher Name</label>
+        <input type="text" id="teacher-new-name" placeholder="e.g., Hartley">
+      </div>
+      <div class="control-group" style="flex:1;">
+        <label>Grade</label>
+        <select id="teacher-new-grade">
+          <option value="">Unassigned</option>
+          <option value="6">6th</option>
+          <option value="7">7th</option>
+          <option value="8">8th</option>
+        </select>
+      </div>
+      <button class="btn" style="background:var(--blue);" onclick="saveTeacher()">Add Teacher</button>
+    </div>
+
+    <div id="teacher-list-container"><p class="no-data">Loading teachers...</p></div>
   </div>
 </div>
 
@@ -671,6 +687,8 @@
     // Conflict Groups state (shares the same roster as Student Management)
     let rosterKeyed = {};
     let conflictGroupsData = {};
+    let teachersData = {}; // { key: {name, grade} } — feeds the kiosk picker and the Reports teacher filters
+    let editingTeacherKey = null; // tracks which teacher row (if any) is being edited inline
 
     // --- Built-in first-name → gender list (offline, no external API) ---
     const BOY_NAMES = `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`.split(/\s+/);
@@ -788,7 +806,7 @@
     }
 
     window.switchMainTab = function(view) {
-      const views = ['reports', 'management', 'conflicts', 'history'];
+      const views = ['reports', 'management', 'teachers', 'conflicts', 'history'];
       views.forEach(v => {
         document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
         document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
@@ -835,6 +853,150 @@
         cgStatusEl.className = 'roster-status';
         cgStatusEl.textContent = `Roster loaded: ${count} students.`;
       }
+    }
+
+    // ---------------- Teacher Management ----------------
+    onValue(ref(db, 'bathroom/teachers'), (snapshot) => {
+      teachersData = snapshot.val() || {};
+      renderTeacherList();
+      populateTeacherFilterDropdowns();
+    });
+
+    window.saveTeacher = async function() {
+      const name = document.getElementById('teacher-new-name').value.trim();
+      const gradeRaw = document.getElementById('teacher-new-grade').value;
+      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
+
+      if (!name) { alert("Please enter a teacher name."); return; }
+
+      const key = name.replace(/[.#$/\[\]]/g, "_");
+      const collision = Object.values(teachersData).some(t => t.name === name);
+      if (collision) {
+        const proceed = confirm(`A teacher named "${name}" already exists. Saving will overwrite their record. Continue?`);
+        if (!proceed) return;
+      }
+
+      try {
+        await set(ref(db, `bathroom/teachers/${key}`), { name, grade });
+        document.getElementById('teacher-new-name').value = '';
+        document.getElementById('teacher-new-grade').value = '';
+      } catch(e) {
+        console.error(e);
+        alert("Error saving teacher: " + (e && e.message ? e.message : e));
+      }
+    };
+
+    window.startTeacherEdit = function(key) {
+      editingTeacherKey = key;
+      renderTeacherList();
+    };
+
+    window.cancelTeacherEdit = function() {
+      editingTeacherKey = null;
+      renderTeacherList();
+    };
+
+    window.saveInlineTeacherEdit = async function(oldKey) {
+      const name = document.getElementById('inline-teacher-name').value.trim();
+      const gradeRaw = document.getElementById('inline-teacher-grade').value;
+      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
+
+      if (!name) { alert("Please enter a teacher name."); return; }
+
+      const newKey = name.replace(/[.#$/\[\]]/g, "_");
+      const collision = newKey !== oldKey && Object.values(teachersData).some(t => t.name === name);
+      if (collision) {
+        const proceed = confirm(`A teacher named "${name}" already exists. Saving will overwrite their record. Continue?`);
+        if (!proceed) return;
+      }
+
+      try {
+        await set(ref(db, `bathroom/teachers/${newKey}`), { name, grade });
+        if (newKey !== oldKey) {
+          await remove(ref(db, `bathroom/teachers/${oldKey}`));
+        }
+        editingTeacherKey = null;
+        renderTeacherList();
+      } catch(e) {
+        console.error(e);
+        alert("Error saving teacher: " + (e && e.message ? e.message : e));
+      }
+    };
+
+    window.removeTeacher = async function(key, name) {
+      if (!confirm(`Remove ${name} from the teacher list? Any of their current bathroom slots or history stay intact — this only removes them from the kiosk picker and filters.`)) return;
+      await remove(ref(db, `bathroom/teachers/${key}`));
+    };
+
+    function renderTeacherList() {
+      const container = document.getElementById('teacher-list-container');
+      if (!container) return;
+      const entries = Object.entries(teachersData).sort((a,b) => a[1].name.localeCompare(b[1].name));
+
+      if (!entries.length) {
+        container.innerHTML = '<p class="no-data">No teachers added yet.</p>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="nosort">Name</th>
+            <th class="nosort">Grade</th>
+            <th class="nosort">Actions</th>
+          </tr>
+        </thead>`;
+
+      const tbody = document.createElement('tbody');
+      entries.forEach(([key, t]) => {
+        const tr = document.createElement('tr');
+        const safeName = t.name.replace(/'/g, "\\'");
+
+        if (key === editingTeacherKey) {
+          tr.innerHTML = `
+            <td><input type="text" id="inline-teacher-name" value="${escapeHtml(t.name)}" style="padding:6px 8px; font-size:0.82rem; width:100%;"></td>
+            <td>
+              <select id="inline-teacher-grade" style="padding:6px 8px; font-size:0.82rem;">
+                <option value="" ${!t.grade ? 'selected' : ''}>Unassigned</option>
+                <option value="6" ${t.grade === 6 ? 'selected' : ''}>6th</option>
+                <option value="7" ${t.grade === 7 ? 'selected' : ''}>7th</option>
+                <option value="8" ${t.grade === 8 ? 'selected' : ''}>8th</option>
+              </select>
+            </td>
+            <td>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineTeacherEdit('${key}')">💾 Save</button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="cancelTeacherEdit()">Cancel</button>
+            </td>`;
+        } else {
+          tr.innerHTML = `
+            <td class="student-name-cell">${escapeHtml(t.name)}</td>
+            <td>${t.grade ? t.grade + 'th' : '—'}</td>
+            <td>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startTeacherEdit('${key}')">✏️ Edit</button>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeTeacher('${key}','${safeName}')">Remove</button>
+            </td>`;
+        }
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.innerHTML = '';
+      container.appendChild(table);
+    }
+
+    // Keeps the Reports/History teacher filter dropdowns in sync with the managed teacher list,
+    // instead of the old hardcoded 4-name option list.
+    function populateTeacherFilterDropdowns() {
+      const names = Object.values(teachersData).map(t => t.name).sort((a,b) => a.localeCompare(b));
+      ['weekly-teacher-filter', 'monthly-teacher-filter', 'custom-teacher-filter'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">All Teachers</option>' +
+          names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+        if (names.includes(current)) sel.value = current;
+      });
     }
 
     // ---------------- Conflict Groups ----------------
