@@ -507,10 +507,8 @@
         <label>Weekly Pass Limit</label>
         <input type="number" id="roster-new-limit" value="5" min="1">
       </div>
-      <button class="btn" id="roster-save-btn" style="background:var(--blue);" onclick="saveStudent()">Add / Update Student</button>
+      <button class="btn" id="roster-save-btn" style="background:var(--blue);" onclick="saveStudent()">Add Student</button>
     </div>
-
-    <div id="roster-edit-hint" class="edit-hint"></div>
 
     <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:14px;">
       <div class="bulk-bar" style="margin-bottom:0;">
@@ -668,7 +666,7 @@
     let currentTab = 'weekly';
     let sortCol = 'totalMins';
     let sortAsc = false;
-    let editingOriginalName = null;
+    let editingKey = null; // tracks which roster row (if any) is being edited inline
 
     // Conflict Groups state (shares the same roster as Student Management)
     let rosterKeyed = {};
@@ -685,6 +683,32 @@
     // "First L." keys instead of colliding the way the old dummy set did.
     const TEST_SURNAMES = ["Testerman","Sampleford","Placeholt","Exampleson","Mockery","Dummington","Fakerson","Trialwood","Pilotson","Draftley","Prototypa","Stubbins","Sandboxx","Rehearsal","Practicer","Scratcher","Templeman","Blueprint","Outlinez","Draftsman","Rendition","Simulacra","Testview","Betaford","Alphaton","Previewly","Sketchley","Trialford","Demoson","Sampleworth"];
 
+    // Builds a display name/key that's guaranteed not to collide with an existing student.
+    // Starts at "First L." (just the last initial, for privacy) and reveals more of the
+    // last name only if needed to stay unique. Falls back to "(2)", "(3)" etc. for the
+    // rare case of two students with the truly identical first+last name.
+    function buildUniqueName(firstName, lastName, existingNamesLower) {
+      const tryName = (suffixLen) => {
+        if (suffixLen >= lastName.length) return `${firstName} ${lastName}`;
+        return `${firstName} ${lastName.slice(0, suffixLen)}.`;
+      };
+
+      let len = 1;
+      let candidate = tryName(len);
+      while (existingNamesLower.has(candidate.toLowerCase()) && len < lastName.length) {
+        len++;
+        candidate = tryName(len);
+      }
+
+      if (existingNamesLower.has(candidate.toLowerCase())) {
+        let n = 2;
+        const base = candidate;
+        while (existingNamesLower.has(`${base} (${n})`.toLowerCase())) n++;
+        candidate = `${base} (${n})`;
+      }
+      return candidate;
+    }
+
     window.seedTestStudents = async function() {
       if (!confirm("This adds 324 clearly-fake test students (108 per grade) to the roster so you can try out grade filtering and Conflict Groups before the real list arrives. You can remove them later with the Remove Test Students button. Continue?")) return;
 
@@ -692,6 +716,7 @@
       if (btn) { btn.disabled = true; btn.textContent = "Loading..."; }
 
       const updates = {};
+      const usedNames = new Set(STUDENTS.map(s => s.name.toLowerCase()));
       [6, 7, 8].forEach((grade, gi) => {
         for (let i = 0; i < 108; i++) {
           const isGirl = i % 2 === 0;
@@ -699,8 +724,8 @@
           const firstRaw = namePool[(i + gi * 37) % namePool.length];
           const firstName = firstRaw.charAt(0).toUpperCase() + firstRaw.slice(1);
           const lastName = TEST_SURNAMES[(i + gi * 13) % TEST_SURNAMES.length];
-          const lastInitial = lastName.charAt(0).toUpperCase();
-          const name = `${firstName} ${lastInitial}.`;
+          const name = buildUniqueName(firstName, lastName, usedNames);
+          usedNames.add(name.toLowerCase());
           const key = name.replace(/[.#$/\[\]]/g, "_");
           updates[key] = { firstName, lastName, name, grade, gender: isGirl ? 'g' : 'b', limit: 5 };
         }
@@ -712,7 +737,7 @@
         // Single atomic multi-location write instead of 324 separate set() calls —
         // avoids firing the roster listener (and a full table re-render) 324 times in a row.
         await update(ref(db, 'bathroom/roster'), updates);
-        alert(`Test students loaded — ${uniqueCount} unique entries written (some of the 324 generated names collided onto the same "First L." key, same as a real duplicate name would — that's expected with a small test name pool).`);
+        alert(`Test students loaded — all ${uniqueCount} are unique. Names that would have collided on "First L." automatically got more of the last name added to tell them apart.`);
       } catch (err) {
         console.error(err);
         alert("Error loading test students: " + (err && err.message ? err.message : err));
@@ -775,7 +800,7 @@
       rosterKeyed = data || {};
       STUDENTS = data ? Object.values(data).sort((a,b) => (a.name || '').localeCompare(b.name || '')) : [];
       renderReport();
-      renderRosterManager();
+      window.renderRosterManager();
       renderPassUsage();
       renderConflictGroups();
       updateConflictRosterStatus();
@@ -951,79 +976,86 @@
 
       if (!firstName || !lastName) { alert("Please enter both a first and last name."); return; }
 
-      const lastInitial = lastName.charAt(0).toUpperCase();
-      const name = `${firstName} ${lastInitial}.`;
+      const usedNames = new Set(STUDENTS.map(s => s.name.toLowerCase()));
+      const name = buildUniqueName(firstName, lastName, usedNames);
       const newKey = name.replace(/[.#$/\[\]]/g, "_");
-
-      const collision = STUDENTS.some(s => s.name === name && s.name !== editingOriginalName);
-      if (collision) {
-        const proceed = confirm(`A student named "${name}" already exists in the roster. Saving will overwrite their record.\n\nIf this is actually a different student, add a middle initial to the last name to tell them apart, then save.\n\nOverwrite anyway?`);
-        if (!proceed) return;
-      }
 
       try {
         await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
-
-        if (editingOriginalName && editingOriginalName !== name) {
-          const oldKey = editingOriginalName.replace(/[.#$/\[\]]/g, "_");
-          if (oldKey !== newKey) {
-            await remove(ref(db, `bathroom/roster/${oldKey}`));
-
-            // Carry conflict-group membership over to the new key so groups don't silently break
-            const groupsWithOldKey = Object.entries(conflictGroupsData).filter(([gid, g]) => g.studentIds && g.studentIds[oldKey]);
-            if (groupsWithOldKey.length) {
-              await Promise.all(groupsWithOldKey.map(([gid]) => Promise.all([
-                set(ref(db, `conflictGroups/${gid}/studentIds/${newKey}`), true),
-                remove(ref(db, `conflictGroups/${gid}/studentIds/${oldKey}`))
-              ])));
-            }
-          }
-          const toRename = allHistory.filter(h => h.name === editingOriginalName);
-          if (toRename.length) {
-            await Promise.all(
-              toRename.map(h => update(ref(db, `bathroom/history/${h._key}`), { name }))
-            );
-          }
+        if (name !== `${firstName} ${lastName.charAt(0).toUpperCase()}.`) {
+          alert(`Saved as "${name}" — another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
         }
-
-        cancelEdit();
+        document.getElementById('roster-new-first').value = '';
+        document.getElementById('roster-new-last').value = '';
+        document.getElementById('roster-new-grade').value = '';
+        document.getElementById('roster-new-gender').value = 'g';
+        document.getElementById('roster-new-limit').value = '5';
       } catch(e) {
         console.error(e);
         alert("Error saving student: " + (e && e.message ? e.message : e));
       }
     };
 
-    window.cancelEdit = function() {
-      editingOriginalName = null;
-      document.getElementById('roster-new-first').value = '';
-      document.getElementById('roster-new-last').value = '';
-      document.getElementById('roster-new-grade').value = '';
-      document.getElementById('roster-new-gender').value = 'g';
-      document.getElementById('roster-new-limit').value = '5';
-      const btn = document.getElementById('roster-save-btn');
-      if (btn) btn.textContent = 'Add / Update Student';
-      const hint = document.getElementById('roster-edit-hint');
-      if (hint) hint.style.display = 'none';
+    // ---------------- Inline row editing (Student Management table) ----------------
+
+    window.startInlineEdit = function(key) {
+      editingKey = key;
+      window.renderRosterManager();
     };
 
-    window.editStudent = function(name) {
-      const s = STUDENTS.find(st => st.name === name);
-      if (!s) return;
-      editingOriginalName = name;
-      const nameBits = name.split(' ');
-      document.getElementById('roster-new-first').value = s.firstName || nameBits[0] || '';
-      document.getElementById('roster-new-last').value = s.lastName || (nameBits[1] || '').replace('.', '');
-      document.getElementById('roster-new-grade').value = s.grade || '';
-      document.getElementById('roster-new-gender').value = s.gender || 'g';
-      document.getElementById('roster-new-limit').value = s.limit || 5;
-      const btn = document.getElementById('roster-save-btn');
-      if (btn) btn.textContent = 'Update Student';
-      const hint = document.getElementById('roster-edit-hint');
-      if (hint) {
-        hint.style.display = 'block';
-        hint.innerHTML = `✏️ Editing <strong>${escapeHtml(name)}</strong> — <a href="#" onclick="cancelEdit(); return false;">cancel</a>`;
+    window.cancelInlineEdit = function() {
+      editingKey = null;
+      window.renderRosterManager();
+    };
+
+    window.saveInlineEdit = async function(oldKey) {
+      const firstName = document.getElementById('inline-first').value.trim();
+      const lastName = document.getElementById('inline-last').value.trim();
+      const gradeRaw = document.getElementById('inline-grade').value;
+      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
+      const gender = document.getElementById('inline-gender').value;
+      const limit = parseInt(document.getElementById('inline-limit').value, 10) || 5;
+
+      if (!firstName || !lastName) { alert("Please enter both a first and last name."); return; }
+
+      const originalStudent = STUDENTS.find(s => s.name.replace(/[.#$/\[\]]/g, "_") === oldKey);
+      const originalName = originalStudent ? originalStudent.name : null;
+
+      const usedNames = new Set(STUDENTS.filter(s => s.name !== originalName).map(s => s.name.toLowerCase()));
+      const name = buildUniqueName(firstName, lastName, usedNames);
+      const newKey = name.replace(/[.#$/\[\]]/g, "_");
+
+      try {
+        await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
+        if (name !== `${firstName} ${lastName.charAt(0).toUpperCase()}.` && name !== originalName) {
+          alert(`Saved as "${name}" — another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
+        }
+
+        if (newKey !== oldKey) {
+          await remove(ref(db, `bathroom/roster/${oldKey}`));
+
+          // Carry conflict-group membership over to the new key so groups don't silently break
+          const groupsWithOldKey = Object.entries(conflictGroupsData).filter(([gid, g]) => g.studentIds && g.studentIds[oldKey]);
+          if (groupsWithOldKey.length) {
+            await Promise.all(groupsWithOldKey.map(([gid]) => Promise.all([
+              set(ref(db, `conflictGroups/${gid}/studentIds/${newKey}`), true),
+              remove(ref(db, `conflictGroups/${gid}/studentIds/${oldKey}`))
+            ])));
+          }
+
+          if (originalName) {
+            const toRename = allHistory.filter(h => h.name === originalName);
+            if (toRename.length) {
+              await Promise.all(toRename.map(h => update(ref(db, `bathroom/history/${h._key}`), { name })));
+            }
+          }
+        }
+
+        editingKey = null;
+      } catch(e) {
+        console.error(e);
+        alert("Error saving student: " + (e && e.message ? e.message : e));
       }
-      document.getElementById('roster-new-first').scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     window.removeStudent = async function(name) {
@@ -1088,12 +1120,13 @@
           let successCount = 0;
           let genderGuessedCount = 0;
           let genderUnknownCount = 0;
+          let adjustedNameCount = 0;
           const unknownNames = [];
           const errorLines = [];
+          const updates = {};
+          const usedNames = new Set(STUDENTS.map(s => s.name.toLowerCase()));
 
           for (let i = 0; i < rawLines.length; i++) {
-            setStatus(`Processing ${i + 1} of ${rawLines.length}...`);
-
             const cleanLine = rawLines[i].replace(/"/g, '');
             const parts = cleanLine.split(',').map(p => p.trim());
             if (!parts.length || !parts[0]) continue;
@@ -1112,8 +1145,10 @@
 
             const firstName = firstNameRaw.charAt(0).toUpperCase() + firstNameRaw.slice(1).toLowerCase();
             const lastName = lastNameRaw.charAt(0).toUpperCase() + lastNameRaw.slice(1).toLowerCase();
-            const lastInitial = lastName.charAt(0).toUpperCase();
-            const name = `${firstName} ${lastInitial}.`;
+            const defaultName = `${firstName} ${lastName.charAt(0).toUpperCase()}.`;
+            const name = buildUniqueName(firstName, lastName, usedNames);
+            usedNames.add(name.toLowerCase());
+            if (name !== defaultName) adjustedNameCount++;
 
             let gender = 'unk';
             const explicitGender = (genderRaw || '').trim().toLowerCase();
@@ -1133,16 +1168,24 @@
             const limit = parseInt(limitRaw, 10);
 
             const key = name.replace(/[.#$/\[\]]/g, '_');
-            await set(ref(db, `bathroom/roster/${key}`), {
+            updates[key] = {
               firstName, lastName, name, grade, gender,
               limit: isNaN(limit) ? 5 : limit
-            });
+            };
             successCount++;
+          }
+
+          setStatus(`Writing ${successCount} student${successCount !== 1 ? 's' : ''}...`);
+          if (successCount > 0) {
+            await update(ref(db, 'bathroom/roster'), updates);
           }
 
           setStatus(`✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''}${errorLines.length ? `, ${errorLines.length} skipped` : ''}.`, errorLines.length ? '#c98a00' : '#1a7a1a');
 
           let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
+          if (adjustedNameCount > 0) {
+            summary += `• ${adjustedNameCount} name${adjustedNameCount !== 1 ? 's' : ''} auto-adjusted to include more of the last name, since "First L." was already taken by someone else — no one was overwritten.\n`;
+          }
           summary += `• Gender guessed from first name: ${genderGuessedCount}\n`;
           summary += `• Gender not recognized (marked Unknown): ${genderUnknownCount}\n`;
           if (unknownNames.length) {
@@ -1166,7 +1209,7 @@
       reader.readAsText(file);
     };
 
-    function renderRosterManager() {
+    window.renderRosterManager = function() {
       const container = document.getElementById('roster-container');
       const gradeFilterEl = document.getElementById('rm-grade-filter');
       const gradeFilter = gradeFilterEl ? gradeFilterEl.value : '';
@@ -1201,18 +1244,52 @@
         const key = s.name.replace(/[.#$/\[\]]/g, "_");
         const safeName = s.name.replace(/'/g, "\\'");
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
-          <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(s.name)}
-          </td>
-          <td>${s.grade ? s.grade + 'th' : '—'}</td>
-          <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
-          <td class="trips-cell">${s.limit || 5} passes</td>
-          <td>
-            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="editStudent('${safeName}')">✏️ Edit</button>
-            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${safeName}')">Remove</button>
-          </td>`;
+
+        if (key === editingKey) {
+          tr.innerHTML = `
+            <td class="check-cell"></td>
+            <td colspan="2">
+              <div style="display:flex; gap:6px;">
+                <input type="text" id="inline-first" value="${escapeHtml(s.firstName || s.name.split(' ')[0] || '')}" placeholder="First" style="width:90px; padding:6px 8px; font-size:0.82rem;">
+                <input type="text" id="inline-last" value="${escapeHtml(s.lastName || (s.name.split(' ')[1] || '').replace('.', ''))}" placeholder="Last" style="width:90px; padding:6px 8px; font-size:0.82rem;">
+              </div>
+            </td>
+            <td>
+              <select id="inline-grade" style="padding:6px 8px; font-size:0.82rem;">
+                <option value="" ${!s.grade ? 'selected' : ''}>Unassigned</option>
+                <option value="6" ${s.grade === 6 ? 'selected' : ''}>6th</option>
+                <option value="7" ${s.grade === 7 ? 'selected' : ''}>7th</option>
+                <option value="8" ${s.grade === 8 ? 'selected' : ''}>8th</option>
+              </select>
+            </td>
+            <td>
+              <select id="inline-gender" style="padding:6px 8px; font-size:0.82rem;">
+                <option value="g" ${s.gender === 'g' ? 'selected' : ''}>Girl</option>
+                <option value="b" ${s.gender === 'b' ? 'selected' : ''}>Boy</option>
+                <option value="unk" ${s.gender === 'unk' ? 'selected' : ''}>Unknown</option>
+              </select>
+            </td>
+            <td>
+              <input type="number" id="inline-limit" value="${s.limit || 5}" min="1" style="width:60px; padding:6px 8px; font-size:0.82rem;">
+            </td>
+            <td>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineEdit('${key}')">💾 Save</button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="cancelInlineEdit()">Cancel</button>
+            </td>`;
+        } else {
+          tr.innerHTML = `
+            <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
+            <td class="student-name-cell">
+              <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(s.name)}
+            </td>
+            <td>${s.grade ? s.grade + 'th' : '—'}</td>
+            <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
+            <td class="trips-cell">${s.limit || 5} passes</td>
+            <td>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startInlineEdit('${key}')">✏️ Edit</button>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${safeName}')">Remove</button>
+            </td>`;
+        }
         tbody.appendChild(tr);
       });
 
