@@ -470,7 +470,8 @@
       <p id="csv-status"></p>
       <div style="margin-top:14px;">
         <button class="btn btn-outline" id="seed-test-btn" onclick="seedTestStudents()">🧪 Load 324 Test Students</button>
-        <span style="font-size:0.75rem; color:var(--gray-500); margin-left:8px;">Adds clearly-fake placeholder students across all 3 grades for testing before the real roster arrives.</span>
+        <button class="btn btn-outline" id="remove-test-btn" onclick="removeTestStudents()">🧹 Remove Test Students</button>
+        <span style="font-size:0.75rem; color:var(--gray-500); margin-left:8px;">Adds/removes clearly-fake placeholder students for testing before the real roster arrives.</span>
       </div>
     </div>
 
@@ -582,7 +583,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getDatabase, ref, onValue, remove, set, update, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, onValue, get, remove, set, update, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBsja7ruNaLkTDTxyga9qd9TZG2Zz5AjHA",
@@ -685,12 +686,12 @@
     const TEST_SURNAMES = ["Testerman","Sampleford","Placeholt","Exampleson","Mockery","Dummington","Fakerson","Trialwood","Pilotson","Draftley","Prototypa","Stubbins","Sandboxx","Rehearsal","Practicer","Scratcher","Templeman","Blueprint","Outlinez","Draftsman","Rendition","Simulacra","Testview","Betaford","Alphaton","Previewly","Sketchley","Trialford","Demoson","Sampleworth"];
 
     window.seedTestStudents = async function() {
-      if (!confirm("This adds 324 clearly-fake test students (108 per grade) to the roster so you can try out grade filtering and Conflict Groups before the real list arrives. You can remove them later by filtering to a grade and using Delete Selected. Continue?")) return;
+      if (!confirm("This adds 324 clearly-fake test students (108 per grade) to the roster so you can try out grade filtering and Conflict Groups before the real list arrives. You can remove them later with the Remove Test Students button. Continue?")) return;
 
       const btn = document.getElementById('seed-test-btn');
       if (btn) { btn.disabled = true; btn.textContent = "Loading..."; }
 
-      const writes = [];
+      const updates = {};
       [6, 7, 8].forEach((grade, gi) => {
         for (let i = 0; i < 108; i++) {
           const isGirl = i % 2 === 0;
@@ -701,20 +702,57 @@
           const lastInitial = lastName.charAt(0).toUpperCase();
           const name = `${firstName} ${lastInitial}.`;
           const key = name.replace(/[.#$/\[\]]/g, "_");
-          writes.push(set(ref(db, `bathroom/roster/${key}`), {
-            firstName, lastName, name, grade, gender: isGirl ? 'g' : 'b', limit: 5
-          }));
+          updates[key] = { firstName, lastName, name, grade, gender: isGirl ? 'g' : 'b', limit: 5 };
         }
       });
 
+      const uniqueCount = Object.keys(updates).length;
+
       try {
-        await Promise.all(writes);
-        alert("Test students loaded. A few names may have collided since there's a limited name pool cycling through 324 entries — that mirrors how a real duplicate name would behave, so it's a good way to see the overwrite-warning in action too.");
+        // Single atomic multi-location write instead of 324 separate set() calls —
+        // avoids firing the roster listener (and a full table re-render) 324 times in a row.
+        await update(ref(db, 'bathroom/roster'), updates);
+        alert(`Test students loaded — ${uniqueCount} unique entries written (some of the 324 generated names collided onto the same "First L." key, same as a real duplicate name would — that's expected with a small test name pool).`);
       } catch (err) {
         console.error(err);
         alert("Error loading test students: " + (err && err.message ? err.message : err));
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = "🧪 Load 324 Test Students"; }
+      }
+    };
+
+    // Reads bathroom/roster directly from Firebase (not from the on-screen STUDENTS array,
+    // in case the table itself isn't showing everything that's actually in the database)
+    // and removes anyone whose last name matches the placeholder test-surname list.
+    window.removeTestStudents = async function() {
+      if (!confirm("This removes all test students (the ones with placeholder surnames like Testerman, Sampleford, etc.) from the roster. Continue?")) return;
+
+      const btn = document.getElementById('remove-test-btn');
+      if (btn) { btn.disabled = true; btn.textContent = "Removing..."; }
+
+      try {
+        const snap = await get(ref(db, 'bathroom/roster'));
+        const data = snap.val() || {};
+        const deletions = {};
+        let count = 0;
+        Object.entries(data).forEach(([key, s]) => {
+          if (s && TEST_SURNAMES.includes(s.lastName)) {
+            deletions[key] = null;
+            count++;
+          }
+        });
+
+        if (count === 0) {
+          alert("No test students found in the database to remove.");
+        } else {
+          await update(ref(db, 'bathroom/roster'), deletions);
+          alert(`Removed ${count} test student${count !== 1 ? 's' : ''} from the database.`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error removing test students: " + (err && err.message ? err.message : err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "🧹 Remove Test Students"; }
       }
     };
 
@@ -735,7 +773,7 @@
     onValue(ref(db, 'bathroom/roster'), (snapshot) => {
       const data = snapshot.val();
       rosterKeyed = data || {};
-      STUDENTS = data ? Object.values(data).sort((a,b) => a.name.localeCompare(b.name)) : [];
+      STUDENTS = data ? Object.values(data).sort((a,b) => (a.name || '').localeCompare(b.name || '')) : [];
       renderReport();
       renderRosterManager();
       renderPassUsage();
