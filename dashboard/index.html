@@ -977,7 +977,6 @@
       const tbody = document.createElement('tbody');
       entries.forEach(([key, t]) => {
         const tr = document.createElement('tr');
-        const safeName = t.name.replace(/'/g, "\\'");
 
         if (key === editingTeacherKey) {
           tr.innerHTML = `
@@ -992,7 +991,7 @@
               </select>
             </td>
             <td>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineTeacherEdit('${key}')">💾 Save</button>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineTeacherEdit('${jsAttr(key)}')">💾 Save</button>
               <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="cancelTeacherEdit()">Cancel</button>
             </td>`;
         } else {
@@ -1001,8 +1000,8 @@
             <td style="color:var(--gray-700); font-size:0.82rem;">${t.email ? escapeHtml(t.email) : '—'}</td>
             <td>${t.grade ? t.grade + 'th' : '—'}</td>
             <td>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startTeacherEdit('${key}')">✏️ Edit</button>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeTeacher('${key}','${safeName}')">Remove</button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startTeacherEdit('${jsAttr(key)}')">✏️ Edit</button>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeTeacher('${jsAttr(key)}','${jsAttr(t.name)}')">Remove</button>
             </td>`;
         }
         tbody.appendChild(tr);
@@ -1144,7 +1143,7 @@
         resultsEl.innerHTML = matches.map(([id, s]) => {
           const p = displayNameParts(s);
           const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
-          return `<div class="search-result-item" onclick="window.addConflictMember('${groupId}','${id}')">
+          return `<div class="search-result-item" onclick="window.addConflictMember('${groupId}','${jsAttr(id)}')">
             <span>${escapeHtml(p.first)} ${escapeHtml(p.last)}</span>
             <span class="sr-grade">${gradeLabel}</span>
           </div>`;
@@ -1180,7 +1179,7 @@
               const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
               return `<span class="member-chip">
                 <span class="grade-tag">${gradeLabel}</span> ${escapeHtml(p.first)} ${escapeHtml(p.last)}
-                <span class="remove-x" onclick="window.removeConflictMember('${groupId}','${id}')">&times;</span>
+                <span class="remove-x" onclick="window.removeConflictMember('${groupId}','${jsAttr(id)}')">&times;</span>
               </span>`;
             }).join('');
 
@@ -1486,7 +1485,6 @@
       const tbody = document.createElement('tbody');
       filtered.forEach(s => {
         const key = s.name.replace(/[.#$/\[\]]/g, "_");
-        const safeName = s.name.replace(/'/g, "\\'");
         const tr = document.createElement('tr');
 
         if (key === editingKey) {
@@ -1517,7 +1515,7 @@
               <input type="number" id="inline-limit" value="${s.limit || 2}" min="1" style="width:60px; padding:6px 8px; font-size:0.82rem;">
             </td>
             <td>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineEdit('${key}')">💾 Save</button>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineEdit('${jsAttr(key)}')">💾 Save</button>
               <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="cancelInlineEdit()">Cancel</button>
             </td>`;
         } else {
@@ -1530,8 +1528,8 @@
             <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
             <td class="trips-cell">${s.limit || 2} passes</td>
             <td>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startInlineEdit('${key}')">✏️ Edit</button>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${safeName}')">Remove</button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startInlineEdit('${jsAttr(key)}')">✏️ Edit</button>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeStudent('${jsAttr(s.name)}')">Remove</button>
             </td>`;
         }
         tbody.appendChild(tr);
@@ -2006,7 +2004,7 @@
           <td>${timeStr}</td>
           <td class="val-cell">${dur < 1 ? '<1m' : dur + 'm'}</td>
           <td>
-            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${h.name}', '${timeStr} on ${dateStr}')">Delete</button>
+            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${jsAttr(h.name)}', '${timeStr} on ${dateStr}')">Delete</button>
           </td>`;
         tbody.appendChild(tr);
       });
@@ -2029,6 +2027,13 @@
       const div = document.createElement('div');
       div.textContent = str || "";
       return div.innerHTML;
+    }
+
+    // Escapes a value for safe embedding inside a single-quoted string within an onclick/onblur
+    // attribute. Without this, a name containing an apostrophe (Jha'mir, O'Brien, D'Angelo, etc.)
+    // breaks the generated JavaScript and silently kills that button.
+    function jsAttr(str) {
+      return String(str == null ? '' : str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     }
   } // end startApp
 </script>
