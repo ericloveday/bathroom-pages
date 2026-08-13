@@ -689,6 +689,13 @@
         return div.innerHTML;
       }
 
+      // Escapes a value for safe embedding inside a single-quoted string within an onclick
+      // attribute. Without this, a teacher or student name containing an apostrophe breaks the
+      // generated JavaScript and silently kills that button.
+      function jsAttr(str) {
+        return String(str == null ? '' : str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      }
+
       // Renders one compact dropdown per grade (instead of a grid of 12+ buttons) for each of the
       // boy/girl panels, so a student picks their grade's teacher directly without scrolling a big list.
       function renderTeacherGrids() {
@@ -903,7 +910,7 @@
               </div>
               <div class="student-card-right">
                 <div class="student-time ${timeClass}" id="timer-${teacher}-${gender}">${formatDuration(getElapsed(entry.checkoutTime))}</div>
-                <button class="btn btn-sm ${cls}-btn" onclick="checkIn('${teacher}','${gender}')">Check In</button>
+                <button class="btn btn-sm ${cls}-btn" onclick="checkIn('${jsAttr(teacher)}','${gender}')">Check In</button>
               </div>
             </div>`;
         });
