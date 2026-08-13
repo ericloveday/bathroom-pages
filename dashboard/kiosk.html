@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -280,6 +281,21 @@
       </div>
     </div>
 
+    <div class="panel boys">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Boy Waiting List</div>
+          <div class="panel-meta">Moves up instantly when a boy's spot clears</div>
+        </div>
+        <div class="panel-count" id="wait-count-boy">0</div>
+      </div>
+      <div class="panel-body">
+        <div class="status-area" id="waiting-list-boy" style="min-height: 290px; justify-content: start; gap: 8px;">
+          <p class="empty-msg">No boys waiting.</p>
+        </div>
+      </div>
+    </div>
+
     <div class="panel girls">
       <div class="panel-header">
         <div>
@@ -313,32 +329,17 @@
       </div>
     </div>
 
-    <div class="panel waiting-panel">
+    <div class="panel girls">
       <div class="panel-header">
         <div>
-          <div class="panel-title">Waiting List</div>
-          <div class="panel-meta">Moves up instantly when spots clear</div>
+          <div class="panel-title">Girl Waiting List</div>
+          <div class="panel-meta">Moves up instantly when a girl's spot clears</div>
         </div>
-        <div class="panel-count" id="wait-count">0</div>
+        <div class="panel-count" id="wait-count-girl">0</div>
       </div>
-      <div class="panel-body" style="gap: 16px;">
-        <div>
-          <div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>♂ Boys Waiting</span>
-            <span id="wait-count-boy" style="font-weight:800; color:var(--boy-primary);">0</span>
-          </div>
-          <div class="status-area" id="waiting-list-boy" style="min-height: 120px; justify-content: start; gap: 8px;">
-            <p class="empty-msg">No boys waiting.</p>
-          </div>
-        </div>
-        <div>
-          <div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>♀ Girls Waiting</span>
-            <span id="wait-count-girl" style="font-weight:800; color:var(--girl-primary);">0</span>
-          </div>
-          <div class="status-area" id="waiting-list-girl" style="min-height: 120px; justify-content: start; gap: 8px;">
-            <p class="empty-msg">No girls waiting.</p>
-          </div>
+      <div class="panel-body">
+        <div class="status-area" id="waiting-list-girl" style="min-height: 290px; justify-content: start; gap: 8px;">
+          <p class="empty-msg">No girls waiting.</p>
         </div>
       </div>
     </div>
@@ -937,7 +938,6 @@
       }
 
       function renderWaiting() {
-        document.getElementById('wait-count').textContent = state.waiting.length;
         document.getElementById('wait-count-boy').textContent = state.waiting.filter(s => s.gender === 'b').length;
         document.getElementById('wait-count-girl').textContent = state.waiting.filter(s => s.gender === 'g').length;
 
