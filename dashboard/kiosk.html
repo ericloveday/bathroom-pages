@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -251,6 +250,21 @@
     <div class="panel boys">
       <div class="panel-header">
         <div>
+          <div class="panel-title">Boy Waiting List</div>
+          <div class="panel-meta">Moves up instantly when a boy's spot clears</div>
+        </div>
+        <div class="panel-count" id="wait-count-boy">0</div>
+      </div>
+      <div class="panel-body">
+        <div class="status-area" id="waiting-list-boy" style="min-height: 290px; justify-content: start; gap: 8px;">
+          <p class="empty-msg">No boys waiting.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel boys">
+      <div class="panel-header">
+        <div>
           <div class="panel-title">Boys Check Out</div>
           <div class="panel-meta" id="boy-out-meta">Select a teacher below to see status</div>
         </div>
@@ -277,21 +291,6 @@
         <div class="section-label" style="margin-top: 6px;">Currently Out</div>
         <div class="status-area" id="boy-out">
           <p class="empty-msg">Select your teacher to see who's out.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel boys">
-      <div class="panel-header">
-        <div>
-          <div class="panel-title">Boy Waiting List</div>
-          <div class="panel-meta">Moves up instantly when a boy's spot clears</div>
-        </div>
-        <div class="panel-count" id="wait-count-boy">0</div>
-      </div>
-      <div class="panel-body">
-        <div class="status-area" id="waiting-list-boy" style="min-height: 290px; justify-content: start; gap: 8px;">
-          <p class="empty-msg">No boys waiting.</p>
         </div>
       </div>
     </div>
