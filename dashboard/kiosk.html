@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -498,16 +499,6 @@
             if (el && entry) el.textContent = formatDuration(getElapsed(entry.checkoutTime));
           });
         });
-        // state.waiting is already sorted by addedTime, so filtering by gender preserves
-        // each queue's order — matching the per-gender indices used when rendering.
-        state.waiting.filter(s => s.gender === 'b').forEach((s, i) => {
-          const el = document.getElementById(`wait-timer-boy-${i}`);
-          if (el) el.textContent = 'Waiting ' + formatDuration(getElapsed(s.addedTime));
-        });
-        state.waiting.filter(s => s.gender === 'g').forEach((s, i) => {
-          const el = document.getElementById(`wait-timer-girl-${i}`);
-          if (el) el.textContent = 'Waiting ' + formatDuration(getElapsed(s.addedTime));
-        });
       }, 1000);
 
       const TEACHER_GRADE_GROUPS = [6, 7, 8, 'other']; // shared order for rendering + lookups
@@ -964,7 +955,6 @@
               <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">${escapeHtml(entry.teacher)}</div>
             </div>
             <div class="student-card-right">
-              <div class="student-time wait-time" id="wait-timer-${idPrefix}-${i}">Waiting ${formatDuration(getElapsed(entry.addedTime))}</div>
               <button class="btn btn-sm" style="background:#999;" onclick="removeFromWaiting('${entry._key}')">Remove</button>
             </div>`;
           container.appendChild(div);
