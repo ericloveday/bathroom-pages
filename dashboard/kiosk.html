@@ -322,9 +322,24 @@
         </div>
         <div class="panel-count" id="wait-count">0</div>
       </div>
-      <div class="panel-body" style="gap: 8px;">
-        <div class="status-area" id="waiting-list" style="min-height: 290px; justify-content: start; gap: 8px;">
-          <p class="empty-msg">No students waiting.</p>
+      <div class="panel-body" style="gap: 16px;">
+        <div>
+          <div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>♂ Boys Waiting</span>
+            <span id="wait-count-boy" style="font-weight:800; color:var(--boy-primary);">0</span>
+          </div>
+          <div class="status-area" id="waiting-list-boy" style="min-height: 120px; justify-content: start; gap: 8px;">
+            <p class="empty-msg">No boys waiting.</p>
+          </div>
+        </div>
+        <div>
+          <div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>♀ Girls Waiting</span>
+            <span id="wait-count-girl" style="font-weight:800; color:var(--girl-primary);">0</span>
+          </div>
+          <div class="status-area" id="waiting-list-girl" style="min-height: 120px; justify-content: start; gap: 8px;">
+            <p class="empty-msg">No girls waiting.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -484,8 +499,14 @@
             if (el && entry) el.textContent = formatDuration(getElapsed(entry.checkoutTime));
           });
         });
-        state.waiting.forEach((s, i) => {
-          const el = document.getElementById(`wait-timer-${i}`);
+        // state.waiting is already sorted by addedTime, so filtering by gender preserves
+        // each queue's order — matching the per-gender indices used when rendering.
+        state.waiting.filter(s => s.gender === 'b').forEach((s, i) => {
+          const el = document.getElementById(`wait-timer-boy-${i}`);
+          if (el) el.textContent = 'Waiting ' + formatDuration(getElapsed(s.addedTime));
+        });
+        state.waiting.filter(s => s.gender === 'g').forEach((s, i) => {
+          const el = document.getElementById(`wait-timer-girl-${i}`);
           if (el) el.textContent = 'Waiting ' + formatDuration(getElapsed(s.addedTime));
         });
       }, 1000);
@@ -917,32 +938,38 @@
       }
 
       function renderWaiting() {
-        const container = document.getElementById('waiting-list');
         document.getElementById('wait-count').textContent = state.waiting.length;
-        if (!state.waiting.length) {
-          container.innerHTML = '<p class="empty-msg">No students waiting.</p>';
-          return;
-        }
+        document.getElementById('wait-count-boy').textContent = state.waiting.filter(s => s.gender === 'b').length;
+        document.getElementById('wait-count-girl').textContent = state.waiting.filter(s => s.gender === 'g').length;
 
         get(ref(db, 'bathroom/waiting')).then(snap => {
           const raw = snap.val() || {};
           const entries = Object.entries(raw).map(([k,v]) => ({...v, _key: k})).sort((a,b) => a.addedTime - b.addedTime);
-          container.innerHTML = '';
-          entries.forEach((entry, i) => {
-            const label = entry.gender === 'b' ? '♂' : '♀';
-            const div = document.createElement('div');
-            div.className = 'student-card wait';
-            div.innerHTML = `
-              <div>
-                <div class="student-name">#${i+1} ${label} ${entry.name}</div>
-                <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">${entry.teacher}</div>
-              </div>
-              <div class="student-card-right">
-                <div class="student-time wait-time" id="wait-timer-${i}">Waiting ${formatDuration(getElapsed(entry.addedTime))}</div>
-                <button class="btn btn-sm" style="background:#999;" onclick="removeFromWaiting('${entry._key}')">Remove</button>
-              </div>`;
-            container.appendChild(div);
-          });
+          renderWaitingQueue('waiting-list-boy', entries.filter(e => e.gender === 'b'), 'boy', 'No boys waiting.');
+          renderWaitingQueue('waiting-list-girl', entries.filter(e => e.gender === 'g'), 'girl', 'No girls waiting.');
+        });
+      }
+
+      function renderWaitingQueue(containerId, entries, idPrefix, emptyMsg) {
+        const container = document.getElementById(containerId);
+        if (!entries.length) {
+          container.innerHTML = `<p class="empty-msg">${emptyMsg}</p>`;
+          return;
+        }
+        container.innerHTML = '';
+        entries.forEach((entry, i) => {
+          const div = document.createElement('div');
+          div.className = 'student-card wait';
+          div.innerHTML = `
+            <div>
+              <div class="student-name">#${i+1} ${escapeHtml(entry.name)}</div>
+              <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">${escapeHtml(entry.teacher)}</div>
+            </div>
+            <div class="student-card-right">
+              <div class="student-time wait-time" id="wait-timer-${idPrefix}-${i}">Waiting ${formatDuration(getElapsed(entry.addedTime))}</div>
+              <button class="btn btn-sm" style="background:#999;" onclick="removeFromWaiting('${entry._key}')">Remove</button>
+            </div>`;
+          container.appendChild(div);
         });
       }
 
