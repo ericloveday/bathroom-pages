@@ -228,7 +228,7 @@
   <div class="rules-banner">
     <h2>⚠️ Bathroom Rules</h2>
     <ul>
-      <li>Students get 5 opportunities to use the bathroom during core classes per week.</li>
+      <li>Students get 2 opportunities to use the bathroom per day for their 4 core classes.</li>
       <li>No one may use the bathroom while the teacher is talking or teaching.</li>
       <li>You must wait for independent working time.</li>
       <li>Do not go to the bathroom without permission.</li>
@@ -1014,8 +1014,10 @@
         canvas.height = window.innerHeight;
 
         const colors = ['#cc0000','#1a6fb5','#b5006e','#e6a817','#22c55e','#ffffff','#f97316','#a855f7'];
+        const headerEl = document.querySelector('header');
+        const headerRect = headerEl ? headerEl.getBoundingClientRect() : null;
         const cx = canvas.width / 2;
-        const cy = canvas.height / 2;
+        const cy = headerRect ? Math.max(headerRect.top - 10, 10) : 60; // just above the black header bar
 
         const pieces = Array.from({ length: 180 }, () => {
           const angle = Math.random() * Math.PI * 2;
