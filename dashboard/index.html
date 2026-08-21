@@ -618,7 +618,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getDatabase, ref, onValue, get, remove, set, update, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
@@ -655,10 +655,17 @@
 
   document.getElementById('google-signin-btn').addEventListener('click', () => {
     signinError.style.display = 'none';
-    signInWithPopup(auth, provider).catch(err => {
+    signInWithRedirect(auth, provider).catch(err => {
       console.error(err);
-      showSigninError('Sign-in failed. Please try again.');
+      showSigninError('Sign-in failed: ' + (err && err.code ? err.code : 'please try again.'));
     });
+  });
+
+  // Redirect-based sign-in leaves the page and comes back, so any error (or the completed
+  // sign-in) surfaces here on load rather than in the click handler above.
+  getRedirectResult(auth).catch(err => {
+    console.error('Redirect sign-in error:', err);
+    showSigninError('Sign-in failed: ' + (err && err.code ? err.code : 'please try again.'));
   });
 
   window.doSignOut = function() {
