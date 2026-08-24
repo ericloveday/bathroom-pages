@@ -306,6 +306,54 @@
   .search-result-item .sr-grade { font-size: 11px; font-weight: 700; color: var(--gray-500); }
   .empty-groups-state { text-align: center; padding: 60px 20px; color: var(--gray-500); }
 
+  /* --- Daily Pattern view --- */
+  .teacher-time-chip {
+    display: inline-block;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-100);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 2px 4px 2px 0;
+    white-space: nowrap;
+  }
+  .teacher-time-chip.flagged {
+    background: #fdf7e8;
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .teacher-time-chip .chip-time {
+    font-weight: 500;
+    color: var(--gray-500);
+    margin-left: 4px;
+  }
+  .teacher-time-chip.flagged .chip-time { color: var(--amber); opacity: 0.8; }
+  .distinct-badge, .distinct-badge-flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    font-weight: 800;
+    font-size: 0.8rem;
+  }
+  .distinct-badge { background: var(--gray-100); color: var(--gray-700); }
+  .distinct-badge-flag { background: var(--amber); color: var(--white); }
+  .pattern-alert {
+    background: #fdf7e8;
+    color: var(--amber);
+    border: 1px solid var(--amber);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
   /* Print styles */
   @media print {
     body { background: white; padding: 10px; }
@@ -365,6 +413,7 @@
   <!-- Date Tabs + report actions -->
   <div style="display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
     <div class="tab-btns" style="margin-bottom:0;">
+      <button class="tab-btn" id="tab-daily" onclick="switchTab('daily')">Daily Pattern</button>
       <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
       <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
       <button class="tab-btn" id="tab-custom" onclick="switchTab('custom')">Custom Range</button>
@@ -376,6 +425,19 @@
   </div>
 
   <!-- Controls -->
+  <div class="controls" id="controls-daily" style="display:none;">
+    <div class="control-group">
+      <label>Date</label>
+      <input type="date" id="daily-date" onchange="renderReport()">
+    </div>
+    <div class="control-group">
+      <button class="btn btn-outline" style="align-self:flex-end;" onclick="shiftDailyDate(-1)">← Prev Day</button>
+    </div>
+    <div class="control-group">
+      <button class="btn btn-outline" style="align-self:flex-end;" onclick="shiftDailyDate(1)">Next Day →</button>
+    </div>
+  </div>
+
   <div class="controls" id="controls-weekly">
     <div class="control-group">
       <label>Week</label>
@@ -1674,16 +1736,25 @@
       const weekAgo = isoDate(new Date(Date.now() - 7*24*60*60*1000));
       document.getElementById('custom-start').value = weekAgo;
       document.getElementById('custom-end').value = today;
+      const dailyDateEl = document.getElementById('daily-date');
+      if (dailyDateEl && !dailyDateEl.value) dailyDateEl.value = today;
     }
 
     function getTeacherFilter() {
+      if (currentTab === 'daily') return '';
       if (currentTab === 'weekly') return document.getElementById('weekly-teacher-filter').value;
       if (currentTab === 'monthly') return document.getElementById('monthly-teacher-filter').value;
       return document.getElementById('custom-teacher-filter').value;
     }
 
     function getDateRange() {
-      if (currentTab === 'weekly') {
+      if (currentTab === 'daily') {
+        const val = document.getElementById('daily-date').value;
+        if (!val) return null;
+        const start = new Date(val + 'T00:00:00').getTime();
+        const end = new Date(val + 'T23:59:59').getTime();
+        return { start, end, label: formatDate(new Date(val + 'T12:00:00')) };
+      } else if (currentTab === 'weekly') {
         const val = document.getElementById('week-select').value;
         if(!val) return null;
         const start = new Date(val + 'T12:00:00');
@@ -1724,6 +1795,16 @@
         <div class="summary-card"><div class="val">${uniqueStudents}</div><div class="lbl">Students Out</div></div>
         <div class="summary-card"><div class="val">${avgMins}m</div><div class="lbl">Avg Trip</div></div>
       `;
+
+      const dailyTableCard = document.getElementById('daily-table-card');
+
+      if (currentTab === 'daily') {
+        if (dailyTableCard) dailyTableCard.style.display = 'none';
+        document.getElementById('table-title').textContent = `Daily Bathroom Pattern — ${range.label}`;
+        renderDailyPatternTable(filtered);
+        return;
+      }
+      if (dailyTableCard) dailyTableCard.style.display = 'block';
 
       document.getElementById('table-title').textContent = `Student Summary — ${range.label}`;
 
@@ -1805,6 +1886,72 @@
         </div>`).join('');
     };
 
+    function renderDailyPatternTable(filtered) {
+      const container = document.getElementById('table-container');
+
+      const studentMap = {};
+      filtered.forEach(h => {
+        if (!studentMap[h.name]) {
+          const rosterEntry = STUDENTS.find(s => s.name === h.name);
+          studentMap[h.name] = { name: h.name, gender: rosterEntry ? rosterEntry.gender : null, trips: [] };
+        }
+        studentMap[h.name].trips.push({ teacher: h.teacher || 'Loveday', time: h.checkedOutAt, duration: h.duration });
+      });
+
+      let rows = Object.values(studentMap);
+      rows.forEach(r => r.trips.sort((a, b) => a.time - b.time));
+
+      // Surface the pattern-worthy rows first: most distinct teachers in one day, then most trips.
+      rows.sort((a, b) => {
+        const distinctA = new Set(a.trips.map(t => t.teacher)).size;
+        const distinctB = new Set(b.trips.map(t => t.teacher)).size;
+        if (distinctB !== distinctA) return distinctB - distinctA;
+        if (b.trips.length !== a.trips.length) return b.trips.length - a.trips.length;
+        return a.name.localeCompare(b.name);
+      });
+
+      if (!rows.length) {
+        container.innerHTML = '<p class="no-data">No bathroom trips recorded on this day.</p>';
+        return;
+      }
+
+      const multiTeacherCount = rows.filter(r => new Set(r.trips.map(t => t.teacher)).size > 1).length;
+
+      const thead = `
+        <thead>
+          <tr>
+            <th class="nosort">Student</th>
+            <th class="nosort" style="text-align:center;">Distinct Teachers</th>
+            <th class="nosort" style="text-align:center;">Trips</th>
+            <th class="nosort">Teacher &amp; Time Breakdown</th>
+          </tr>
+        </thead>`;
+
+      const tbody = `<tbody>${rows.map(r => {
+        const distinct = new Set(r.trips.map(t => t.teacher)).size;
+        const flagged = distinct > 1;
+        const breakdown = r.trips.map(t => {
+          const timeStr = new Date(t.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+          return `<span class="teacher-time-chip${flagged ? ' flagged' : ''}">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span></span>`;
+        }).join(' ');
+        return `
+        <tr>
+          <td class="student-name-cell">
+            <span class="gender-dot ${genderInfo(r.gender).cls}"></span>${escapeHtml(r.name)}
+          </td>
+          <td style="text-align:center;">
+            <span class="${flagged ? 'distinct-badge-flag' : 'distinct-badge'}">${distinct}</span>
+          </td>
+          <td class="trips-cell" style="text-align:center;">${r.trips.length}</td>
+          <td>${breakdown}</td>
+        </tr>`;
+      }).join('')}</tbody>`;
+
+      container.innerHTML = `
+        ${multiTeacherCount > 0 ? `<div class="pattern-alert">⚠️ ${multiTeacherCount} student${multiTeacherCount !== 1 ? 's' : ''} left from more than one teacher's class today — worth a look.</div>` : ''}
+        <table>${thead}${tbody}</table>`;
+    }
+
     window.sortBy = function(col) {
       if (sortCol === col) sortAsc = !sortAsc;
       else { sortCol = col; sortAsc = false; }
@@ -1813,10 +1960,18 @@
 
     window.switchTab = function(tab) {
       currentTab = tab;
-      ['weekly','monthly','custom'].forEach(t => {
+      ['daily','weekly','monthly','custom'].forEach(t => {
         document.getElementById(`controls-${t}`).style.display = t === tab ? 'flex' : 'none';
         document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
       });
+      renderReport();
+    };
+
+    window.shiftDailyDate = function(delta) {
+      const input = document.getElementById('daily-date');
+      const d = new Date(input.value + 'T12:00:00');
+      d.setDate(d.getDate() + delta);
+      input.value = isoDate(d);
       renderReport();
     };
 
