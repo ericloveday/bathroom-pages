@@ -401,6 +401,7 @@
       <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
       <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
       <button class="tab-btn" id="tab-custom" onclick="switchTab('custom')">Custom Range</button>
+      <button class="tab-btn" id="tab-compare" onclick="switchTab('compare')">🔍 Compare Students</button>
     </div>
     <div id="report-actions" style="display:flex; gap:10px; align-items:center;">
       <button class="btn btn-outline" onclick="window.print()">🖨 Print</button>
@@ -413,6 +414,15 @@
     <div class="control-group">
       <label>Date</label>
       <input type="date" id="daily-date" onchange="renderReport()">
+    </div>
+    <div class="control-group">
+      <label>Grade</label>
+      <select id="daily-grade-filter" onchange="renderReport()">
+        <option value="">All Grades</option>
+        <option value="6">6th</option>
+        <option value="7">7th</option>
+        <option value="8">8th</option>
+      </select>
     </div>
     <div class="control-group">
       <button class="btn btn-outline" style="align-self:flex-end;" onclick="shiftDailyDate(-1)">← Prev Day</button>
@@ -428,6 +438,15 @@
       <select id="week-select" onchange="renderReport()"></select>
     </div>
     <div class="control-group">
+      <label>Grade</label>
+      <select id="weekly-grade-filter" onchange="renderReport()">
+        <option value="">All Grades</option>
+        <option value="6">6th</option>
+        <option value="7">7th</option>
+        <option value="8">8th</option>
+      </select>
+    </div>
+    <div class="control-group">
       <label>Teacher</label>
       <select id="weekly-teacher-filter" onchange="renderReport()">
         <option value="">All Teachers</option>
@@ -439,6 +458,15 @@
     <div class="control-group">
       <label>Month</label>
       <select id="month-select" onchange="renderReport()"></select>
+    </div>
+    <div class="control-group">
+      <label>Grade</label>
+      <select id="monthly-grade-filter" onchange="renderReport()">
+        <option value="">All Grades</option>
+        <option value="6">6th</option>
+        <option value="7">7th</option>
+        <option value="8">8th</option>
+      </select>
     </div>
     <div class="control-group">
       <label>Teacher</label>
@@ -458,12 +486,52 @@
       <input type="date" id="custom-end">
     </div>
     <div class="control-group">
+      <label>Grade</label>
+      <select id="custom-grade-filter">
+        <option value="">All Grades</option>
+        <option value="6">6th</option>
+        <option value="7">7th</option>
+        <option value="8">8th</option>
+      </select>
+    </div>
+    <div class="control-group">
       <label>Teacher</label>
       <select id="custom-teacher-filter">
         <option value="">All Teachers</option>
       </select>
     </div>
     <button class="btn" onclick="renderReport()">Generate</button>
+  </div>
+
+  <div class="controls" id="controls-compare" style="display:none;">
+    <div class="control-group">
+      <label>Grade</label>
+      <select id="compare-grade-filter" onchange="renderReport()">
+        <option value="">All Grades</option>
+        <option value="6">6th</option>
+        <option value="7">7th</option>
+        <option value="8">8th</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Start Date</label>
+      <input type="date" id="compare-start" onchange="renderReport()">
+    </div>
+    <div class="control-group">
+      <label>End Date</label>
+      <input type="date" id="compare-end" onchange="renderReport()">
+    </div>
+  </div>
+
+  <!-- Student picker for Compare Students -->
+  <div class="table-card" id="compare-picker-card" style="display:none;">
+    <h2>Select Students to Compare</h2>
+    <div class="card-desc">Search and add one or more students. Pick a wider date range above (a few weeks) to spot patterns across many days — like the same teacher every day, or two students leaving at close to the same time.</div>
+    <div class="add-student-wrap" style="max-width:420px;">
+      <input class="add-student-input" id="compare-search-input" placeholder="Search name to add..." oninput="handleCompareSearchInput(this.value)">
+      <div class="search-results" id="compare-search-results"></div>
+    </div>
+    <div class="members-box" id="compare-selected-chips" style="margin-top:12px;"></div>
   </div>
 
   <!-- Summary -->
@@ -712,6 +780,7 @@
   };
 
   let appStarted = false;
+  let currentUserEmail = null;
 
   onAuthStateChanged(auth, (user) => {
     if (!user) {
@@ -728,6 +797,7 @@
     subtitleBar.style.display = 'block';
     loadingScreen.style.display = 'flex';
     userBadge.textContent = user.email || '';
+    currentUserEmail = (user.email || '').toLowerCase();
 
     if (!appStarted) {
       appStarted = true;
@@ -750,6 +820,10 @@
     let conflictGroupsData = {};
     let teachersData = {}; // { key: {name, grade} } — feeds the kiosk picker and the Reports teacher filters
     let editingTeacherKey = null; // tracks which teacher row (if any) is being edited inline
+
+    // Compare Students state
+    let compareSelectedNames = new Set();
+    let gradeDefaultsApplied = false;
 
     // --- Built-in first-name → gender list (offline, no external API) ---
     const BOY_NAMES = `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`.split(/\s+/);
@@ -921,148 +995,204 @@
       teachersData = snapshot.val() || {};
       renderTeacherList();
       populateTeacherFilterDropdowns();
+      if (!gradeDefaultsApplied) {
+        applyDetectedGradeDefaults();
+        gradeDefaultsApplied = true;
+      }
     });
 
-    window.saveTeacher = async function() {
-      const name = document.getElementById('teacher-new-name').value.trim();
-      const email = document.getElementById('teacher-new-email').value.trim().toLowerCase();
-      const gradeRaw = document.getElementById('teacher-new-grade').value;
-      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
+    // Looks up the signed-in teacher's own grade (matched by email against Teacher Management
+    // records, same as the kiosk's auto-detect) and pre-sets every Grade filter to it. Teachers
+    // can still change it manually afterward — this only sets the starting point.
+    function applyDetectedGradeDefaults() {
+      if (!currentUserEmail) return;
+      const match = Object.values(teachersData).find(t => t.email && t.email.toLowerCase() === currentUserEmail);
+      if (!match || !match.grade) return;
+      const gradeStr = String(match.grade);
+      ['daily-grade-filter', 'weekly-grade-filter', 'monthly-grade-filter', 'custom-grade-filter', 'compare-grade-filter'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = gradeStr;
+      });
+    }
 
-      if (!name) { alert("Please enter a teacher name."); return; }
+    function getGradeFilter() {
+      if (currentTab === 'daily') return document.getElementById('daily-grade-filter')?.value || '';
+      if (currentTab === 'weekly') return document.getElementById('weekly-grade-filter')?.value || '';
+      if (currentTab === 'monthly') return document.getElementById('monthly-grade-filter')?.value || '';
+      if (currentTab === 'custom') return document.getElementById('custom-grade-filter')?.value || '';
+      return '';
+    }
 
-      const key = name.replace(/[.#$/\[\]]/g, "_");
-      const collision = Object.values(teachersData).some(t => t.name === name);
-      if (collision) {
-        const proceed = confirm(`A teacher named "${name}" already exists. Saving will overwrite their record. Continue?`);
-        if (!proceed) return;
-      }
+    // ---------------- Compare Students ----------------
+    window.handleCompareSearchInput = function(value) {
+      const resultsEl = document.getElementById('compare-search-results');
+      const q = value.trim().toLowerCase();
+      if (!q) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
 
-      try {
-        await set(ref(db, `bathroom/teachers/${key}`), { name, email: email || null, grade });
-        document.getElementById('teacher-new-name').value = '';
-        document.getElementById('teacher-new-email').value = '';
-        document.getElementById('teacher-new-grade').value = '';
-      } catch(e) {
-        console.error(e);
-        alert("Error saving teacher: " + (e && e.message ? e.message : e));
-      }
-    };
+      const gradeFilter = document.getElementById('compare-grade-filter').value;
+      let matches = STUDENTS
+        .filter(s => !compareSelectedNames.has(s.name))
+        .filter(s => !gradeFilter || String(s.grade) === gradeFilter)
+        .filter(s => (s.name || '').toLowerCase().includes(q));
 
-    window.startTeacherEdit = function(key) {
-      editingTeacherKey = key;
-      renderTeacherList();
-    };
+      matches.sort((a, b) => a.name.localeCompare(b.name));
+      const totalMatches = matches.length;
+      matches = matches.slice(0, 25);
 
-    window.cancelTeacherEdit = function() {
-      editingTeacherKey = null;
-      renderTeacherList();
-    };
-
-    window.saveInlineTeacherEdit = async function(oldKey) {
-      const name = document.getElementById('inline-teacher-name').value.trim();
-      const email = document.getElementById('inline-teacher-email').value.trim().toLowerCase();
-      const gradeRaw = document.getElementById('inline-teacher-grade').value;
-      const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
-
-      if (!name) { alert("Please enter a teacher name."); return; }
-
-      const newKey = name.replace(/[.#$/\[\]]/g, "_");
-      const collision = newKey !== oldKey && Object.values(teachersData).some(t => t.name === name);
-      if (collision) {
-        const proceed = confirm(`A teacher named "${name}" already exists. Saving will overwrite their record. Continue?`);
-        if (!proceed) return;
-      }
-
-      try {
-        await set(ref(db, `bathroom/teachers/${newKey}`), { name, email: email || null, grade });
-        if (newKey !== oldKey) {
-          await remove(ref(db, `bathroom/teachers/${oldKey}`));
+      if (matches.length === 0) {
+        resultsEl.innerHTML = '<div class="search-result-item">No matches</div>';
+      } else {
+        resultsEl.innerHTML = matches.map(s => {
+          const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
+          return `<div class="search-result-item" onclick="window.addCompareStudent('${jsAttr(s.name)}')">
+            <span>${escapeHtml(s.name)}</span>
+            <span class="sr-grade">${gradeLabel}</span>
+          </div>`;
+        }).join('');
+        if (totalMatches > 25) {
+          resultsEl.innerHTML += `<div class="search-result-item" style="color:var(--gray-500); font-style:italic; cursor:default;">+${totalMatches - 25} more — type more letters to narrow it down</div>`;
         }
-        editingTeacherKey = null;
-        renderTeacherList();
-      } catch(e) {
-        console.error(e);
-        alert("Error saving teacher: " + (e && e.message ? e.message : e));
       }
+      resultsEl.style.display = 'block';
     };
 
-    window.removeTeacher = async function(key, name) {
-      if (!confirm(`Remove ${name} from the teacher list? Any of their current bathroom slots or history stay intact — this only removes them from the kiosk picker and filters.`)) return;
-      await remove(ref(db, `bathroom/teachers/${key}`));
+    window.addCompareStudent = function(name) {
+      compareSelectedNames.add(name);
+      const input = document.getElementById('compare-search-input');
+      const resultsEl = document.getElementById('compare-search-results');
+      if (input) input.value = '';
+      if (resultsEl) resultsEl.style.display = 'none';
+      renderCompareChips();
+      renderReport();
     };
 
-    function renderTeacherList() {
-      const container = document.getElementById('teacher-list-container');
-      if (!container) return;
-      const entries = Object.entries(teachersData).sort((a,b) => a[1].name.localeCompare(b[1].name));
+    window.removeCompareStudent = function(name) {
+      compareSelectedNames.delete(name);
+      renderCompareChips();
+      renderReport();
+    };
 
-      if (!entries.length) {
-        container.innerHTML = '<p class="no-data">No teachers added yet.</p>';
+    function renderCompareChips() {
+      const box = document.getElementById('compare-selected-chips');
+      if (!box) return;
+      if (!compareSelectedNames.size) {
+        box.innerHTML = '<div class="empty-members">No students selected yet — search above to add.</div>';
+        return;
+      }
+      box.innerHTML = [...compareSelectedNames].sort().map(name => {
+        const s = STUDENTS.find(x => x.name === name);
+        const gradeLabel = s && s.grade ? `Gr ${s.grade}` : 'Gr —';
+        return `<span class="member-chip">
+          <span class="grade-tag">${gradeLabel}</span> ${escapeHtml(name)}
+          <span class="remove-x" onclick="window.removeCompareStudent('${jsAttr(name)}')">&times;</span>
+        </span>`;
+      }).join('');
+    }
+
+    function renderComparisonReport() {
+      document.getElementById('daily-table-card').style.display = 'none';
+      document.getElementById('table-title').textContent = 'Student Comparison';
+
+      const summaryGrid = document.getElementById('summary-grid');
+      const tableContainer = document.getElementById('table-container');
+      const names = [...compareSelectedNames];
+
+      if (!names.length) {
+        summaryGrid.innerHTML = '';
+        tableContainer.innerHTML = '<p class="no-data">Search and select one or more students above to compare.</p>';
         return;
       }
 
-      const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th class="nosort">Name</th>
-            <th class="nosort">Email</th>
-            <th class="nosort">Grade</th>
-            <th class="nosort">Actions</th>
-          </tr>
-        </thead>`;
+      const startVal = document.getElementById('compare-start').value;
+      const endVal = document.getElementById('compare-end').value;
+      if (!startVal || !endVal) {
+        summaryGrid.innerHTML = '';
+        tableContainer.innerHTML = '<p class="no-data">Pick a start and end date above.</p>';
+        return;
+      }
 
-      const tbody = document.createElement('tbody');
-      entries.forEach(([key, t]) => {
-        const tr = document.createElement('tr');
+      const start = new Date(startVal + 'T00:00:00').getTime();
+      const end = new Date(endVal + 'T23:59:59').getTime();
+      const relevant = allHistory.filter(h => h.checkedOutAt >= start && h.checkedOutAt <= end && names.includes(h.name));
 
-        if (key === editingTeacherKey) {
-          tr.innerHTML = `
-            <td><input type="text" id="inline-teacher-name" value="${escapeHtml(t.name)}" style="padding:6px 8px; font-size:0.82rem; width:100%;"></td>
-            <td><input type="text" id="inline-teacher-email" value="${escapeHtml(t.email || '')}" style="padding:6px 8px; font-size:0.82rem; width:100%;"></td>
-            <td>
-              <select id="inline-teacher-grade" style="padding:6px 8px; font-size:0.82rem;">
-                <option value="" ${!t.grade ? 'selected' : ''}>Unassigned</option>
-                <option value="6" ${t.grade === 6 ? 'selected' : ''}>6th</option>
-                <option value="7" ${t.grade === 7 ? 'selected' : ''}>7th</option>
-                <option value="8" ${t.grade === 8 ? 'selected' : ''}>8th</option>
-              </select>
-            </td>
-            <td>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="saveInlineTeacherEdit('${jsAttr(key)}')">💾 Save</button>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="cancelTeacherEdit()">Cancel</button>
-            </td>`;
-        } else {
-          tr.innerHTML = `
-            <td class="student-name-cell">${escapeHtml(t.name)}</td>
-            <td style="color:var(--gray-700); font-size:0.82rem;">${t.email ? escapeHtml(t.email) : '—'}</td>
-            <td>${t.grade ? t.grade + 'th' : '—'}</td>
-            <td>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startTeacherEdit('${jsAttr(key)}')">✏️ Edit</button>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeTeacher('${jsAttr(key)}','${jsAttr(t.name)}')">Remove</button>
-            </td>`;
+      // Group: dayKey -> studentName -> [{teacher, time}]
+      const byDay = {};
+      relevant.forEach(h => {
+        const dayKey = isoDate(new Date(h.checkedOutAt));
+        byDay[dayKey] = byDay[dayKey] || {};
+        byDay[dayKey][h.name] = byDay[dayKey][h.name] || [];
+        byDay[dayKey][h.name].push({ teacher: h.teacher || 'Loveday', time: h.checkedOutAt });
+      });
+      const dayKeys = Object.keys(byDay).sort().reverse();
+      const CLOSE_MS = 15 * 60 * 1000; // "close timing" threshold for the pattern highlight
+
+      // ---- Summary cards ----
+      let summaryHtml = `<div class="summary-card"><div class="val">${names.length}</div><div class="lbl">Student${names.length !== 1 ? 's' : ''} Selected</div></div>`;
+      summaryHtml += `<div class="summary-card"><div class="val">${dayKeys.length}</div><div class="lbl">Days With Trips</div></div>`;
+
+      if (names.length === 1) {
+        const trips = relevant.slice().sort((a, b) => a.checkedOutAt - b.checkedOutAt);
+        const teacherCounts = {};
+        trips.forEach(h => { const t = h.teacher || 'Loveday'; teacherCounts[t] = (teacherCounts[t] || 0) + 1; });
+        let dominant = null, dominantCount = 0;
+        Object.entries(teacherCounts).forEach(([t, c]) => { if (c > dominantCount) { dominant = t; dominantCount = c; } });
+        const pct = trips.length ? Math.round((dominantCount / trips.length) * 100) : 0;
+        summaryHtml += `<div class="summary-card"><div class="val">${trips.length}</div><div class="lbl">Total Trips</div></div>`;
+        if (dominant && pct >= 60 && trips.length >= 3) {
+          summaryHtml += `<div class="summary-card" style="background:#fdf7e8;"><div class="val" style="color:var(--amber);">${pct}%</div><div class="lbl">With ${escapeHtml(dominant)} (pattern)</div></div>`;
+        } else if (dominant) {
+          summaryHtml += `<div class="summary-card"><div class="val">${pct}%</div><div class="lbl">Most Often: ${escapeHtml(dominant)}</div></div>`;
         }
-        tbody.appendChild(tr);
-      });
+      } else {
+        let closeDayCount = 0;
+        dayKeys.forEach(dk => {
+          const allTimes = [];
+          Object.values(byDay[dk]).forEach(trips => trips.forEach(t => allTimes.push(t.time)));
+          allTimes.sort((a, b) => a - b);
+          for (let i = 0; i < allTimes.length - 1; i++) {
+            if ((allTimes[i + 1] - allTimes[i]) <= CLOSE_MS) { closeDayCount++; break; }
+          }
+        });
+        const hasPattern = closeDayCount > 0;
+        summaryHtml += `<div class="summary-card" ${hasPattern ? 'style="background:#fdf7e8;"' : ''}><div class="val" ${hasPattern ? 'style="color:var(--amber);"' : ''}>${closeDayCount}</div><div class="lbl">Days With Overlapping Times</div></div>`;
+      }
+      summaryGrid.innerHTML = summaryHtml;
 
-      table.appendChild(tbody);
-      container.innerHTML = '';
-      container.appendChild(table);
-    }
+      // ---- Day-by-day comparison table ----
+      if (!dayKeys.length) {
+        tableContainer.innerHTML = '<p class="no-data">No bathroom trips recorded for the selected students in this date range.</p>';
+        return;
+      }
 
-    // Keeps the Reports/History teacher filter dropdowns in sync with the managed teacher list,
-    // instead of the old hardcoded 4-name option list.
-    function populateTeacherFilterDropdowns() {
-      const names = Object.values(teachersData).map(t => t.name).sort((a,b) => a.localeCompare(b));
-      ['weekly-teacher-filter', 'monthly-teacher-filter', 'custom-teacher-filter'].forEach(id => {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-        const current = sel.value;
-        sel.innerHTML = '<option value="">All Teachers</option>' +
-          names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
-        if (names.includes(current)) sel.value = current;
-      });
+      const thead = `<thead><tr><th class="nosort">Date</th>${names.map(n => `<th class="nosort">${escapeHtml(n)}</th>`).join('')}</tr></thead>`;
+
+      const rowsHtml = dayKeys.map(dk => {
+        const dayData = byDay[dk];
+        let isCloseDay = false;
+        if (names.length > 1) {
+          const allTimes = [];
+          Object.values(dayData).forEach(trips => trips.forEach(t => allTimes.push(t.time)));
+          allTimes.sort((a, b) => a - b);
+          for (let i = 0; i < allTimes.length - 1; i++) {
+            if ((allTimes[i + 1] - allTimes[i]) <= CLOSE_MS) { isCloseDay = true; break; }
+          }
+        }
+        const dateLabel = new Date(dk + 'T12:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        const cells = names.map(n => {
+          const trips = dayData[n];
+          if (!trips || !trips.length) return `<td style="color:var(--gray-500);">—</td>`;
+          const chips = trips.map(t => {
+            const timeStr = new Date(t.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            return `<span class="teacher-time-chip">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span></span>`;
+          }).join(' ');
+          return `<td>${chips}</td>`;
+        }).join('');
+        const rowStyle = isCloseDay ? ' style="background:#fdf7e8;"' : '';
+        const flag = isCloseDay ? ' <span title="Overlapping times that day">⚠️</span>' : '';
+        return `<tr${rowStyle}><td class="student-name-cell">${dateLabel}${flag}</td>${cells}</tr>`;
+      }).join('');
+
+      tableContainer.innerHTML = `<table>${thead}<tbody>${rowsHtml}</tbody></table>`;
     }
 
     // ---------------- Conflict Groups ----------------
@@ -1722,6 +1852,11 @@
       document.getElementById('custom-end').value = today;
       const dailyDateEl = document.getElementById('daily-date');
       if (dailyDateEl && !dailyDateEl.value) dailyDateEl.value = today;
+
+      const compareStartEl = document.getElementById('compare-start');
+      const compareEndEl = document.getElementById('compare-end');
+      if (compareStartEl && !compareStartEl.value) compareStartEl.value = isoDate(new Date(Date.now() - 13*24*60*60*1000));
+      if (compareEndEl && !compareEndEl.value) compareEndEl.value = today;
     }
 
     function getTeacherFilter() {
@@ -1761,12 +1896,24 @@
     }
 
     window.renderReport = function() {
+      if (currentTab === 'compare') {
+        renderComparisonReport();
+        return;
+      }
+
       const range = getDateRange();
       if (!range) return;
       const teacherFilter = getTeacherFilter();
+      const gradeFilter = getGradeFilter();
 
       let filtered = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
       if (teacherFilter) filtered = filtered.filter(h => (h.teacher || 'Loveday') === teacherFilter);
+      if (gradeFilter) {
+        filtered = filtered.filter(h => {
+          const s = STUDENTS.find(x => x.name === h.name);
+          return s && String(s.grade) === gradeFilter;
+        });
+      }
 
       const totalTrips = filtered.length;
       const totalMins = filtered.reduce((sum, h) => sum + Math.floor(h.duration / 60), 0);
@@ -1794,6 +1941,7 @@
 
       const studentMap = {};
       STUDENTS.forEach(s => {
+        if (gradeFilter && String(s.grade) !== gradeFilter) return;
         studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {}, teachers: new Set() };
       });
 
@@ -1939,10 +2087,13 @@
 
     window.switchTab = function(tab) {
       currentTab = tab;
-      ['daily','weekly','monthly','custom'].forEach(t => {
+      ['daily','weekly','monthly','custom','compare'].forEach(t => {
         document.getElementById(`controls-${t}`).style.display = t === tab ? 'flex' : 'none';
         document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
       });
+      const pickerCard = document.getElementById('compare-picker-card');
+      if (pickerCard) pickerCard.style.display = tab === 'compare' ? 'block' : 'none';
+      if (tab === 'compare') renderCompareChips();
       renderReport();
     };
 
