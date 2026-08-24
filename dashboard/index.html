@@ -999,6 +999,12 @@
         applyDetectedGradeDefaults();
         gradeDefaultsApplied = true;
       }
+    }, (err) => {
+      console.error('bathroom/teachers read failed:', err);
+      const container = document.getElementById('teacher-list-container');
+      if (container) {
+        container.innerHTML = `<p class="no-data" style="color:var(--red);">Couldn't load teachers: ${err.message}. This is usually a Firebase security-rules permission issue for the "bathroom/teachers" path — check the browser console (F12) for the full error.</p>`;
+      }
     });
 
     // Looks up the signed-in teacher's own grade (matched by email against Teacher Management
