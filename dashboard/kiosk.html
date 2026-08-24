@@ -85,7 +85,7 @@
     header { display: flex; justify-content: space-between; align-items: center; background: var(--black); padding: 14px 24px; border-radius: var(--radius); gap: 12px; flex-wrap: wrap; max-width: 1300px; width: 100%; margin: 0 auto; }
     h1 { font-size: 18px; font-weight: 800; color: var(--white); }
     h1 span { color: var(--red); }
-    #clock { font-size: 1.1rem; font-weight: 700; font-family: monospace; color: #4ade80; background: #022c22; padding: 4px 10px; border-radius: 6px; border: 1px solid #064e3b; }
+    #clock { font-size: 1.05rem; font-weight: 700; color: var(--white); background: transparent; padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); letter-spacing: 0.3px; }
     .header-right { display: flex; align-items: center; gap: 12px; }
     #user-badge { font-size: 12.5px; color: rgba(255,255,255,0.7); }
     #signout-btn {
@@ -526,8 +526,21 @@
         const match = TEACHER_RECORDS.find(t => t.email && t.email.toLowerCase() === currentUserEmail.toLowerCase());
         autoTeacher = match || null;
         renderTeacherDetectionUI();
+        updateHeaderBadge();
         renderCurrentlyOut();
         renderDropdowns();
+      }
+
+      // Header badge shows "Lastname: Nth Grade" once the signed-in teacher is detected,
+      // falling back to the raw email until then (or if no match is found).
+      function updateHeaderBadge() {
+        if (autoTeacher) {
+          userBadge.textContent = autoTeacher.grade
+            ? `${autoTeacher.name}: ${autoTeacher.grade}th Grade`
+            : autoTeacher.name;
+        } else {
+          userBadge.textContent = currentUserEmail;
+        }
       }
 
       function renderTeacherDetectionUI() {
@@ -539,15 +552,20 @@
         if (!banner) return;
 
         if (autoTeacher) {
-          banner.style.display = 'block';
-          banner.className = autoTeacher.grade ? 'teacher-detect-banner detected' : 'teacher-detect-banner fallback';
-          banner.textContent = autoTeacher.grade
-            ? `✓ Signed in as ${autoTeacher.name} — ${autoTeacher.grade}th Grade`
-            : `✓ Signed in as ${autoTeacher.name} — no grade assigned, so ALL grades are showing. Set a grade for ${autoTeacher.name} in Teacher Management to filter this.`;
           if (boyStep) boyStep.style.display = 'none';
           if (girlStep) girlStep.style.display = 'none';
           if (boyLabel) boyLabel.textContent = 'Your Name';
           if (girlLabel) girlLabel.textContent = 'Your Name';
+
+          if (autoTeacher.grade) {
+            // Teacher confirmed with a grade set — no banner needed, the header badge already shows it.
+            banner.style.display = 'none';
+          } else {
+            // Still flag the missing-grade case since it's actionable (affects which students show up).
+            banner.style.display = 'block';
+            banner.className = 'teacher-detect-banner fallback';
+            banner.textContent = `No grade assigned for ${autoTeacher.name}, so ALL grades are showing. Set a grade in Teacher Management to filter this.`;
+          }
         } else {
           banner.style.display = 'block';
           banner.className = 'teacher-detect-banner fallback';
