@@ -319,18 +319,12 @@
     margin: 2px 4px 2px 0;
     white-space: nowrap;
   }
-  .teacher-time-chip.flagged {
-    background: #fdf7e8;
-    border-color: var(--amber);
-    color: var(--amber);
-  }
   .teacher-time-chip .chip-time {
     font-weight: 500;
     color: var(--gray-500);
     margin-left: 4px;
   }
-  .teacher-time-chip.flagged .chip-time { color: var(--amber); opacity: 0.8; }
-  .distinct-badge, .distinct-badge-flag {
+  .distinct-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -340,18 +334,8 @@
     border-radius: 11px;
     font-weight: 800;
     font-size: 0.8rem;
-  }
-  .distinct-badge { background: var(--gray-100); color: var(--gray-700); }
-  .distinct-badge-flag { background: var(--amber); color: var(--white); }
-  .pattern-alert {
-    background: #fdf7e8;
-    color: var(--amber);
-    border: 1px solid var(--amber);
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 16px;
+    background: var(--gray-100);
+    color: var(--gray-700);
   }
 
   /* Print styles */
@@ -1915,8 +1899,6 @@
         return;
       }
 
-      const multiTeacherCount = rows.filter(r => new Set(r.trips.map(t => t.teacher)).size > 1).length;
-
       const thead = `
         <thead>
           <tr>
@@ -1929,10 +1911,9 @@
 
       const tbody = `<tbody>${rows.map(r => {
         const distinct = new Set(r.trips.map(t => t.teacher)).size;
-        const flagged = distinct > 1;
         const breakdown = r.trips.map(t => {
           const timeStr = new Date(t.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-          return `<span class="teacher-time-chip${flagged ? ' flagged' : ''}">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span></span>`;
+          return `<span class="teacher-time-chip">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span></span>`;
         }).join(' ');
         return `
         <tr>
@@ -1940,16 +1921,14 @@
             <span class="gender-dot ${genderInfo(r.gender).cls}"></span>${escapeHtml(r.name)}
           </td>
           <td style="text-align:center;">
-            <span class="${flagged ? 'distinct-badge-flag' : 'distinct-badge'}">${distinct}</span>
+            <span class="distinct-badge">${distinct}</span>
           </td>
           <td class="trips-cell" style="text-align:center;">${r.trips.length}</td>
           <td>${breakdown}</td>
         </tr>`;
       }).join('')}</tbody>`;
 
-      container.innerHTML = `
-        ${multiTeacherCount > 0 ? `<div class="pattern-alert">⚠️ ${multiTeacherCount} student${multiTeacherCount !== 1 ? 's' : ''} left from more than one teacher's class today — worth a look.</div>` : ''}
-        <table>${thead}${tbody}</table>`;
+      container.innerHTML = `<table>${thead}${tbody}</table>`;
     }
 
     window.sortBy = function(col) {
