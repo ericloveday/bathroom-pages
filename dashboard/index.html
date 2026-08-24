@@ -1729,7 +1729,7 @@
 
       const studentMap = {};
       STUDENTS.forEach(s => {
-        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {} };
+        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {}, teachers: new Set() };
       });
 
       filtered.forEach(h => {
@@ -1737,6 +1737,7 @@
         const s = studentMap[h.name];
         s.trips++;
         s.totalMins += Math.floor(h.duration / 60);
+        s.teachers.add(h.teacher || 'Loveday');
         const day = new Date(h.checkedOutAt).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
         const dayKey = isoDate(new Date(h.checkedOutAt));
         if (!s.days[dayKey]) s.days[dayKey] = { label: day, trips: 0, mins: 0 };
@@ -1761,6 +1762,7 @@
         <thead>
           <tr>
             <th onclick="sortBy('name')" class="${sortCol==='name'?'sorted':''}">Student ${sortCol==='name'?(sortAsc?'↑':'↓'):''}</th>
+            <th class="nosort">Teacher</th>
             <th onclick="sortBy('trips')" class="${sortCol==='trips'?'sorted':''}">Trips ${sortCol==='trips'?(sortAsc?'↑':'↓'):''}</th>
             <th onclick="sortBy('totalMins')" class="${sortCol==='totalMins'?'sorted':''}">Total Time ${sortCol==='totalMins'?(sortAsc?'↑':'↓'):''}</th>
           </tr>
@@ -1771,6 +1773,7 @@
           <td class="student-name-cell">
             <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
           </td>
+          <td style="color:var(--gray-500); font-weight:500;">${[...s.teachers].join(', ')}</td>
           <td class="trips-cell">${s.trips}</td>
           <td class="val-cell">${s.totalMins}m</td>
         </tr>`).join('')}</tbody>`;
