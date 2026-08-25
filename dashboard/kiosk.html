@@ -433,12 +433,6 @@
     function startApp(currentUserEmail) {
       appContent.style.display = 'block';
 
-      // Any bathroom slot still checked out past this many minutes gets auto checked-in so a
-      // forgotten sign-in doesn't post a giant duration into history and skew trip-length averages
-      // on the dashboard. The record is flagged autoCheckedIn:true so it can still be spotted later.
-      const AUTO_CHECKIN_MINUTES = 20;
-      const AUTO_CHECKIN_MS = AUTO_CHECKIN_MINUTES * 60 * 1000;
-
       // Returns a YYYY-MM-DD key for grouping history entries by calendar day
       function getDayKey(date = new Date()) {
         return date.toISOString().split('T')[0];
@@ -505,56 +499,6 @@
           });
         });
       }, 1000);
-
-      // --- Stale checkout watchdog: auto check-in anyone past AUTO_CHECKIN_MINUTES ---
-      // Re-reads the live slot straight from Firebase before writing, so two kiosks (or a kiosk
-      // plus a manual check-in happening at the same moment) can't both try to close the same slot.
-      async function autoCheckInStale(teacher, gender) {
-        const slotKey = `${teacher}_${gender}`;
-        const snap = await get(ref(db, `bathroom/slots/${slotKey}`));
-        const entry = snap.val();
-        if (!entry) return; // already checked in by someone else in the meantime
-        if (getElapsed(entry.checkoutTime) * 1000 < AUTO_CHECKIN_MS) return; // no longer stale
-
-        await push(ref(db, 'bathroom/history'), {
-          name: entry.name, gender, teacher,
-          checkedOutAt: entry.checkoutTime,
-          duration: getElapsed(entry.checkoutTime),
-          autoCheckedIn: true
-        });
-
-        await set(ref(db, `bathroom/slots/${slotKey}`), null);
-
-        // Promote the next person waiting for this same teacher/gender, same as a manual check-in
-        const waitSnap = await get(ref(db, 'bathroom/waiting'));
-        const waitingData = waitSnap.val() || {};
-        const waiting = Object.entries(waitingData).map(([k,v]) => ({...v, _key: k})).sort((a,b) => a.addedTime - b.addedTime);
-
-        const slotsSnap = await get(ref(db, 'bathroom/slots'));
-        const slotsNow = slotsSnap.val() || {};
-        const outNamesAfterClear = getOutNamesFromSlots(slotsNow);
-
-        const candidates = waiting.filter(s => s.gender === gender && s.teacher === teacher);
-        const next = candidates.find(cand => !hasConflictingGroupmateOut(cand.name, outNamesAfterClear));
-        if (next) {
-          await set(ref(db, `bathroom/slots/${slotKey}`), { name: next.name, gender, teacher, checkoutTime: Date.now() });
-          await remove(ref(db, `bathroom/waiting/${next._key}`));
-        }
-      }
-
-      // Scans every currently-occupied slot and auto checks-in anything past the threshold.
-      // Runs on a slower interval than the live timer tick since it involves Firebase writes.
-      function checkForStaleCheckouts() {
-        TEACHERS.forEach(t => {
-          ['b','g'].forEach(g => {
-            const entry = state.slots[`${t}_${g}`];
-            if (entry && getElapsed(entry.checkoutTime) * 1000 >= AUTO_CHECKIN_MS) {
-              autoCheckInStale(t, g);
-            }
-          });
-        });
-      }
-      setInterval(checkForStaleCheckouts, 30000);
 
       const TEACHER_GRADE_GROUPS = [6, 7, 8, 'other']; // shared order for rendering + lookups
       let autoTeacher = null; // {name, grade} when the signed-in email matches a teacher — bypasses the picker entirely
@@ -736,7 +680,6 @@
         state.history = data.history ? Object.values(data.history).sort((a,b) => b.checkedOutAt - a.checkedOutAt) : [];
         renderAll();
         loadingScreen.style.display = 'none';
-        checkForStaleCheckouts(); // catch anything that was already stale when this snapshot loaded
       }
 
       // Teacher pickers are dynamically generated dropdowns (one per grade), so listen via
@@ -1048,7 +991,7 @@
           div.innerHTML = `
             <div>
               <div class="name">${h.name}</div>
-              <div class="ts">${timeStr} on ${dateStr} · ${h.teacher || 'Loveday'}${h.autoCheckedIn ? ' · auto checked-in' : ''}</div>
+              <div class="ts">${timeStr} on ${dateStr} · ${h.teacher || 'Loveday'}</div>
             </div>
             <div class="dur">${formatDuration(h.duration)}</div>`;
           container.appendChild(div);
