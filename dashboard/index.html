@@ -338,6 +338,29 @@
     color: var(--gray-700);
   }
 
+  /* Auto checked-in badge — flags trips the kiosk closed automatically after 20 minutes
+     because a student forgot to sign back in, so the duration is a cutoff, not a real time. */
+  .auto-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: #fdf7e8;
+    color: var(--amber);
+    border: 1px solid #f3e2b0;
+    margin-left: 6px;
+    white-space: nowrap;
+    cursor: help;
+  }
+  .teacher-time-chip.auto-chip {
+    background: #fdf7e8;
+    border-color: #f3e2b0;
+    color: var(--amber);
+  }
+
   /* Print styles */
   @media print {
     body { background: white; padding: 10px; }
@@ -1262,7 +1285,7 @@
         const dayKey = isoDate(new Date(h.checkedOutAt));
         byDay[dayKey] = byDay[dayKey] || {};
         byDay[dayKey][h.name] = byDay[dayKey][h.name] || [];
-        byDay[dayKey][h.name].push({ teacher: h.teacher || 'Loveday', time: h.checkedOutAt });
+        byDay[dayKey][h.name].push({ teacher: h.teacher || 'Loveday', time: h.checkedOutAt, autoCheckedIn: !!h.autoCheckedIn });
       });
       const dayKeys = Object.keys(byDay).sort().reverse();
       const CLOSE_MS = 15 * 60 * 1000; // "close timing" threshold for the pattern highlight
@@ -1324,7 +1347,8 @@
           if (!trips || !trips.length) return `<td style="color:var(--gray-500);">—</td>`;
           const chips = trips.map(t => {
             const timeStr = new Date(t.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            return `<span class="teacher-time-chip">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span></span>`;
+            const autoTag = t.autoCheckedIn ? ' <span class="auto-badge" title="Auto checked-in by the kiosk after 20 minutes — the student never signed back in, so this duration is a cutoff, not their real time.">⏱ auto</span>' : '';
+            return `<span class="teacher-time-chip${t.autoCheckedIn ? ' auto-chip' : ''}">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span>${autoTag}</span>`;
           }).join(' ');
           return `<td>${chips}</td>`;
         }).join('');
@@ -2083,7 +2107,7 @@
       const studentMap = {};
       STUDENTS.forEach(s => {
         if (gradeFilter && String(s.grade) !== gradeFilter) return;
-        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {}, teachers: new Set() };
+        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {}, teachers: new Set(), autoCount: 0 };
       });
 
       filtered.forEach(h => {
@@ -2092,6 +2116,7 @@
         s.trips++;
         s.totalMins += Math.floor(h.duration / 60);
         s.teachers.add(h.teacher || 'Loveday');
+        if (h.autoCheckedIn) s.autoCount++;
         const day = new Date(h.checkedOutAt).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
         const dayKey = isoDate(new Date(h.checkedOutAt));
         if (!s.days[dayKey]) s.days[dayKey] = { label: day, trips: 0, mins: 0 };
@@ -2128,7 +2153,7 @@
             <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
           </td>
           <td style="color:var(--gray-500); font-weight:500;">${[...s.teachers].join(', ')}</td>
-          <td class="trips-cell">${s.trips}</td>
+          <td class="trips-cell">${s.trips}${s.autoCount > 0 ? ` <span class="auto-badge" title="${s.autoCount} of these trip${s.autoCount !== 1 ? 's were' : ' was'} auto checked-in by the kiosk after 20 minutes — the student never signed back in, so this duration is a cutoff, not their real time.">⏱ ${s.autoCount} auto</span>` : ''}</td>
           <td class="val-cell">${s.totalMins}m</td>
         </tr>`).join('')}</tbody>`;
 
@@ -2168,7 +2193,7 @@
           const rosterEntry = STUDENTS.find(s => s.name === h.name);
           studentMap[h.name] = { name: h.name, gender: rosterEntry ? rosterEntry.gender : null, trips: [] };
         }
-        studentMap[h.name].trips.push({ teacher: h.teacher || 'Loveday', time: h.checkedOutAt, duration: h.duration });
+        studentMap[h.name].trips.push({ teacher: h.teacher || 'Loveday', time: h.checkedOutAt, duration: h.duration, autoCheckedIn: !!h.autoCheckedIn });
       });
 
       let rows = Object.values(studentMap);
@@ -2202,8 +2227,10 @@
         const distinct = new Set(r.trips.map(t => t.teacher)).size;
         const breakdown = r.trips.map(t => {
           const timeStr = new Date(t.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-          return `<span class="teacher-time-chip">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span></span>`;
+          const autoTag = t.autoCheckedIn ? ' <span class="auto-badge" title="Auto checked-in by the kiosk after 20 minutes — the student never signed back in, so this duration is a cutoff, not their real time.">⏱ auto</span>' : '';
+          return `<span class="teacher-time-chip${t.autoCheckedIn ? ' auto-chip' : ''}">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span>${autoTag}</span>`;
         }).join(' ');
+        const autoCountInRow = r.trips.filter(t => t.autoCheckedIn).length;
         return `
         <tr>
           <td class="student-name-cell">
@@ -2212,7 +2239,7 @@
           <td style="text-align:center;">
             <span class="distinct-badge">${distinct}</span>
           </td>
-          <td class="trips-cell" style="text-align:center;">${r.trips.length}</td>
+          <td class="trips-cell" style="text-align:center;">${r.trips.length}${autoCountInRow > 0 ? ` <span class="auto-badge" title="${autoCountInRow} trip${autoCountInRow !== 1 ? 's' : ''} auto checked-in after 20 minutes.">⏱ ${autoCountInRow}</span>` : ''}</td>
           <td>${breakdown}</td>
         </tr>`;
       }).join('')}</tbody>`;
