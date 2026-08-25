@@ -599,7 +599,7 @@
         </select>
       </div>
       <div class="control-group" style="flex:1;">
-        <label>Gender Orientation</label>
+        <label>Gender</label>
         <select id="roster-new-gender">
           <option value="g">Girl</option>
           <option value="b">Boy</option>
@@ -613,20 +613,7 @@
       <button class="btn" id="roster-save-btn" style="background:var(--blue);" onclick="saveStudent()">Add Student</button>
     </div>
 
-    <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:14px;">
-      <div class="bulk-bar" style="margin-bottom:0;">
-        <button class="btn" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
-        <select id="bulk-grade-select" style="padding:9px 12px;">
-          <option value="">Assign grade...</option>
-          <option value="6">6th</option>
-          <option value="7">7th</option>
-          <option value="8">8th</option>
-        </select>
-        <button class="btn btn-outline" onclick="bulkAssignGrade()">Apply to Selected</button>
-        <input type="number" id="bulk-limit-input" placeholder="Daily limit" min="1" style="width:110px; padding:9px 12px;">
-        <button class="btn btn-outline" onclick="bulkAssignLimit()">Set Limit for Selected</button>
-        <span id="rm-selected-count" class="selected-count">0 selected</span>
-      </div>
+    <div style="display:flex; justify-content:flex-start; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:14px;">
       <div class="control-group" style="min-width:170px;">
         <label>Filter by Grade</label>
         <select id="rm-grade-filter" onchange="renderRosterManager()">
@@ -636,6 +623,12 @@
           <option value="8">8th Grade</option>
           <option value="unassigned">Unassigned</option>
         </select>
+      </div>
+      <div class="bulk-bar" style="margin-bottom:0;">
+        <button class="btn" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
+        <input type="number" id="bulk-limit-input" placeholder="Daily limit" min="1" style="width:110px; padding:9px 12px;">
+        <button class="btn btn-outline" onclick="bulkAssignLimit()">Set Limit for Selected</button>
+        <span id="rm-selected-count" class="selected-count">0 selected</span>
       </div>
     </div>
 
