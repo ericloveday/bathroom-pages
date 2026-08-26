@@ -167,6 +167,16 @@
   .summary-card .val { font-size: 2rem; font-weight: 800; color: var(--red); line-height: 1; margin-bottom: 4px; }
   .summary-card .lbl { font-size: 0.72rem; font-weight: 600; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.4px; }
 
+  .live-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--red);
+    animation: livePulse 1.6s ease-in-out infinite;
+  }
+  @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
   /* Table */
   .table-card {
     background: var(--white);
@@ -840,6 +850,48 @@
     // Compare Students state
     let compareSelectedNames = new Set();
     let gradeDefaultsApplied = false;
+
+    // ---------------- Live "currently out" tracking (all classrooms, all grades) ----------------
+    // Separate from the history-based stats below since this reflects right-now status, not a
+    // completed trip. Kept as its own lightweight listener so a checkout happening elsewhere in
+    // the building doesn't force a full report re-render — it only updates the live card's number.
+    let liveSlots = {};
+    onValue(ref(db, 'bathroom/slots'), (snapshot) => {
+      liveSlots = snapshot.val() || {};
+      updateLiveOutCard();
+    });
+
+    function updateLiveOutCard() {
+      const el = document.getElementById('live-out-value');
+      if (!el) return; // only present while the Daily Pattern tab is on screen
+      const count = Object.values(liveSlots).filter(Boolean).length;
+      el.textContent = count;
+    }
+
+    // Time-weighted average number of students concurrently out, computed across the window from
+    // the first checkout to the last check-in that day — not the full 24-hour day, since averaging
+    // over hours with no school in session would make the number look artificially tiny.
+    function computeAvgConcurrent(entries) {
+      if (!entries.length) return '0';
+      const intervals = entries.map(h => [h.checkedOutAt, h.checkedOutAt + (h.duration || 0) * 1000]);
+      const windowStart = Math.min(...intervals.map(i => i[0]));
+      const windowEnd = Math.max(...intervals.map(i => i[1]));
+      const totalMs = windowEnd - windowStart;
+      if (totalMs <= 0) return '0';
+
+      const events = [];
+      intervals.forEach(([s, e]) => { events.push([s, 1]); events.push([e, -1]); });
+      events.sort((a, b) => a[0] - b[0]);
+
+      let concurrent = 0, lastTime = windowStart, areaMs = 0;
+      events.forEach(([t, delta]) => {
+        areaMs += concurrent * (t - lastTime);
+        concurrent += delta;
+        lastTime = t;
+      });
+
+      return (areaMs / totalMs).toFixed(1);
+    }
 
     // --- Built-in first-name → gender list (offline, no external API) ---
     const BOY_NAMES = `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`.split(/\s+/);
@@ -2097,6 +2149,26 @@
       if (currentTab === 'daily') {
         if (dailyTableCard) dailyTableCard.style.display = 'none';
         document.getElementById('table-title').textContent = `Daily Bathroom Pattern — ${range.label}`;
+
+        // These two extra cards are school-wide (all grades and teachers, ignoring the Grade
+        // filter above) since they're meant to give the principal a quick whole-building snapshot.
+        const dayAllHistory = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
+        const avgConcurrent = computeAvgConcurrent(dayAllHistory);
+
+        document.getElementById('summary-grid').insertAdjacentHTML('beforeend', `
+          <div class="summary-card">
+            <div class="val" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span class="live-dot"></span><span id="live-out-value">0</span>
+            </div>
+            <div class="lbl">Currently Out — All Classes</div>
+          </div>
+          <div class="summary-card">
+            <div class="val">${avgConcurrent}</div>
+            <div class="lbl">Avg Out at Once — All Classes</div>
+          </div>
+        `);
+        updateLiveOutCard();
+
         renderDailyPatternTable(filtered);
         return;
       }
