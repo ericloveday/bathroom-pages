@@ -893,6 +893,23 @@
       return (areaMs / totalMs).toFixed(1);
     }
 
+    // For ranges spanning multiple days (Weekly, Monthly), a single continuous window from first
+    // to last event would swallow every overnight and weekend gap in between, making the average
+    // look artificially tiny. Instead: compute the same time-weighted average separately for each
+    // individual day that actually had trips, then average those per-day numbers together — this
+    // reads as "on a typical day in this period, X students were out at once."
+    function computeAvgConcurrentPerDay(entries) {
+      if (!entries.length) return '0';
+      const byDay = {};
+      entries.forEach(h => {
+        const dayKey = new Date(h.checkedOutAt).toISOString().split('T')[0];
+        (byDay[dayKey] = byDay[dayKey] || []).push(h);
+      });
+      const dayAverages = Object.values(byDay).map(dayEntries => parseFloat(computeAvgConcurrent(dayEntries)));
+      const mean = dayAverages.reduce((sum, v) => sum + v, 0) / dayAverages.length;
+      return mean.toFixed(1);
+    }
+
     // --- Built-in first-name → gender list (offline, no external API) ---
     const BOY_NAMES = `aiden akshay ben benjamin buck camden cole crews declan dominick everett gabriel grayson hayden holden hunter jackson jacob jason jeremiah jordan joshua kaden kaleb keegan liam lincoln lucas malachi mason mathis nate nikholaus nolan ritesh sawyer sean sebastian truston veer will william noah oliver elijah james henry alexander michael daniel matthew david joseph samuel john luke andrew ryan nathan isaac caleb ethan aaron thomas charles christopher anthony dylan tyler brandon zachary cameron connor gavin colton brayden carson jaxon jax greyson easton wyatt owen theodore theo leo asher carter jayden ezra jack jace adam adrian jose juan carlos diego miguel luis kevin brian eric evan ian chase blake bryce tanner trevor drew max maxwell miles finn felix oscar silas xavier damian elias emmett graham harrison jasper roman tucker walker weston zane`.split(/\s+/);
     const GIRL_NAMES = `aaliyah aanya abby akira alex alexandra alyson amelia amiyah ananya aubrey avery bethany cambrie camila catalina charlotte elliott emberly emma eva gabriella grace hadley heather ishani izzy jacey josie kaye kayla kennedy kerslynne kourtney lalla lamia josephine gabby hadiara laney leslie louise macy maddie madelyn madison mckenzie mia morgan nadeline naomi nora oakley rachel saja sarah simran sophia sovereign stevie taelynn victoria abigail ava isabella olivia sophie chloe lily ella scarlett aria layla zoey zoe hannah addison natalie brooklyn savannah claire skylar audrey bella kaylee allison hailey gabrielle alyssa ashley jessica jennifer elizabeth megan katherine kate katie lucy ellie penelope violet stella hazel aurora luna nova elena maya ruby alice mackenzie paige sydney faith jade autumn brianna gianna isla eliana delilah willow ivy emilia sadie piper quinn everly harper evelyn riley peyton reagan ariana valentina brooke mya kylie mila sofia`.split(/\s+/);
@@ -2160,11 +2177,11 @@
             <div class="val" style="display:flex; align-items:center; justify-content:center; gap:8px;">
               <span class="live-dot"></span><span id="live-out-value">0</span>
             </div>
-            <div class="lbl">Currently Out All Classes</div>
+            <div class="lbl">Currently Out — All Classes</div>
           </div>
           <div class="summary-card">
             <div class="val">${avgConcurrent}</div>
-            <div class="lbl">Avg Out at Once All Classes</div>
+            <div class="lbl">Avg Out at Once — All Classes</div>
           </div>
         `);
         updateLiveOutCard();
@@ -2173,6 +2190,21 @@
         return;
       }
       if (dailyTableCard) dailyTableCard.style.display = 'block';
+
+      if (currentTab === 'weekly' || currentTab === 'monthly') {
+        // Same "All Classes" treatment as the Daily Pattern tab — school-wide regardless of the
+        // Grade/Teacher filters above, since this is meant as a principal-level building snapshot.
+        // Averaged per school day within the range rather than one continuous window (see
+        // computeAvgConcurrentPerDay's comment for why that matters over multi-day spans).
+        const periodAllHistory = allHistory.filter(h => h.checkedOutAt >= range.start && h.checkedOutAt <= range.end);
+        const avgConcurrentPeriod = computeAvgConcurrentPerDay(periodAllHistory);
+        document.getElementById('summary-grid').insertAdjacentHTML('beforeend', `
+          <div class="summary-card">
+            <div class="val">${avgConcurrentPeriod}</div>
+            <div class="lbl">Avg Out at Once — All Classes</div>
+          </div>
+        `);
+      }
 
       document.getElementById('table-title').textContent = `Student Summary — ${range.label}`;
 
