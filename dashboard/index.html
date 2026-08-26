@@ -2174,15 +2174,16 @@
 
         document.getElementById('summary-grid').insertAdjacentHTML('beforeend', `
           <div class="summary-card">
+            <div class="val">${avgConcurrent}</div>
+            <div class="lbl">Avg Out at Once — All Classes</div>
+          </div>
+          <div class="summary-card">
             <div class="val" style="display:flex; align-items:center; justify-content:center; gap:8px;">
               <span class="live-dot"></span><span id="live-out-value">0</span>
             </div>
             <div class="lbl">Currently Out — All Classes</div>
           </div>
-          <div class="summary-card">
-            <div class="val">${avgConcurrent}</div>
-            <div class="lbl">Avg Out at Once — All Classes</div>
-          </div>
+          
         `);
         updateLiveOutCard();
 
