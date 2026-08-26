@@ -443,7 +443,7 @@
   </div>
 
   <!-- Controls -->
-  <div class="controls" id="controls-daily" style="display:none;">
+  <div class="controls" id="controls-daily">
     <div class="control-group">
       <label>Date</label>
       <input type="date" id="daily-date" onchange="renderReport()">
@@ -465,7 +465,7 @@
     </div>
   </div>
 
-  <div class="controls" id="controls-weekly">
+  <div class="controls" id="controls-weekly" style="display:none;">
     <div class="control-group">
       <label>Week</label>
       <select id="week-select" onchange="renderReport()"></select>
@@ -836,7 +836,7 @@
 
     let allHistory = [];
     let STUDENTS = [];
-    let currentTab = 'weekly';
+    let currentTab = 'daily';
     let sortCol = 'totalMins';
     let sortAsc = false;
     let editingKey = null; // tracks which roster row (if any) is being edited inline
