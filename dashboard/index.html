@@ -2211,7 +2211,7 @@
       const studentMap = {};
       STUDENTS.forEach(s => {
         if (gradeFilter && String(s.grade) !== gradeFilter) return;
-        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {}, teachers: new Set(), autoCount: 0 };
+        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {}, teacherCounts: {}, autoCount: 0 };
       });
 
       filtered.forEach(h => {
@@ -2219,7 +2219,8 @@
         const s = studentMap[h.name];
         s.trips++;
         s.totalMins += Math.floor(h.duration / 60);
-        s.teachers.add(h.teacher || 'Loveday');
+        const teacherName = h.teacher || 'Loveday';
+        s.teacherCounts[teacherName] = (s.teacherCounts[teacherName] || 0) + 1;
         if (h.autoCheckedIn) s.autoCount++;
         const day = new Date(h.checkedOutAt).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
         const dayKey = isoDate(new Date(h.checkedOutAt));
@@ -2256,7 +2257,7 @@
           <td class="student-name-cell">
             <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
           </td>
-          <td style="color:var(--gray-500); font-weight:500;">${[...s.teachers].join(', ')}</td>
+          <td style="color:var(--gray-500); font-weight:500;">${Object.entries(s.teacherCounts).sort((a, b) => b[1] - a[1]).map(([name, count]) => `${escapeHtml(name)}${count > 1 ? ` (${count})` : ''}`).join(', ')}</td>
           <td class="trips-cell">${s.trips}${s.autoCount > 0 ? ` <span class="auto-badge" title="${s.autoCount} of these trip${s.autoCount !== 1 ? 's were' : ' was'} auto checked-in by the kiosk after 20 minutes — the student never signed back in, so this duration is a cutoff, not their real time.">⏱ ${s.autoCount} auto</span>` : ''}</td>
           <td class="val-cell">${s.totalMins}m</td>
         </tr>`).join('')}</tbody>`;
