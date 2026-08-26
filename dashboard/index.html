@@ -585,7 +585,7 @@
   <!-- Daily Pass Usage -->
   <div class="table-card accent-red-border">
     <h2>🚫 Daily Pass Usage — Today</h2>
-    <div class="card-desc">Students who are close to or over their allocated daily bathroom limit.</div>
+    <div class="card-desc">Students who are close to or over their allocated daily bathroom limit. Only counts trips checked out between 8:00 AM and 12:15 PM — trips outside that window are logged but don't use a pass.</div>
     <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
   </div>
 </div>
@@ -850,6 +850,16 @@
     // Compare Students state
     let compareSelectedNames = new Set();
     let gradeDefaultsApplied = false;
+
+    // Pass-counting window: mirrors the kiosk's rule that passes are only deducted for trips
+    // checked out between 8:00 AM and 12:15 PM. Kept here too so the "Daily Pass Usage" report
+    // matches what the kiosk actually enforces, instead of counting every trip of the day.
+    const PASS_WINDOW_START_MIN = 8 * 60;        // 8:00 AM
+    const PASS_WINDOW_END_MIN = 12 * 60 + 15;    // 12:15 PM
+    function isWithinPassWindow(date) {
+      const mins = date.getHours() * 60 + date.getMinutes();
+      return mins >= PASS_WINDOW_START_MIN && mins <= PASS_WINDOW_END_MIN;
+    }
 
     // ---------------- Live "currently out" tracking (all classrooms, all grades) ----------------
     // Separate from the history-based stats below since this reflects right-now status, not a
@@ -2421,6 +2431,7 @@
       allHistory.forEach(h => {
         const d = new Date(h.checkedOutAt);
         if (getDayKey(d) !== todayKey) return;
+        if (!isWithinPassWindow(d)) return; // trips outside 8:00 AM–12:15 PM don't use a pass
         counts[h.name] = (counts[h.name] || 0) + 1;
       });
 
