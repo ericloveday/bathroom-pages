@@ -149,6 +149,7 @@
     .pass-indicator.ok { color: var(--gray-700); }
     .pass-indicator.low { color: var(--amber); }
     .pass-indicator.out { color: var(--red); }
+    .pass-indicator.info { color: var(--gray-500); font-style: italic; text-transform: none; letter-spacing: 0; }
 
     .btn { width: 100%; font-size: 0.88rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 12px; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.1s ease, filter 0.15s ease; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; }
     .btn:active { transform: scale(0.98); }
@@ -247,6 +248,7 @@
       <li>No one may use the bathroom while the teacher is talking or teaching.</li>
       <li>You must wait for independent working time.</li>
       <li>Do not go to the bathroom without permission.</li>
+      <li>Passes are only counted between 8:00 AM–12:15 PM. Trips outside that window are still logged but don't use a pass.</li>
     </ul>
   </div>
 
@@ -438,23 +440,41 @@
         return date.toISOString().split('T')[0];
       }
 
-      // Counts a student's bathroom trips for today only (limits reset daily now, not weekly)
+      // Pass-counting window: trips are only deducted from a student's daily limit if they
+      // check out between 8:00 AM and 12:15 PM (local time). Trips outside this window are
+      // still recorded to history as normal — they just don't count against the daily limit.
+      const PASS_WINDOW_START_MIN = 8 * 60;        // 8:00 AM
+      const PASS_WINDOW_END_MIN = 12 * 60 + 15;    // 12:15 PM
+      function isWithinPassWindow(date) {
+        const mins = date.getHours() * 60 + date.getMinutes();
+        return mins >= PASS_WINDOW_START_MIN && mins <= PASS_WINDOW_END_MIN;
+      }
+
+      // Counts a student's bathroom trips for today that count against their daily limit —
+      // i.e. today's trips that fall inside the 8:00 AM–12:15 PM pass window. Trips outside
+      // that window are still in history (for reporting) but are excluded here on purpose.
       function getDailyCount(name) {
         const todayKey = getDayKey();
 
-        // Count completed trips from history for today
+        // Count completed trips from history for today, within the pass window only
         let count = state.history.filter(h => {
           if (h.name !== name) return false;
           const d = new Date(h.checkedOutAt);
-          return getDayKey(d) === todayKey;
+          return getDayKey(d) === todayKey && isWithinPassWindow(d);
         }).length;
 
-        // ALSO count if the student is actively checked out right now or in the waiting list
-        const isCurrentlyOut = Object.values(state.slots).some(slot => slot && slot.name === name);
-        const isCurrentlyWaiting = state.waiting.some(s => s.name === name);
-        
-        if (isCurrentlyOut || isCurrentlyWaiting) {
-          count += 1;
+        // ALSO count if the student is actively checked out right now or in the waiting list —
+        // but only if THAT trip's own start time falls inside the pass window too, so a student
+        // who checked out at 1:00 PM doesn't get dinged while they're still out.
+        const outEntry = Object.values(state.slots).find(slot => slot && slot.name === name);
+        const waitEntry = state.waiting.find(s => s.name === name);
+        const activeEntry = outEntry || waitEntry;
+
+        if (activeEntry) {
+          const activeTime = outEntry ? outEntry.checkoutTime : waitEntry.addedTime;
+          if (isWithinPassWindow(new Date(activeTime))) {
+            count += 1;
+          }
         }
 
         return count;
@@ -775,13 +795,22 @@
         const name = document.getElementById(`${prefix}-select`).value;
         const el = document.getElementById(`${prefix}-pass-indicator`);
         if (!name) { el.style.display = 'none'; return; }
-        
+
+        el.style.display = 'block';
+
+        // Outside the pass-counting window, checking out is unlimited and doesn't touch passes —
+        // say so plainly instead of showing a pass count that wouldn't actually apply.
+        if (!isWithinPassWindow(new Date())) {
+          el.className = 'pass-indicator info';
+          el.textContent = `Outside pass hours (8:00–12:15) — this trip won't use a pass`;
+          return;
+        }
+
         const studentData = STUDENTS.find(s => s.name === name);
         const limit = studentData?.limit || 2;
         
         const used = getDailyCount(name);
         const remaining = limit - used;
-        el.style.display = 'block';
         
         if (remaining <= 0) {
           el.className = 'pass-indicator out';
@@ -805,14 +834,18 @@
         if (!teacher) { showAlert('Please select your current teacher.'); return; }
         if (!name) { showAlert('Please select your name.'); return; }
 
-        const used = getDailyCount(name);
-        const studentData = STUDENTS.find(s => s.name === name);
-        const limit = studentData?.limit || 2;
-        
-        if (used >= limit) {
-          showAlert(`${name} has used all ${limit} passes for today.`);
-          playBlockedSound();
-          return;
+        // Pass limits only apply inside the 8:00 AM–12:15 PM window. Outside it, skip the
+        // limit check entirely — the trip is still logged normally on check-in.
+        if (isWithinPassWindow(new Date())) {
+          const used = getDailyCount(name);
+          const studentData = STUDENTS.find(s => s.name === name);
+          const limit = studentData?.limit || 2;
+
+          if (used >= limit) {
+            showAlert(`${name} has used all ${limit} passes for today.`);
+            playBlockedSound();
+            return;
+          }
         }
 
         // Conflict Groups check: block if a groupmate (any grade, any teacher) is currently out
