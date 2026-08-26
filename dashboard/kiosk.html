@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bathroom Kiosk</title>
+  <title>Bathroom Check-Out System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -63,7 +63,7 @@
 
     /* Top Banner / Rules — sits directly under the header, styled as a continuation of it */
     .rules-banner {
-      max-width: 1300px;
+      max-width: 1120px;
       width: 100%;
       margin: -10px auto 0;
       background: var(--white);
@@ -81,7 +81,7 @@
     .rules-banner li { position: relative; padding-left: 12px; }
     .rules-banner li::before { content: "•"; position: absolute; left: 0; color: var(--red); font-weight: 800; }
 
-    header { display: flex; justify-content: space-between; align-items: center; background: var(--black); padding: 14px 24px; border-radius: var(--radius); gap: 12px; flex-wrap: wrap; max-width: 1300px; width: 100%; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; background: var(--black); padding: 14px 24px; border-radius: var(--radius); gap: 12px; flex-wrap: wrap; max-width: 1120px; width: 100%; margin: 0 auto; }
     h1 { font-size: 18px; font-weight: 800; color: var(--white); }
     h1 span { color: var(--red); }
     #clock { font-size: 13px; font-weight: 700; color: var(--white); background: transparent; padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); letter-spacing: 0.3px; }
@@ -93,12 +93,12 @@
     }
     #signout-btn:hover { background: rgba(255,255,255,0.1); }
 
-    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; align-items: start; max-width: 1300px; width: 100%; margin: 0 auto; }
+    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; align-items: start; max-width: 1120px; width: 100%; margin: 0 auto; }
     .panel { background: var(--card-bg); border-radius: var(--radius); border: none; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow); }
 
     .panel-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center; }
     .panel-title { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; }
-    .panel-count { font-size: 1.3rem; font-weight: 800; padding: 2px 12px; border-radius: 20px; min-width: 40px; text-align: center; }
+    .panel-count { display: none; }
     .panel-meta { font-size: 0.75rem; color: var(--gray-700); margin-top: 2px; font-weight: 500; }
 
     .panel.boys { border-top: 4px solid var(--boy-primary); }
@@ -134,7 +134,7 @@
     .teacher-select-label { font-size: 0.72rem; font-weight: 700; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.3px; min-width: 86px; flex-shrink: 0; }
     .teacher-select-row select { flex: 1; margin: 0; }
 
-    .teacher-detect-banner { max-width: 1300px; width: 100%; margin: 0 auto; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; text-align: center; }
+    .teacher-detect-banner { max-width: 1120px; width: 100%; margin: 0 auto; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; text-align: center; }
     .teacher-detect-banner.detected { background: #eef8f0; color: var(--green); border: 1px solid #cfeada; }
     .teacher-detect-banner.fallback { background: #fdf7e8; color: var(--amber); border: 1px solid #f3e2b0; }
 
@@ -176,7 +176,7 @@
     .boy-btn { background: var(--boy-primary); }
     .girl-btn { background: var(--girl-primary); }
 
-    .history-panel { background: var(--card-bg); border-radius: var(--radius); border: none; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; max-width: 1300px; width: 100%; margin-left: auto; margin-right: auto; }
+    .history-panel { background: var(--card-bg); border-radius: var(--radius); border: none; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; max-width: 1120px; width: 100%; margin-left: auto; margin-right: auto; }
     .history-header { padding: 14px 18px; border-bottom: 1px solid var(--gray-100); background: var(--gray-50); display: flex; justify-content: space-between; align-items: center; }
     .history-title { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--gray-700); letter-spacing: 0.4px; }
     .history-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; }
@@ -191,7 +191,7 @@
     .spinner { width: 40px; height: 40px; border: 4px solid var(--gray-100); border-top-color: var(--red); border-radius: 50%; animation: spin 1s linear infinite; }
     #confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 9998; width: 100%; height: 100%; }
 
-    #app-content { max-width: 1300px; margin: 0 auto; width: 100%; display: none; flex-direction: column; gap: 10px; }
+    #app-content { max-width: 1120px; margin: 0 auto; width: 100%; display: none; flex-direction: column; gap: 10px; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
@@ -922,7 +922,7 @@
           const waitCount = state.waiting.filter(s => s.teacher === teacher && s.gender === gender).length;
 
           countEl.textContent = entry ? '1' : '0';
-          metaEl.textContent = `${teacher} · 1 spot${waitCount > 0 ? ` · ${waitCount} waiting` : ''}`;
+          metaEl.textContent = waitCount > 0 ? `${waitCount} waiting` : '';
           container.innerHTML = '';
 
           if (!entry) {
