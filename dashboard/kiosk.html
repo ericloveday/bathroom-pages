@@ -629,27 +629,34 @@
         return !!findBlockingGroupmate(studentName, outNames);
       }
 
-      // Short two-tone "denied" chime — generated in-browser so there's no audio file to host.
+      // Attention-grabbing "denied" alarm — generated in-browser so there's no audio file to host.
+      // Uses a square wave (much brighter/buzzier than a sine tone, cuts through classroom noise
+      // better) at higher volume, with three quick high-low pulses so it reads as an alert rather
+      // than a soft chirp. Teachers reported the old two-tone sine version was too quiet to hear.
       function playBlockedSound() {
         try {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
           if (!AudioCtx) return;
           const ctx = new AudioCtx();
           const now = ctx.currentTime;
-          [600, 340].forEach((freq, i) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            const start = now + i * 0.16;
-            gain.gain.setValueAtTime(0.0001, start);
-            gain.gain.exponentialRampToValueAtTime(0.28, start + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(start);
-            osc.stop(start + 0.17);
-          });
+          const PULSES = 3;
+          const PULSE_GAP = 0.22;
+          for (let i = 0; i < PULSES; i++) {
+            [980, 520].forEach((freq, j) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'square';
+              osc.frequency.value = freq;
+              const start = now + i * PULSE_GAP + j * 0.1;
+              gain.gain.setValueAtTime(0.0001, start);
+              gain.gain.exponentialRampToValueAtTime(0.55, start + 0.015);
+              gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.1);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(start);
+              osc.stop(start + 0.11);
+            });
+          }
         } catch (e) {
           console.error('Could not play alert sound', e);
         }
