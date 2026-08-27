@@ -604,11 +604,6 @@
         <button class="btn btn-outline" id="csv-upload-btn" onclick="processCSV()">Upload CSV</button>
       </div>
       <p id="csv-status"></p>
-      <div style="margin-top:14px;">
-        <button class="btn btn-outline" id="seed-test-btn" onclick="seedTestStudents()">🧪 Load 324 Test Students</button>
-        <button class="btn btn-outline" id="remove-test-btn" onclick="removeTestStudents()">🧹 Remove Test Students</button>
-        <span style="font-size:0.75rem; color:var(--gray-500); margin-left:8px;">Adds/removes clearly-fake placeholder students for testing before the real roster arrives.</span>
-      </div>
     </div>
 
     <div style="border-top:1px solid var(--gray-100); margin: 0 0 22px;"></div>
@@ -660,7 +655,7 @@
       <div class="bulk-bar" style="margin-bottom:0;">
         <button class="btn" onclick="deleteSelectedStudents()">🗑 Delete Selected</button>
         <input type="number" id="bulk-limit-input" placeholder="Daily limit" min="1" style="width:110px; padding:9px 12px;">
-        <button class="btn btn-outline" onclick="bulkAssignLimit()">Set Limit for Selected</button>
+        <button class="btn" onclick="bulkAssignLimit()">Set Limit for Selected</button>
         <span id="rm-selected-count" class="selected-count">0 selected</span>
       </div>
     </div>
