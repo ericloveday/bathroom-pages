@@ -102,7 +102,7 @@
     margin-bottom: 24px;
     display: flex;
     gap: 16px;
-    align-items: center;
+    align-items: flex-end;
     flex-wrap: wrap;
   }
 
@@ -348,7 +348,7 @@
     color: var(--gray-700);
   }
 
-  /* Auto checked-in badge — flags trips the kiosk closed automatically after 20 minutes
+  /* Auto checked-in badge - flags trips the kiosk closed automatically after 20 minutes
      because a student forgot to sign back in, so the duration is a cutoff, not a real time. */
   .auto-badge {
     display: inline-flex;
@@ -559,7 +559,7 @@
   <!-- Student picker for Compare Students -->
   <div class="table-card" id="compare-picker-card" style="display:none;">
     <h2>Select Students to Compare</h2>
-    <div class="card-desc">Search and add one or more students. Pick a wider date range above (a few weeks) to spot patterns across many days — like the same teacher every day, or two students leaving at close to the same time.</div>
+    <div class="card-desc">Search and add one or more students. Pick a wider date range above (a few weeks) to spot patterns across many days - like the same teacher every day, or two students leaving at close to the same time.</div>
     <div class="add-student-wrap" style="max-width:420px;">
       <input class="add-student-input" id="compare-search-input" placeholder="Search name to add..." oninput="handleCompareSearchInput(this.value)">
       <div class="search-results" id="compare-search-results"></div>
@@ -570,10 +570,10 @@
   <!-- Summary -->
   <div class="summary-grid" id="summary-grid"></div>
 
-  <!-- Currently Out (Live) -->
+  <!-- Currently Out (Live) - daily tab only -->
   <div class="table-card" id="live-out-card">
     <h2>🚻 Currently Out (Live)</h2>
-    <div class="card-desc">Students the kiosk currently has marked as "out," across every classroom. If someone forgot to check back in, sign them in here to clear them — this only clears live status, it does not touch or delete their bathroom history (use History Management for that).</div>
+    <div class="card-desc">Students the kiosk currently has marked as "out," across every classroom. If someone forgot to check back in, sign them in here to clear them - this only clears live status, it does not touch or delete their bathroom history (use History Management for that).</div>
     <div id="live-out-list"><p class="no-data">Loading...</p></div>
   </div>
 
@@ -589,10 +589,10 @@
     <div id="daily-container"><p class="no-data">No data for this period.</p></div>
   </div>
 
-  <!-- Daily Pass Usage -->
-  <div class="table-card accent-red-border">
-    <h2>🚫 Daily Pass Usage — Today</h2>
-    <div class="card-desc">Students who are close to or over their allocated daily bathroom limit. Only counts trips checked out between 8:00 AM and 12:15 PM — trips outside that window are logged but don't use a pass.</div>
+  <!-- Daily Pass Usage - daily tab only -->
+  <div class="table-card accent-red-border" id="pass-usage-card">
+    <h2>🚫 Daily Pass Usage - Today</h2>
+    <div class="card-desc">Students who are close to or over their allocated daily bathroom limit. Only counts trips checked out between 8:00 AM and 12:15 PM - trips outside that window are logged but don't use a pass.</div>
     <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
   </div>
 </div>
@@ -601,11 +601,11 @@
 <div id="view-management" style="display:none;">
   <div class="section-panel accent-blue no-print">
     <h2 style="color: var(--blue);">👥 Roster &amp; Pass Limit Management</h2>
-    <div class="card-desc">This is the one shared roster for all three grades — used for daily pass limits here and for Conflict Groups. Filter by grade below to make managing 300+ students easier.</div>
+    <div class="card-desc">This is the one shared roster for all three grades - used for daily pass limits here and for Conflict Groups. Filter by grade below to make managing 300+ students easier.</div>
 
     <div class="csv-block" style="margin-top:0; padding-top:0; border-top:none; margin-bottom:22px;">
       <h3>Bulk Upload Students (CSV)</h3>
-      <p>Format: <code>LastName, FirstName, Grade, Gender, Limit</code>. Grade must be 6, 7, or 8. Gender and Limit are optional — gender is guessed from the first name if left blank, limit (daily passes) defaults to 2. Example: <code>Doe, Jane, 7, F, 2</code>. A header row is detected and skipped automatically.</p>
+      <p>Format: <code>LastName, FirstName, Grade, Gender, Limit</code>. Grade must be 6, 7, or 8. Gender and Limit are optional - gender is guessed from the first name if left blank, limit (daily passes) defaults to 2. Example: <code>Doe, Jane, 7, F, 2</code>. A header row is detected and skipped automatically.</p>
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <input type="file" id="csv-upload" accept=".csv" style="padding: 5px; max-width: 300px; width: 100%;">
         <button class="btn btn-outline" id="csv-upload-btn" onclick="processCSV()">Upload CSV</button>
@@ -706,7 +706,7 @@
 <div id="view-conflicts" style="display:none;">
   <div class="section-panel accent-red no-print">
     <h2>🚫 Conflict Groups</h2>
-    <div class="card-desc">A conflict group is a set of students who can't be signed out at the same time — across any grade or teacher. When one is signed out, the others in their group are blocked until that student returns.</div>
+    <div class="card-desc">A conflict group is a set of students who can't be signed out at the same time - across any grade or teacher. When one is signed out, the others in their group are blocked until that student returns.</div>
     <div class="roster-status" id="cg-roster-status">Loading roster…</div>
   </div>
 
@@ -723,7 +723,7 @@
       <h2>🚫 Blocked Attempts Log</h2>
       <button class="btn btn-outline" onclick="clearConflictBlocksLog()">Clear Log</button>
     </div>
-    <div class="card-desc">Every time a student's checkout is blocked because a groupmate is currently out, it's logged here — including who the blocking groupmate was, for your review.</div>
+    <div class="card-desc">Every time a student's checkout is blocked because a groupmate is currently out, it's logged here - including who the blocking groupmate was, for your review.</div>
     <div id="cg-blocks-container"><p class="no-data">No blocked attempts logged yet.</p></div>
   </div>
 </div>
@@ -732,7 +732,7 @@
 <div id="view-history" style="display:none;">
   <div class="section-panel accent-amber no-print">
     <h2 style="color: var(--amber);">⚠ History Management</h2>
-    <div class="card-desc">Find and delete individual history entries — useful if a student forgot to check back in. Check multiple rows and use <strong>Delete Selected</strong> for bulk cleanup. Deletions are permanent.</div>
+    <div class="card-desc">Find and delete individual history entries - useful if a student forgot to check back in. Check multiple rows and use <strong>Delete Selected</strong> for bulk cleanup. Deletions are permanent.</div>
     <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end;">
       <div class="control-group" style="flex:1; min-width:180px;">
         <label>Filter by Student</label>
@@ -799,7 +799,7 @@
 
     signInWithEmailAndPassword(auth, email, password).catch(err => {
       console.error(err);
-      showSigninError('Sign-in failed — check your email and password and try again.');
+      showSigninError('Sign-in failed - check your email and password and try again.');
     });
   });
 
@@ -846,7 +846,7 @@
     // Conflict Groups state (shares the same roster as Student Management)
     let rosterKeyed = {};
     let conflictGroupsData = {};
-    let teachersData = {}; // { key: {name, grade} } — feeds the kiosk picker and the Reports teacher filters
+    let teachersData = {}; // { key: {name, grade} } - feeds the kiosk picker and the Reports teacher filters
     let editingTeacherKey = null; // tracks which teacher row (if any) is being edited inline
 
     // Compare Students state
@@ -866,7 +866,7 @@
     // ---------------- Live "currently out" tracking (all classrooms, all grades) ----------------
     // Separate from the history-based stats below since this reflects right-now status, not a
     // completed trip. Kept as its own lightweight listener so a checkout happening elsewhere in
-    // the building doesn't force a full report re-render — it only updates the live card's number.
+    // the building doesn't force a full report re-render - it only updates the live card's number.
     let liveSlots = {};
     onValue(ref(db, 'bathroom/slots'), (snapshot) => {
       liveSlots = snapshot.val() || {};
@@ -900,7 +900,7 @@
       el.innerHTML = entries.map(([key, val]) => {
         const isObj = val && typeof val === 'object';
         const label = isObj ? (val.name || val.student || val.who || key) : key;
-        const teacher = isObj && val.teacher ? ` <span style="color:var(--gray-500); font-size:0.78rem;">— ${escapeHtml(val.teacher)}</span>` : '';
+        const teacher = isObj && val.teacher ? ` <span style="color:var(--gray-500); font-size:0.78rem;">- ${escapeHtml(val.teacher)}</span>` : '';
         const rawTime = isObj ? (val.checkedOutAt || val.time || val.timestamp) : null;
         const since = rawTime ? ` <span style="color:var(--gray-500); font-size:0.78rem;">since ${new Date(rawTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>` : '';
         return `<div class="day-row">
@@ -911,10 +911,10 @@
     }
 
     // Clears a student's live "out" status directly (in case they forgot to check back in at the
-    // kiosk, or the kiosk missed it). This does NOT touch bathroom/history — if a history entry
+    // kiosk, or the kiosk missed it). This does NOT touch bathroom/history - if a history entry
     // for that trip needs fixing or removing too, do that from the History Management tab.
     window.signInLiveSlot = async function(key, label) {
-      if (!confirm(`Mark "${label}" as signed back in? This clears them from "Currently Out" — it does not delete any bathroom history.`)) return;
+      if (!confirm(`Mark "${label}" as signed back in? This clears them from "Currently Out" - it does not delete any bathroom history.`)) return;
       try {
         await remove(ref(db, 'bathroom/slots/' + key));
       } catch (e) {
@@ -924,7 +924,7 @@
     };
 
     // Time-weighted average number of students concurrently out, computed across the window from
-    // the first checkout to the last check-in that day — not the full 24-hour day, since averaging
+    // the first checkout to the last check-in that day - not the full 24-hour day, since averaging
     // over hours with no school in session would make the number look artificially tiny.
     function computeAvgConcurrent(entries) {
       if (!entries.length) return '0';
@@ -951,7 +951,7 @@
     // For ranges spanning multiple days (Weekly, Monthly), a single continuous window from first
     // to last event would swallow every overnight and weekend gap in between, making the average
     // look artificially tiny. Instead: compute the same time-weighted average separately for each
-    // individual day that actually had trips, then average those per-day numbers together — this
+    // individual day that actually had trips, then average those per-day numbers together - this
     // reads as "on a typical day in this period, X students were out at once."
     function computeAvgConcurrentPerDay(entries) {
       if (!entries.length) return '0';
@@ -1027,10 +1027,10 @@
       const uniqueCount = Object.keys(updates).length;
 
       try {
-        // Single atomic multi-location write instead of 324 separate set() calls —
+        // Single atomic multi-location write instead of 324 separate set() calls -
         // avoids firing the roster listener (and a full table re-render) 324 times in a row.
         await update(ref(db, 'bathroom/roster'), updates);
-        alert(`Test students loaded — all ${uniqueCount} are unique. Names that would have collided on "First L." automatically got more of the last name added to tell them apart.`);
+        alert(`Test students loaded - all ${uniqueCount} are unique. Names that would have collided on "First L." automatically got more of the last name added to tell them apart.`);
       } catch (err) {
         console.error(err);
         alert("Error loading test students: " + (err && err.message ? err.message : err));
@@ -1123,7 +1123,7 @@
       const count = STUDENTS.length;
       if (count === 0) {
         cgStatusEl.className = 'roster-status warn';
-        cgStatusEl.textContent = 'No students loaded yet — add or upload students on the Student Management tab first.';
+        cgStatusEl.textContent = 'No students loaded yet - add or upload students on the Student Management tab first.';
       } else {
         cgStatusEl.className = 'roster-status';
         cgStatusEl.textContent = `Roster loaded: ${count} students.`;
@@ -1143,7 +1143,7 @@
       console.error('bathroom/teachers read failed:', err);
       const container = document.getElementById('teacher-list-container');
       if (container) {
-        container.innerHTML = `<p class="no-data" style="color:var(--red);">Couldn't load teachers: ${err.message}. This is usually a Firebase security-rules permission issue for the "bathroom/teachers" path — check the browser console (F12) for the full error.</p>`;
+        container.innerHTML = `<p class="no-data" style="color:var(--red);">Couldn't load teachers: ${err.message}. This is usually a Firebase security-rules permission issue for the "bathroom/teachers" path - check the browser console (F12) for the full error.</p>`;
       }
     });
 
@@ -1212,7 +1212,7 @@
     };
 
     window.removeTeacher = async function(key, name) {
-      if (!confirm(`Remove ${name} from the teacher list? Any of their current bathroom slots or history stay intact — this only removes them from the kiosk picker and filters.`)) return;
+      if (!confirm(`Remove ${name} from the teacher list? Any of their current bathroom slots or history stay intact - this only removes them from the kiosk picker and filters.`)) return;
       await remove(ref(db, `bathroom/teachers/${key}`));
     };
 
@@ -1260,8 +1260,8 @@
         } else {
           tr.innerHTML = `
             <td class="student-name-cell">${escapeHtml(t.name)}</td>
-            <td style="color:var(--gray-700); font-size:0.82rem;">${t.email ? escapeHtml(t.email) : '—'}</td>
-            <td>${t.grade ? t.grade + 'th' : '—'}</td>
+            <td style="color:var(--gray-700); font-size:0.82rem;">${t.email ? escapeHtml(t.email) : '-'}</td>
+            <td>${t.grade ? t.grade + 'th' : '-'}</td>
             <td>
               <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 5px;" onclick="startTeacherEdit('${jsAttr(key)}')">✏️ Edit</button>
               <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="removeTeacher('${jsAttr(key)}','${jsAttr(t.name)}')">Remove</button>
@@ -1291,7 +1291,7 @@
 
     // Looks up the signed-in teacher's own grade (matched by email against Teacher Management
     // records, same as the kiosk's auto-detect) and pre-sets every Grade filter to it. Teachers
-    // can still change it manually afterward — this only sets the starting point.
+    // can still change it manually afterward - this only sets the starting point.
     function applyDetectedGradeDefaults() {
       if (!currentUserEmail) return;
       const match = Object.values(teachersData).find(t => t.email && t.email.toLowerCase() === currentUserEmail);
@@ -1331,14 +1331,14 @@
         resultsEl.innerHTML = '<div class="search-result-item">No matches</div>';
       } else {
         resultsEl.innerHTML = matches.map(s => {
-          const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
+          const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr -';
           return `<div class="search-result-item" onclick="window.addCompareStudent('${jsAttr(s.name)}')">
             <span>${escapeHtml(s.name)}</span>
             <span class="sr-grade">${gradeLabel}</span>
           </div>`;
         }).join('');
         if (totalMatches > 25) {
-          resultsEl.innerHTML += `<div class="search-result-item" style="color:var(--gray-500); font-style:italic; cursor:default;">+${totalMatches - 25} more — type more letters to narrow it down</div>`;
+          resultsEl.innerHTML += `<div class="search-result-item" style="color:var(--gray-500); font-style:italic; cursor:default;">+${totalMatches - 25} more - type more letters to narrow it down</div>`;
         }
       }
       resultsEl.style.display = 'block';
@@ -1364,12 +1364,12 @@
       const box = document.getElementById('compare-selected-chips');
       if (!box) return;
       if (!compareSelectedNames.size) {
-        box.innerHTML = '<div class="empty-members">No students selected yet — search above to add.</div>';
+        box.innerHTML = '<div class="empty-members">No students selected yet - search above to add.</div>';
         return;
       }
       box.innerHTML = [...compareSelectedNames].sort().map(name => {
         const s = STUDENTS.find(x => x.name === name);
-        const gradeLabel = s && s.grade ? `Gr ${s.grade}` : 'Gr —';
+        const gradeLabel = s && s.grade ? `Gr ${s.grade}` : 'Gr -';
         return `<span class="member-chip">
           <span class="grade-tag">${gradeLabel}</span> ${escapeHtml(name)}
           <span class="remove-x" onclick="window.removeCompareStudent('${jsAttr(name)}')">&times;</span>
@@ -1468,10 +1468,10 @@
         const dateLabel = new Date(dk + 'T12:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
         const cells = names.map(n => {
           const trips = dayData[n];
-          if (!trips || !trips.length) return `<td style="color:var(--gray-500);">—</td>`;
+          if (!trips || !trips.length) return `<td style="color:var(--gray-500);">-</td>`;
           const chips = trips.map(t => {
             const timeStr = new Date(t.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            const autoTag = t.autoCheckedIn ? ' <span class="auto-badge" title="Auto checked-in by the kiosk after 20 minutes — the student never signed back in, so this duration is a cutoff, not their real time.">⏱ auto</span>' : '';
+            const autoTag = t.autoCheckedIn ? ' <span class="auto-badge" title="Auto checked-in by the kiosk after 20 minutes - the student never signed back in, so this duration is a cutoff, not their real time.">⏱ auto</span>' : '';
             return `<span class="teacher-time-chip${t.autoCheckedIn ? ' auto-chip' : ''}">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span>${autoTag}</span>`;
           }).join(' ');
           return `<td>${chips}</td>`;
@@ -1527,7 +1527,7 @@
         tr.innerHTML = `
           <td>${dateStr}, ${timeStr}</td>
           <td class="student-name-cell">${escapeHtml(b.name || '')}</td>
-          <td>${escapeHtml(b.blockedGroupmate || '—')}</td>
+          <td>${escapeHtml(b.blockedGroupmate || '-')}</td>
           <td>${escapeHtml(b.teacher || '')}</td>`;
         tbody.appendChild(tr);
       });
@@ -1600,14 +1600,14 @@
       } else {
         resultsEl.innerHTML = matches.map(([id, s]) => {
           const p = displayNameParts(s);
-          const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
+          const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr -';
           return `<div class="search-result-item" onclick="window.addConflictMember('${groupId}','${jsAttr(id)}')">
             <span>${escapeHtml(p.first)} ${escapeHtml(p.last)}</span>
             <span class="sr-grade">${gradeLabel}</span>
           </div>`;
         }).join('');
         if (totalMatches > 25) {
-          resultsEl.innerHTML += `<div class="search-result-item" style="color:var(--gray-500); font-style:italic; cursor:default;">+${totalMatches - 25} more — type more letters to narrow it down</div>`;
+          resultsEl.innerHTML += `<div class="search-result-item" style="color:var(--gray-500); font-style:italic; cursor:default;">+${totalMatches - 25} more - type more letters to narrow it down</div>`;
         }
       }
       resultsEl.style.display = 'block';
@@ -1629,12 +1629,12 @@
       grid.innerHTML = entries.map(([groupId, group]) => {
         const memberIds = Object.keys(group.studentIds || {});
         const membersHtml = memberIds.length === 0
-          ? '<div class="empty-members">No students yet — search below to add.</div>'
+          ? '<div class="empty-members">No students yet - search below to add.</div>'
           : memberIds.map(id => {
               const s = rosterKeyed[id];
               if (!s) return '';
               const p = displayNameParts(s);
-              const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr —';
+              const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr -';
               return `<span class="member-chip">
                 <span class="grade-tag">${gradeLabel}</span> ${escapeHtml(p.first)} ${escapeHtml(p.last)}
                 <span class="remove-x" onclick="window.removeConflictMember('${groupId}','${jsAttr(id)}')">&times;</span>
@@ -1683,7 +1683,7 @@
       try {
         await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
         if (name !== `${firstName} ${lastName.charAt(0).toUpperCase()}.`) {
-          alert(`Saved as "${name}" — another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
+          alert(`Saved as "${name}" - another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
         }
         document.getElementById('roster-new-first').value = '';
         document.getElementById('roster-new-last').value = '';
@@ -1728,7 +1728,7 @@
       try {
         await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
         if (name !== `${firstName} ${lastName.charAt(0).toUpperCase()}.` && name !== originalName) {
-          alert(`Saved as "${name}" — another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
+          alert(`Saved as "${name}" - another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
         }
 
         if (newKey !== oldKey) {
@@ -1801,7 +1801,7 @@
           let rawLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
 
           if (!rawLines.length) {
-            setStatus("❌ The file appears to be empty — no rows found.", '#cc0000');
+            setStatus("❌ The file appears to be empty - no rows found.", '#cc0000');
             uploadBtn.disabled = false;
             return;
           }
@@ -1813,7 +1813,7 @@
           }
 
           if (!rawLines.length) {
-            setStatus("❌ Only a header row was found — no student data to import.", '#cc0000');
+            setStatus("❌ Only a header row was found - no student data to import.", '#cc0000');
             uploadBtn.disabled = false;
             return;
           }
@@ -1833,14 +1833,14 @@
             if (!parts.length || !parts[0]) continue;
 
             if (parts.length < 3) {
-              errorLines.push(`Line ${i + 1}: needs at least LastName, FirstName, Grade — got "${rawLines[i]}"`);
+              errorLines.push(`Line ${i + 1}: needs at least LastName, FirstName, Grade - got "${rawLines[i]}"`);
               continue;
             }
 
             const [lastNameRaw, firstNameRaw, gradeRaw, genderRaw, limitRaw] = parts;
             const grade = parseInt(gradeRaw, 10);
             if (![6, 7, 8].includes(grade)) {
-              errorLines.push(`Line ${i + 1}: grade must be 6, 7, or 8 — got "${gradeRaw}"`);
+              errorLines.push(`Line ${i + 1}: grade must be 6, 7, or 8 - got "${gradeRaw}"`);
               continue;
             }
 
@@ -1885,7 +1885,7 @@
 
           let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
           if (adjustedNameCount > 0) {
-            summary += `• ${adjustedNameCount} name${adjustedNameCount !== 1 ? 's' : ''} auto-adjusted to include more of the last name, since "First L." was already taken by someone else — no one was overwritten.\n`;
+            summary += `• ${adjustedNameCount} name${adjustedNameCount !== 1 ? 's' : ''} auto-adjusted to include more of the last name, since "First L." was already taken by someone else - no one was overwritten.\n`;
           }
           summary += `• Gender guessed from first name: ${genderGuessedCount}\n`;
           summary += `• Gender not recognized (marked Unknown): ${genderUnknownCount}\n`;
@@ -1982,7 +1982,7 @@
             <td class="student-name-cell">
               <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(s.name)}
             </td>
-            <td>${s.grade ? s.grade + 'th' : '—'}</td>
+            <td>${s.grade ? s.grade + 'th' : '-'}</td>
             <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
             <td class="trips-cell">${s.limit || 2} passes</td>
             <td>
@@ -2220,7 +2220,7 @@
 
       if (currentTab === 'daily') {
         if (dailyTableCard) dailyTableCard.style.display = 'none';
-        document.getElementById('table-title').textContent = `Daily Bathroom Pattern — ${range.label}`;
+        document.getElementById('table-title').textContent = `Daily Bathroom Pattern - ${range.label}`;
 
         // These two extra cards are school-wide (all grades and teachers, ignoring the Grade
         // filter above) since they're meant to give the principal a quick whole-building snapshot.
@@ -2247,8 +2247,8 @@
       }
       if (dailyTableCard) dailyTableCard.style.display = 'block';
 
-      if (currentTab === 'weekly' || currentTab === 'monthly') {
-        // Same "All Classes" treatment as the Daily Pattern tab — school-wide regardless of the
+      if (currentTab === 'weekly' || currentTab === 'monthly' || currentTab === 'custom') {
+        // Same "All Classes" treatment as the Daily Pattern tab - school-wide regardless of the
         // Grade/Teacher filters above, since this is meant as a principal-level building snapshot.
         // Averaged per school day within the range rather than one continuous window (see
         // computeAvgConcurrentPerDay's comment for why that matters over multi-day spans).
@@ -2257,12 +2257,12 @@
         document.getElementById('summary-grid').insertAdjacentHTML('beforeend', `
           <div class="summary-card">
             <div class="val">${avgConcurrentPeriod}</div>
-            <div class="lbl">Avg Out at Once — All Classes</div>
+            <div class="lbl">Avg Out at Once - All Classes</div>
           </div>
         `);
       }
 
-      document.getElementById('table-title').textContent = `Student Summary — ${range.label}`;
+      document.getElementById('table-title').textContent = `Student Summary - ${range.label}`;
 
       const studentMap = {};
       STUDENTS.forEach(s => {
@@ -2314,7 +2314,7 @@
             <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
           </td>
           <td style="color:var(--gray-500); font-weight:500;">${Object.entries(s.teacherCounts).sort((a, b) => b[1] - a[1]).map(([name, count]) => `${escapeHtml(name)}${count > 1 ? ` (${count})` : ''}`).join(', ')}</td>
-          <td class="trips-cell">${s.trips}${s.autoCount > 0 ? ` <span class="auto-badge" title="${s.autoCount} of these trip${s.autoCount !== 1 ? 's were' : ' was'} auto checked-in by the kiosk after 20 minutes — the student never signed back in, so this duration is a cutoff, not their real time.">⏱ ${s.autoCount} auto</span>` : ''}</td>
+          <td class="trips-cell">${s.trips}${s.autoCount > 0 ? ` <span class="auto-badge" title="${s.autoCount} of these trip${s.autoCount !== 1 ? 's were' : ' was'} auto checked-in by the kiosk after 20 minutes - the student never signed back in, so this duration is a cutoff, not their real time.">⏱ ${s.autoCount} auto</span>` : ''}</td>
           <td class="val-cell">${s.totalMins}m</td>
         </tr>`).join('')}</tbody>`;
 
@@ -2388,7 +2388,7 @@
         const distinct = new Set(r.trips.map(t => t.teacher)).size;
         const breakdown = r.trips.map(t => {
           const timeStr = new Date(t.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-          const autoTag = t.autoCheckedIn ? ' <span class="auto-badge" title="Auto checked-in by the kiosk after 20 minutes — the student never signed back in, so this duration is a cutoff, not their real time.">⏱ auto</span>' : '';
+          const autoTag = t.autoCheckedIn ? ' <span class="auto-badge" title="Auto checked-in by the kiosk after 20 minutes - the student never signed back in, so this duration is a cutoff, not their real time.">⏱ auto</span>' : '';
           return `<span class="teacher-time-chip${t.autoCheckedIn ? ' auto-chip' : ''}">${escapeHtml(t.teacher)} <span class="chip-time">${timeStr}</span>${autoTag}</span>`;
         }).join(' ');
         const autoCountInRow = r.trips.filter(t => t.autoCheckedIn).length;
@@ -2423,6 +2423,13 @@
       const pickerCard = document.getElementById('compare-picker-card');
       if (pickerCard) pickerCard.style.display = tab === 'compare' ? 'block' : 'none';
       if (tab === 'compare') renderCompareChips();
+
+      // These two are daily-only - they don't make sense scoped to a week/month/range.
+      const liveOutCard = document.getElementById('live-out-card');
+      if (liveOutCard) liveOutCard.style.display = tab === 'daily' ? 'block' : 'none';
+      const passUsageCard = document.getElementById('pass-usage-card');
+      if (passUsageCard) passUsageCard.style.display = tab === 'daily' ? 'block' : 'none';
+
       renderReport();
     };
 
@@ -2626,7 +2633,7 @@
     };
 
     window.deleteEntry = async function(key, name, label) {
-      if (!confirm(`Delete this entry?\n\n${name} — ${label}\n\nThis cannot be undone.`)) return;
+      if (!confirm(`Delete this entry?\n\n${name} - ${label}\n\nThis cannot be undone.`)) return;
       try {
         await remove(ref(db, `bathroom/history/${key}`));
       } catch(e) {
