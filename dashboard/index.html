@@ -79,7 +79,7 @@
   .header-block { margin-bottom: 20px; }
   .header-block h2 { font-size: 1.1rem; font-weight: 800; color: var(--black); }
 
-  .tab-btns { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-btns { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
   .tab-btn {
     padding: 8px 18px;
     border-radius: 7px;
@@ -428,7 +428,7 @@
 <!-- ================= REPORTS VIEW ================= -->
 <div id="view-reports">
   <!-- Date Tabs + report actions -->
-  <div style="display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+  <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
     <div class="tab-btns" style="margin-bottom:0;">
       <button class="tab-btn active" id="tab-daily" onclick="switchTab('daily')">Daily</button>
       <button class="tab-btn" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
@@ -569,6 +569,13 @@
 
   <!-- Summary -->
   <div class="summary-grid" id="summary-grid"></div>
+
+  <!-- Currently Out (Live) -->
+  <div class="table-card" id="live-out-card">
+    <h2>🚻 Currently Out (Live)</h2>
+    <div class="card-desc">Students the kiosk currently has marked as "out," across every classroom. If someone forgot to check back in, sign them in here to clear them — this only clears live status, it does not touch or delete their bathroom history (use History Management for that).</div>
+    <div id="live-out-list"><p class="no-data">Loading...</p></div>
+  </div>
 
   <!-- Student Table -->
   <div class="table-card" id="main-table-card">
@@ -868,10 +875,53 @@
 
     function updateLiveOutCard() {
       const el = document.getElementById('live-out-value');
-      if (!el) return; // only present while the Daily Pattern tab is on screen
-      const count = Object.values(liveSlots).filter(Boolean).length;
-      el.textContent = count;
+      if (el) {
+        const count = Object.values(liveSlots).filter(Boolean).length;
+        el.textContent = count;
+      }
+      renderLiveOutList();
     }
+
+    // Renders the actual student(s) currently marked "out" so Eric doesn't have to guess who the
+    // live count refers to. The slot's stored shape isn't fixed in this file (the kiosk writes it),
+    // so this reads defensively: an object value with a name/student/who field is shown by that
+    // name; anything else falls back to the slot's own key, which is usually the student or
+    // teacher identifier the kiosk used.
+    function renderLiveOutList() {
+      const el = document.getElementById('live-out-list');
+      if (!el) return; // only present while the Reports view is on screen
+
+      const entries = Object.entries(liveSlots).filter(([key, val]) => val);
+      if (!entries.length) {
+        el.innerHTML = '<p class="no-data">No one is currently out. 🎉</p>';
+        return;
+      }
+
+      el.innerHTML = entries.map(([key, val]) => {
+        const isObj = val && typeof val === 'object';
+        const label = isObj ? (val.name || val.student || val.who || key) : key;
+        const teacher = isObj && val.teacher ? ` <span style="color:var(--gray-500); font-size:0.78rem;">— ${escapeHtml(val.teacher)}</span>` : '';
+        const rawTime = isObj ? (val.checkedOutAt || val.time || val.timestamp) : null;
+        const since = rawTime ? ` <span style="color:var(--gray-500); font-size:0.78rem;">since ${new Date(rawTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>` : '';
+        return `<div class="day-row">
+          <div><span class="day-label">${escapeHtml(String(label))}</span>${teacher}${since}</div>
+          <button class="btn btn-outline" style="padding:4px 10px; font-size:0.75rem;" onclick="window.signInLiveSlot('${jsAttr(key)}','${jsAttr(String(label))}')">✅ Sign In</button>
+        </div>`;
+      }).join('');
+    }
+
+    // Clears a student's live "out" status directly (in case they forgot to check back in at the
+    // kiosk, or the kiosk missed it). This does NOT touch bathroom/history — if a history entry
+    // for that trip needs fixing or removing too, do that from the History Management tab.
+    window.signInLiveSlot = async function(key, label) {
+      if (!confirm(`Mark "${label}" as signed back in? This clears them from "Currently Out" — it does not delete any bathroom history.`)) return;
+      try {
+        await remove(ref(db, 'bathroom/slots/' + key));
+      } catch (e) {
+        console.error(e);
+        alert('Error signing in: ' + (e && e.message ? e.message : e));
+      }
+    };
 
     // Time-weighted average number of students concurrently out, computed across the window from
     // the first checkout to the last check-in that day — not the full 24-hour day, since averaging
