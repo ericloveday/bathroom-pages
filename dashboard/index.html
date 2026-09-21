@@ -853,6 +853,10 @@
     let compareSelectedNames = new Set();
     let gradeDefaultsApplied = false;
 
+    // History Management sort state
+    let dmSortCol = 'checkedOutAt';
+    let dmSortAsc = false;
+
     // Pass-counting window: mirrors the kiosk's rule that passes are only deducted for trips
     // checked out between 8:00 AM and 12:15 PM. Kept here too so the "Daily Pass Usage" report
     // matches what the kiosk actually enforces, instead of counting every trip of the day.
@@ -2575,6 +2579,12 @@
       }
     };
 
+    window.sortDataManager = function(col) {
+      if (dmSortCol === col) dmSortAsc = !dmSortAsc;
+      else { dmSortCol = col; dmSortAsc = (col === 'name' || col === 'teacher'); }
+      renderDataManager();
+    };
+
     window.renderDataManager = function() {
       const studentFilter = document.getElementById('dm-student-filter').value;
       const dateFilter = document.getElementById('dm-date-filter').value;
@@ -2590,17 +2600,35 @@
         return;
       }
 
+      const getSortVal = (h, col) => {
+        if (col === 'name') return (h.name || '').toLowerCase();
+        if (col === 'teacher') return (h.teacher || 'Loveday').toLowerCase();
+        if (col === 'checkedOutAt') return h.checkedOutAt;
+        if (col === 'duration') return h.duration || 0;
+        return h.checkedOutAt;
+      };
+
+      entries.sort((a, b) => {
+        const av = getSortVal(a, dmSortCol), bv = getSortVal(b, dmSortCol);
+        if (av < bv) return dmSortAsc ? -1 : 1;
+        if (av > bv) return dmSortAsc ? 1 : -1;
+        return 0;
+      });
+
+      const arrow = (col) => dmSortCol === col ? (dmSortAsc ? ' ↑' : ' ↓') : '';
+      const sortedCls = (col) => dmSortCol === col ? 'sorted' : '';
+
       container.innerHTML = '';
       const table = document.createElement('table');
       table.innerHTML = `
         <thead>
           <tr>
             <th class="nosort check-cell"><input type="checkbox" id="dm-select-all" onclick="toggleSelectAll(this)" title="Select all"></th>
-            <th class="nosort">Student</th>
-            <th class="nosort">Teacher</th>
-            <th class="nosort">Date</th>
-            <th class="nosort">Time Out</th>
-            <th class="nosort">Duration</th>
+            <th class="${sortedCls('name')}" onclick="sortDataManager('name')">Student${arrow('name')}</th>
+            <th class="${sortedCls('teacher')}" onclick="sortDataManager('teacher')">Teacher${arrow('teacher')}</th>
+            <th class="${sortedCls('checkedOutAt')}" onclick="sortDataManager('checkedOutAt')">Date${arrow('checkedOutAt')}</th>
+            <th class="${sortedCls('checkedOutAt')}" onclick="sortDataManager('checkedOutAt')">Time Out${arrow('checkedOutAt')}</th>
+            <th class="${sortedCls('duration')}" onclick="sortDataManager('duration')">Duration${arrow('duration')}</th>
             <th class="nosort">Action</th>
           </tr>
         </thead>`;
