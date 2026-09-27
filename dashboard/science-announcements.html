@@ -115,15 +115,117 @@
       outline: none;
       border-color: var(--red);
     }
-    textarea {
-      resize: vertical;
-      min-height: 90px;
-    }
     .form-row {
       display: grid;
-      grid-template-columns: 180px 180px 1fr;
+      grid-template-columns: 180px 180px;
       gap: 16px;
     }
+    @media (max-width: 480px) {
+      .form-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ---------------- Rich Text Editor ---------------- */
+    .rte {
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      transition: border-color 0.15s;
+    }
+    .rte:focus-within { border-color: var(--red); }
+    .rte-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      padding: 6px;
+      background: #f5f5f5;
+      border-bottom: 2px solid #ddd;
+    }
+    .rte-btn {
+      min-width: 32px;
+      height: 32px;
+      padding: 0 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.85rem;
+      color: #333;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .rte-btn:hover { background: #e6e6e6; }
+    .rte-btn:focus-visible, .rte-swatch:focus-visible, .rte-select:focus-visible {
+      outline: 2px solid var(--red);
+      outline-offset: 1px;
+    }
+    .rte-btn.active {
+      background: #fff;
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .rte-sep {
+      width: 1px;
+      height: 20px;
+      background: #ccc;
+      margin: 0 4px;
+    }
+    .rte-select {
+      height: 32px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.8rem;
+      padding: 0 6px;
+      background: white;
+      color: #333;
+      cursor: pointer;
+    }
+    .rte-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px #bbb;
+      cursor: pointer;
+      padding: 0;
+      margin: 0 1px;
+    }
+    .rte-swatch:hover { box-shadow: 0 0 0 2px #555; }
+    /* Dark editing surface so what you type matches how it looks on the site */
+    .rte-editor {
+      min-height: 110px;
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 12px 14px;
+      background: #1a1a1a;
+      color: #ffffff;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      outline: none;
+      word-wrap: break-word;
+    }
+    .rte-editor:empty::before {
+      content: attr(data-placeholder);
+      color: #777;
+      pointer-events: none;
+    }
+    .rte-hint {
+      font-size: 0.72rem;
+      color: #999;
+      margin: -8px 0 14px;
+    }
+
+    /* Shared formatting for rendered announcement HTML (the * reset strips list padding) */
+    .rich ul, .rich ol { padding-left: 1.4em; margin: 4px 0; }
+    .rich a { text-decoration: underline; }
+    .rte-editor a, .preview-text a { color: #ff6b6b; }
+    .ann-text a { color: var(--red); }
+
     .btn {
       padding: 11px 24px;
       background: var(--red);
@@ -390,14 +492,44 @@
         <label>End Date</label>
         <input type="date" id="ann-end-date">
       </div>
-      <div>
-        <label>Announcement Text</label>
-        <textarea id="ann-text" placeholder="Type your announcement here..."></textarea>
-      </div>
     </div>
 
+    <label id="ann-text-label">Announcement Text</label>
+    <div class="rte">
+      <div class="rte-toolbar" id="rte-toolbar" role="toolbar" aria-label="Text formatting">
+        <button type="button" class="rte-btn" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button type="button" class="rte-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button type="button" class="rte-btn" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+        <button type="button" class="rte-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+        <span class="rte-sep"></span>
+        <select class="rte-select" id="rte-size" title="Text size">
+          <option value="">Size</option>
+          <option value="2">Small</option>
+          <option value="3">Normal</option>
+          <option value="5">Large</option>
+          <option value="6">Huge</option>
+        </select>
+        <span class="rte-sep"></span>
+        <button type="button" class="rte-swatch" data-color="#ffffff" style="background:#ffffff;" title="White (default)"></button>
+        <button type="button" class="rte-swatch" data-color="#ff5a5a" style="background:#ff5a5a;" title="Red"></button>
+        <button type="button" class="rte-swatch" data-color="#ffd54a" style="background:#ffd54a;" title="Yellow"></button>
+        <button type="button" class="rte-swatch" data-color="#4ade80" style="background:#4ade80;" title="Green"></button>
+        <button type="button" class="rte-swatch" data-color="#60a5fa" style="background:#60a5fa;" title="Blue"></button>
+        <span class="rte-sep"></span>
+        <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
+        <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+        <span class="rte-sep"></span>
+        <button type="button" class="rte-btn" data-action="link" title="Add or edit link (Ctrl+K)">🔗 Link</button>
+        <button type="button" class="rte-btn" data-cmd="unlink" title="Remove link">Unlink</button>
+        <button type="button" class="rte-btn" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+      </div>
+      <div id="ann-text" class="rte-editor rich" contenteditable="true" role="textbox" aria-multiline="true"
+           aria-labelledby="ann-text-label" data-placeholder="Type your announcement here..."></div>
+    </div>
+    <p class="rte-hint">Highlight text, then use the toolbar. Pasted text keeps bold, italics, and links but drops outside colors and sizes.</p>
+
     <div style="margin-bottom:14px;">
-      <label>Link URL <span style="font-weight:500;text-transform:none;font-size:0.75rem;">(optional)</span></label>
+      <label>Link Button URL <span style="font-weight:500;text-transform:none;font-size:0.75rem;">(optional)</span></label>
       <input type="text" id="ann-url" placeholder="https://...">
       
       <label style="margin-top:-8px;">Link Button Text <span style="font-weight:500;text-transform:none;font-size:0.75rem;">(optional — defaults to "Click Here")</span></label>
@@ -447,6 +579,247 @@
     const loadingScreen = document.getElementById('loading');
     const signinError = document.getElementById('signin-error');
 
+    function showAlert(msg) {
+      const el = document.getElementById('alert');
+      el.textContent = msg;
+      el.style.display = 'block';
+      clearTimeout(window._alertTimer);
+      window._alertTimer = setTimeout(() => el.style.display = 'none', 3000);
+    }
+
+    // =====================================================================
+    //  HTML safety helpers
+    //  Announcements are now stored as HTML, so everything is run through an
+    //  allowlist sanitizer before it's saved AND before it's displayed.
+    // =====================================================================
+    function escapeHTML(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    function safeUrl(u) {
+      if (!u) return null;
+      try {
+        const parsed = new URL(u, location.href);
+        return ['http:', 'https:', 'mailto:'].includes(parsed.protocol) ? parsed.href : null;
+      } catch {
+        return null;
+      }
+    }
+
+    const DROP_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'TEMPLATE', 'NOSCRIPT',
+      'META', 'LINK', 'TITLE', 'HEAD', 'SVG', 'MATH', 'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'IMG', 'VIDEO', 'AUDIO']);
+    const KEEP_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'A', 'BR', 'P', 'DIV', 'SPAN', 'UL', 'OL', 'LI']);
+    const STYLE_PROPS = ['color', 'background-color', 'font-size', 'font-weight', 'font-style', 'text-decoration', 'text-decoration-line'];
+    const PASTE_DROP_PROPS = new Set(['color', 'background-color', 'font-size']);
+
+    function cleanAttributes(el, opts) {
+      const tag = el.tagName.toUpperCase();
+      const styleText = el.getAttribute('style');
+      const href = el.getAttribute('href');
+      for (const attr of Array.from(el.attributes)) el.removeAttribute(attr.name);
+
+      if (tag === 'A') {
+        const url = safeUrl(href);
+        if (url) {
+          el.setAttribute('href', url);
+          el.setAttribute('target', '_blank');
+          el.setAttribute('rel', 'noopener noreferrer');
+        }
+      }
+
+      if (styleText) {
+        const tmp = document.createElement('span');
+        tmp.setAttribute('style', styleText);
+        const parts = [];
+        for (const prop of STYLE_PROPS) {
+          if (opts.paste && PASTE_DROP_PROPS.has(prop)) continue;
+          const val = tmp.style.getPropertyValue(prop);
+          if (val && !/url\(|expression|javascript:/i.test(val)) parts.push(`${prop}: ${val}`);
+        }
+        if (parts.length) el.setAttribute('style', parts.join('; '));
+      }
+    }
+
+    function cleanChildren(parent, opts) {
+      for (const child of Array.from(parent.childNodes)) {
+        if (child.nodeType === Node.TEXT_NODE) continue;
+        if (child.nodeType !== Node.ELEMENT_NODE) { child.remove(); continue; }
+
+        let el = child;
+        const tag = el.tagName.toUpperCase();
+
+        if (DROP_TAGS.has(tag)) { el.remove(); continue; }
+
+        if (tag === 'FONT') {
+          // Convert legacy <font color> into a styled span
+          const span = document.createElement('span');
+          const color = el.getAttribute('color');
+          if (color) span.setAttribute('style', 'color:' + color);
+          span.append(...el.childNodes);
+          el.replaceWith(span);
+          el = span;
+        } else if (!KEEP_TAGS.has(tag)) {
+          // Unknown tag: keep its (cleaned) contents, drop the tag itself
+          cleanChildren(el, opts);
+          el.replaceWith(...el.childNodes);
+          continue;
+        }
+
+        cleanAttributes(el, opts);
+        cleanChildren(el, opts);
+      }
+    }
+
+    function sanitizeHTML(html, opts = {}) {
+      const tpl = document.createElement('template');
+      tpl.innerHTML = html;
+      cleanChildren(tpl.content, opts);
+      return tpl.innerHTML.trim();
+    }
+
+    // Older announcements were plain text; keep them displaying correctly.
+    function toDisplayHTML(text) {
+      if (!text) return '';
+      return /<[a-z][\s\S]*>/i.test(text)
+        ? sanitizeHTML(text)
+        : escapeHTML(text).replace(/\n/g, '<br>');
+    }
+
+    // =====================================================================
+    //  Rich text editor
+    // =====================================================================
+    const editor = document.getElementById('ann-text');
+    const toolbar = document.getElementById('rte-toolbar');
+    const sizeSelect = document.getElementById('rte-size');
+    let savedRange = null;
+
+    function saveSelection() {
+      const sel = window.getSelection();
+      if (sel.rangeCount && editor.contains(sel.anchorNode)) {
+        savedRange = sel.getRangeAt(0).cloneRange();
+      }
+    }
+
+    function restoreSelection() {
+      editor.focus();
+      if (savedRange) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+      }
+    }
+
+    function updateToolbarState() {
+      const inEditor = editor.contains(window.getSelection().anchorNode);
+      toolbar.querySelectorAll('[data-cmd]').forEach(btn => {
+        const cmd = btn.dataset.cmd;
+        if (cmd === 'removeFormat' || cmd === 'unlink') return;
+        let on = false;
+        try { on = document.queryCommandState(cmd); } catch { /* unsupported */ }
+        btn.classList.toggle('active', inEditor && on);
+      });
+    }
+
+    function exec(cmd, value = null) {
+      restoreSelection();
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand(cmd, false, value);
+      saveSelection();
+      updateToolbarState();
+    }
+
+    function linkAtSelection() {
+      const node = window.getSelection().anchorNode;
+      const el = node && (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement);
+      const a = el && el.closest('a');
+      return a && editor.contains(a) ? a : null;
+    }
+
+    function insertLink() {
+      restoreSelection();
+      const existing = linkAtSelection();
+      let input = prompt('Link address:', existing ? existing.getAttribute('href') : 'https://');
+      if (input === null) return;
+      input = input.trim();
+      if (!input || input === 'https://') return;
+
+      if (!/^(https?:|mailto:)/i.test(input)) {
+        input = (input.includes('@') && !input.includes('/') ? 'mailto:' : 'https://') + input;
+      }
+      const url = safeUrl(input);
+      if (!url) { showAlert('That link address isn’t valid.'); return; }
+
+      restoreSelection();
+      if (existing) {
+        existing.setAttribute('href', url);
+      } else if (window.getSelection().isCollapsed) {
+        // Nothing highlighted: insert the address itself as the link text
+        const label = input.replace(/^mailto:/i, '');
+        document.execCommand('insertHTML', false,
+          `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(label)}</a>&nbsp;`);
+      } else {
+        document.execCommand('createLink', false, url);
+      }
+      editor.querySelectorAll('a').forEach(a => {
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+      });
+      saveSelection();
+    }
+
+    // Keep the text selection when toolbar buttons are clicked
+    toolbar.addEventListener('mousedown', e => {
+      if (e.target.closest('button')) e.preventDefault();
+    });
+
+    toolbar.addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.cmd) exec(btn.dataset.cmd);
+      else if (btn.dataset.color) exec('foreColor', btn.dataset.color);
+      else if (btn.dataset.action === 'link') insertLink();
+    });
+
+    sizeSelect.addEventListener('change', () => {
+      if (sizeSelect.value) exec('fontSize', sizeSelect.value);
+      sizeSelect.value = '';
+    });
+
+    document.addEventListener('selectionchange', () => {
+      if (editor.contains(window.getSelection().anchorNode)) {
+        saveSelection();
+        updateToolbarState();
+      }
+    });
+
+    editor.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        saveSelection();
+        insertLink();
+      }
+    });
+
+    editor.addEventListener('input', () => {
+      if (editor.innerHTML === '<br>') editor.innerHTML = ''; // bring the placeholder back
+    });
+
+    // Clean up pasted content (Google Docs, websites, etc.)
+    editor.addEventListener('paste', e => {
+      e.preventDefault();
+      const html = e.clipboardData.getData('text/html');
+      const text = e.clipboardData.getData('text/plain');
+      const clean = html
+        ? sanitizeHTML(html, { paste: true })
+        : escapeHTML(text).replace(/\n/g, '<br>');
+      document.execCommand('insertHTML', false, clean);
+    });
+
+    // =====================================================================
+    //  Auth
+    // =====================================================================
     function showSigninError(msg) {
       signinError.textContent = msg;
       signinError.style.display = 'block';
@@ -523,11 +896,21 @@
         loadingScreen.style.display = 'none';
       });
 
+      function resetForm() {
+        editor.innerHTML = '';
+        savedRange = null;
+        document.getElementById('ann-url').value = '';
+        document.getElementById('ann-url-label').value = '';
+        document.getElementById('ann-start-date').value = getDateStringOffset(0);
+        document.getElementById('ann-end-date').value = getDateStringOffset(7);
+        updateToolbarState();
+      }
+
       // --- Save ---
       window.saveAnnouncement = async function() {
         const startDate = document.getElementById('ann-start-date').value;
         const endDate = document.getElementById('ann-end-date').value;
-        const text = document.getElementById('ann-text').value.trim();
+        const text = sanitizeHTML(editor.innerHTML);
         const url = document.getElementById('ann-url').value.trim();
         const urlLabel = document.getElementById('ann-url-label').value.trim() || 'Click Here';
 
@@ -539,7 +922,7 @@
           showAlert('Error: End Date cannot be earlier than the Start Date!');
           return;
         }
-        if (!text) {
+        if (!editor.textContent.trim()) {
           showAlert('Please enter announcement text.');
           return;
         }
@@ -562,13 +945,7 @@
         } else {
           await push(ref(db, 'announcements'), entry);
           showAlert(startDate > todayStr ? `Announcement scheduled for ${startDate}!` : 'Announcement added!');
-          
-          // Reset Form to baseline standards
-          document.getElementById('ann-text').value = '';
-          document.getElementById('ann-url').value = '';
-          document.getElementById('ann-url-label').value = '';
-          document.getElementById('ann-start-date').value = getDateStringOffset(0);
-          document.getElementById('ann-end-date').value = getDateStringOffset(7);
+          resetForm();
         }
       };
 
@@ -582,7 +959,8 @@
         document.getElementById('ann-start-date').value = ann.startDate || ann.date || todayStr;
         document.getElementById('ann-end-date').value = ann.endDate || ann.startDate || ann.date || todayStr;
         
-        document.getElementById('ann-text').value = ann.text;
+        editor.innerHTML = toDisplayHTML(ann.text);
+        savedRange = null;
         document.getElementById('ann-url').value = ann.url || '';
         document.getElementById('ann-url-label').value = ann.urlLabel || '';
         document.getElementById('form-title').textContent = 'Edit Announcement';
@@ -597,11 +975,7 @@
       // --- Cancel edit ---
       window.cancelEdit = function() {
         editingKey = null;
-        document.getElementById('ann-start-date').value = getDateStringOffset(0);
-        document.getElementById('ann-end-date').value = getDateStringOffset(7);
-        document.getElementById('ann-text').value = '';
-        document.getElementById('ann-url').value = '';
-        document.getElementById('ann-url-label').value = '';
+        resetForm();
         document.getElementById('form-title').textContent = 'Add New Announcement';
         document.getElementById('cancel-btn').style.display = 'none';
         document.querySelectorAll('.announcement-item').forEach(el => el.classList.remove('editing'));
@@ -613,6 +987,12 @@
         await remove(ref(db, `announcements/${key}`));
         showAlert('Announcement deleted.');
       };
+
+      function buttonLinkHtml(ann, cls) {
+        const url = safeUrl(ann.url);
+        if (!url) return '';
+        return `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" class="${cls}">${escapeHTML(ann.urlLabel || 'Click Here')}</a>`;
+      }
 
       // --- Render list ---
       function renderList() {
@@ -686,8 +1066,6 @@
           div.style.backgroundColor = "#f9f9f9";
         }
 
-        const linkHtml = ann.url ? `<a href="${ann.url}" target="_blank" class="ann-link">${ann.urlLabel || 'Click Here'}</a>` : '';
-        
         let badgeHtml = '';
         if (status === 'scheduled') badgeHtml = '<span class="badge-scheduled">Scheduled</span>';
         if (status === 'expired') badgeHtml = '<span class="badge-scheduled" style="background:#555;">Expired</span>';
@@ -695,8 +1073,8 @@
         div.innerHTML = `
           <div>
             <div class="ann-date">${dStart} to ${dEnd} ${badgeHtml}</div>
-            <div class="ann-text">${ann.text}</div>
-            ${linkHtml}
+            <div class="ann-text rich">${toDisplayHTML(ann.text)}</div>
+            ${buttonLinkHtml(ann, 'ann-link')}
           </div>
           <div class="ann-actions">
             <button class="btn btn-edit" onclick="editAnnouncement('${ann._key}')">Edit</button>
@@ -729,22 +1107,12 @@
           
           const div = document.createElement('div');
           div.className = 'preview-item';
-          const linkHtml = ann.url ? `<a href="${ann.url}" target="_blank" class="preview-link">${ann.urlLabel || 'Click Here'}</a>` : '';
-          
           div.innerHTML = `
             <div class="preview-date">${dateStr}</div>
-            <div class="preview-text">${ann.text}</div>
-            ${linkHtml}`;
+            <div class="preview-text rich">${toDisplayHTML(ann.text)}</div>
+            ${buttonLinkHtml(ann, 'preview-link')}`;
           container.appendChild(div);
         });
-      }
-
-      function showAlert(msg) {
-        const el = document.getElementById('alert');
-        el.textContent = msg;
-        el.style.display = 'block';
-        clearTimeout(window._alertTimer);
-        window._alertTimer = setTimeout(() => el.style.display = 'none', 3000);
       }
     } // end startApp
   </script>
