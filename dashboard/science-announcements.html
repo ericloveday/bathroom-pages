@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Announcement Manager</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Comic+Neue:wght@400;700&family=Bangers&family=Permanent+Marker&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0a0a0a;
       --card: #ffffff;
-      --red: #cc0000;
-      --red-dark: #990000;
+      --red: #ce1f07;
+      --red-dark: #a01805;
       --text: #111111;
       --muted: #666666;
       --radius: 12px;
@@ -186,16 +186,18 @@
       cursor: pointer;
     }
     .rte-swatch {
-      width: 22px;
-      height: 22px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
-      border: 2px solid #fff;
-      box-shadow: 0 0 0 1px #bbb;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 2px #333;
       cursor: pointer;
       padding: 0;
-      margin: 0 1px;
+      margin: 0 2px;
+      transition: transform 0.1s;
     }
-    .rte-swatch:hover { box-shadow: 0 0 0 2px #555; }
+    .rte-swatch:hover { transform: scale(1.15); }
+    #rte-font { max-width: 150px; }
     /* Dark editing surface so what you type matches how it looks on the site */
     .rte-editor {
       min-height: 110px;
@@ -332,7 +334,7 @@
       display: inline-block;
       margin-top: 8px;
       padding: 5px 12px;
-      background: #cc0000;
+      background: var(--red);
       color: white;
       border-radius: 6px;
       font-size: 0.72rem;
@@ -502,6 +504,16 @@
         <button type="button" class="rte-btn" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
         <button type="button" class="rte-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
         <span class="rte-sep"></span>
+        <select class="rte-select" id="rte-font" title="Font">
+          <option value="">Font</option>
+          <option value="Montserrat, sans-serif" style="font-family:Montserrat, sans-serif;">Montserrat (default)</option>
+          <option value="Verdana, Geneva, Tahoma, sans-serif" style="font-family:Verdana, Geneva, Tahoma, sans-serif;">Verdana</option>
+          <option value="'Comic Sans MS', 'Comic Neue', cursive" style="font-family:'Comic Sans MS', 'Comic Neue', cursive;">Comic Sans</option>
+          <option value="Bangers, Impact, sans-serif" style="font-family:Bangers, Impact, sans-serif;">Bangers</option>
+          <option value="'Permanent Marker', cursive" style="font-family:'Permanent Marker', cursive;">Permanent Marker</option>
+          <option value="Georgia, 'Times New Roman', serif" style="font-family:Georgia, 'Times New Roman', serif;">Georgia</option>
+          <option value="'Courier New', Courier, monospace" style="font-family:'Courier New', Courier, monospace;">Courier</option>
+        </select>
         <select class="rte-select" id="rte-size" title="Text size">
           <option value="">Size</option>
           <option value="2">Small</option>
@@ -511,10 +523,12 @@
         </select>
         <span class="rte-sep"></span>
         <button type="button" class="rte-swatch" data-color="#ffffff" style="background:#ffffff;" title="White (default)"></button>
-        <button type="button" class="rte-swatch" data-color="#ff5a5a" style="background:#ff5a5a;" title="Red"></button>
-        <button type="button" class="rte-swatch" data-color="#ffd54a" style="background:#ffd54a;" title="Yellow"></button>
-        <button type="button" class="rte-swatch" data-color="#4ade80" style="background:#4ade80;" title="Green"></button>
-        <button type="button" class="rte-swatch" data-color="#60a5fa" style="background:#60a5fa;" title="Blue"></button>
+        <button type="button" class="rte-swatch" data-color="#ce1f07" style="background:#ce1f07;" title="Red"></button>
+        <button type="button" class="rte-swatch" data-color="#ff6d00" style="background:#ff6d00;" title="Orange"></button>
+        <button type="button" class="rte-swatch" data-color="#ffd600" style="background:#ffd600;" title="Yellow"></button>
+        <button type="button" class="rte-swatch" data-color="#00c853" style="background:#00c853;" title="Green"></button>
+        <button type="button" class="rte-swatch" data-color="#2979ff" style="background:#2979ff;" title="Blue"></button>
+        <button type="button" class="rte-swatch" data-color="#aa00ff" style="background:#aa00ff;" title="Purple"></button>
         <span class="rte-sep"></span>
         <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
         <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
@@ -611,8 +625,8 @@
     const DROP_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'TEMPLATE', 'NOSCRIPT',
       'META', 'LINK', 'TITLE', 'HEAD', 'SVG', 'MATH', 'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'IMG', 'VIDEO', 'AUDIO']);
     const KEEP_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'A', 'BR', 'P', 'DIV', 'SPAN', 'UL', 'OL', 'LI']);
-    const STYLE_PROPS = ['color', 'background-color', 'font-size', 'font-weight', 'font-style', 'text-decoration', 'text-decoration-line'];
-    const PASTE_DROP_PROPS = new Set(['color', 'background-color', 'font-size']);
+    const STYLE_PROPS = ['color', 'background-color', 'font-size', 'font-family', 'font-weight', 'font-style', 'text-decoration', 'text-decoration-line'];
+    const PASTE_DROP_PROPS = new Set(['color', 'background-color', 'font-size', 'font-family']);
 
     function cleanAttributes(el, opts) {
       const tag = el.tagName.toUpperCase();
@@ -656,7 +670,11 @@
           // Convert legacy <font color> into a styled span
           const span = document.createElement('span');
           const color = el.getAttribute('color');
-          if (color) span.setAttribute('style', 'color:' + color);
+          const face = el.getAttribute('face');
+          const styles = [];
+          if (color) styles.push('color:' + color);
+          if (face) styles.push('font-family:' + face);
+          if (styles.length) span.setAttribute('style', styles.join(';'));
           span.append(...el.childNodes);
           el.replaceWith(span);
           el = span;
@@ -693,6 +711,7 @@
     const editor = document.getElementById('ann-text');
     const toolbar = document.getElementById('rte-toolbar');
     const sizeSelect = document.getElementById('rte-size');
+    const fontSelect = document.getElementById('rte-font');
     let savedRange = null;
 
     function saveSelection() {
@@ -780,6 +799,11 @@
       if (btn.dataset.cmd) exec(btn.dataset.cmd);
       else if (btn.dataset.color) exec('foreColor', btn.dataset.color);
       else if (btn.dataset.action === 'link') insertLink();
+    });
+
+    fontSelect.addEventListener('change', () => {
+      if (fontSelect.value) exec('fontName', fontSelect.value);
+      fontSelect.value = '';
     });
 
     sizeSelect.addEventListener('change', () => {
