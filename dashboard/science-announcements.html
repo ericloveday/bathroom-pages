@@ -90,6 +90,21 @@
       letter-spacing: 0.5px;
       margin-bottom: 18px;
     }
+    .card h2 .h2-note {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #888;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .group-header {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 16px 0 10px;
+    }
+    .group-header:first-child { margin-top: 0; }
     label {
       display: block;
       font-size: 0.75rem;
@@ -483,7 +498,8 @@
     <button id="signout-btn" onclick="doSignOut()">Sign Out</button>
   </header>
 
-  <div class="card">
+  <!-- 1. Add / Edit form -->
+  <div class="card" id="form-card">
     <h2 id="form-title">Add New Announcement</h2>
     <div class="form-row">
       <div>
@@ -556,16 +572,24 @@
     </div>
   </div>
 
+  <!-- 2. Current (live) announcements -->
   <div class="card">
-    <h2>All Announcements</h2>
-    <div id="announcement-list"><p class="empty-msg">No announcements yet.</p></div>
+    <h2 style="color:#22c55e;">✓ Current Announcements <span class="h2-note">(live on your site now)</span></h2>
+    <div id="live-list"><p class="empty-msg">No live announcements right now.</p></div>
   </div>
 
+  <!-- 3. Live preview -->
   <div class="card" style="border-color:#333;">
-    <h2 style="color:#888;">Live Preview <span style="font-size:0.75rem; font-weight:500; color:#888; text-transform:none;">(how it looks on your site)</span></h2>
+    <h2 style="color:#888;">Live Preview <span class="h2-note">(how it looks on your site)</span></h2>
     <div class="preview-box" id="preview-box">
       <p class="preview-empty">No active announcements to preview.</p>
     </div>
+  </div>
+
+  <!-- 4. Scheduled & expired -->
+  <div class="card" style="border-color:#ccc;">
+    <h2 style="color:#888;">Scheduled &amp; Expired</h2>
+    <div id="other-list"><p class="empty-msg">No scheduled or expired announcements.</p></div>
   </div>
   </div><!-- /#app-content -->
 
@@ -593,6 +617,11 @@
     const loadingScreen = document.getElementById('loading');
     const signinError = document.getElementById('signin-error');
 
+    // Local date as YYYY-MM-DD (avoids the UTC "tomorrow after 8 PM" bug)
+    function localDateStr(d = new Date()) {
+      return d.toLocaleDateString('en-CA');
+    }
+
     function showAlert(msg) {
       const el = document.getElementById('alert');
       el.textContent = msg;
@@ -603,7 +632,7 @@
 
     // =====================================================================
     //  HTML safety helpers
-    //  Announcements are now stored as HTML, so everything is run through an
+    //  Announcements are stored as HTML, so everything is run through an
     //  allowlist sanitizer before it's saved AND before it's displayed.
     // =====================================================================
     function escapeHTML(s) {
@@ -893,11 +922,11 @@
       let announcements = [];
       let editingKey = null;
 
-      // Helper function to return a future string date offset by days
+      // Date string offset by days, in local time
       function getDateStringOffset(daysOffset = 0) {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + daysOffset);
-        return targetDate.toISOString().split('T')[0];
+        return localDateStr(targetDate);
       }
 
       // Set defaults: Start = Today, End = 3 Days from Now
@@ -989,7 +1018,7 @@
         document.getElementById('ann-url-label').value = ann.urlLabel || '';
         document.getElementById('form-title').textContent = 'Edit Announcement';
         document.getElementById('cancel-btn').style.display = 'inline-block';
-        document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
         
         document.querySelectorAll('.announcement-item').forEach(el => el.classList.remove('editing'));
         const el = document.getElementById(`ann-${key}`);
@@ -1018,15 +1047,19 @@
         return `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" class="${cls}">${escapeHTML(ann.urlLabel || 'Click Here')}</a>`;
       }
 
-      // --- Render list ---
+      function addGroupHeader(container, text, color) {
+        const header = document.createElement('p');
+        header.className = 'group-header';
+        header.style.color = color;
+        header.textContent = text;
+        container.appendChild(header);
+      }
+
+      // --- Render lists (Current card + Scheduled & Expired card) ---
       function renderList() {
-        const container = document.getElementById('announcement-list');
-        if (!announcements.length) {
-          container.innerHTML = '<p class="empty-msg">No announcements yet.</p>';
-          return;
-        }
-        container.innerHTML = '';
-        const today = new Date().toISOString().split('T')[0];
+        const liveContainer = document.getElementById('live-list');
+        const otherContainer = document.getElementById('other-list');
+        const today = localDateStr();
 
         const scheduled = [];
         const live = [];
@@ -1038,39 +1071,37 @@
 
           if (today < start) {
             scheduled.push(a);
-          } else if (today >= start && today <= end) {
+          } else if (today <= end) {
             live.push(a);
           } else {
             expired.push(a);
           }
         });
 
-        // 1. Scheduled Header & Content
-        if (scheduled.length) {
-          const header = document.createElement('p');
-          header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#e6a817;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;';
-          header.textContent = '⏰ Scheduled';
-          container.appendChild(header);
-          scheduled.sort((a,b) => (a.startDate||a.date).localeCompare(b.startDate||b.date))
-                   .forEach(ann => renderAnnItem(ann, container, 'scheduled'));
-        }
-
-        // 2. Live Header & Content
+        // Current (live)
+        liveContainer.innerHTML = '';
         if (live.length) {
-          const header = document.createElement('p');
-          header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px;';
-          header.textContent = '✓ Live';
-          container.appendChild(header);
-          live.forEach(ann => renderAnnItem(ann, container, 'live'));
+          live.forEach(ann => renderAnnItem(ann, liveContainer, 'live'));
+        } else {
+          liveContainer.innerHTML = '<p class="empty-msg">No live announcements right now.</p>';
         }
 
-        // 3. Expired Header & Content
+        // Scheduled & Expired
+        otherContainer.innerHTML = '';
+        if (!scheduled.length && !expired.length) {
+          otherContainer.innerHTML = '<p class="empty-msg">No scheduled or expired announcements.</p>';
+          return;
+        }
+
+        if (scheduled.length) {
+          addGroupHeader(otherContainer, '⏰ Scheduled', '#e6a817');
+          scheduled.sort((a, b) => (a.startDate || a.date).localeCompare(b.startDate || b.date))
+                   .forEach(ann => renderAnnItem(ann, otherContainer, 'scheduled'));
+        }
+
         if (expired.length) {
-          const header = document.createElement('p');
-          header.style.cssText = 'font-size:0.72rem;font-weight:700;color:#666666;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px;';
-          header.textContent = '⌛ Expired (Hidden from Website)';
-          container.appendChild(header);
-          expired.forEach(ann => renderAnnItem(ann, container, 'expired'));
+          addGroupHeader(otherContainer, '⌛ Expired (Hidden from Website)', '#666666');
+          expired.forEach(ann => renderAnnItem(ann, otherContainer, 'expired'));
         }
       }
 
@@ -1084,6 +1115,7 @@
         const div = document.createElement('div');
         div.className = `announcement-item${status === 'scheduled' ? ' scheduled' : ''}`;
         div.id = `ann-${ann._key}`;
+        if (ann._key === editingKey) div.classList.add('editing');
         
         if (status === 'expired') {
           div.style.opacity = "0.65";
@@ -1110,7 +1142,7 @@
       // --- Render preview ---
       function renderPreview() {
         const container = document.getElementById('preview-box');
-        const today = new Date().toISOString().split('T')[0];
+        const today = localDateStr();
         
         const liveItems = announcements.filter(a => {
           const start = a.startDate || a.date;
