@@ -61,7 +61,7 @@
     h1 {
       font-size: 2rem;
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text);
       text-transform: uppercase;
     }
     header p {
@@ -70,12 +70,12 @@
       margin-top: 4px;
     }
     #signout-btn {
-      font-size: 0.72rem; font-weight: 700; color: #ccc; background: transparent;
-      border: 2px solid #333; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+      font-size: 0.72rem; font-weight: 700; color: #555; background: transparent;
+      border: 2px solid #ddd; padding: 8px 14px; border-radius: 8px; cursor: pointer;
       font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;
       white-space: nowrap; align-self: flex-start;
     }
-    #signout-btn:hover { color: #fff; border-color: var(--red); }
+    #signout-btn:hover { color: var(--red); border-color: var(--red); }
     .card {
       background: var(--card);
       border-radius: var(--radius);
@@ -198,14 +198,14 @@
     }
     .rte-swatch:hover { transform: scale(1.15); }
     #rte-font { max-width: 150px; }
-    /* Dark editing surface so what you type matches how it looks on the site */
+    /* White editing surface */
     .rte-editor {
       min-height: 110px;
       max-height: 320px;
       overflow-y: auto;
       padding: 12px 14px;
-      background: #000000;
-      color: #ffffff;
+      background: #ffffff;
+      color: #111111;
       font-size: 0.92rem;
       line-height: 1.5;
       outline: none;
@@ -213,7 +213,7 @@
     }
     .rte-editor:empty::before {
       content: attr(data-placeholder);
-      color: #777;
+      color: #999;
       pointer-events: none;
     }
     .rte-hint {
@@ -225,7 +225,7 @@
     /* Shared formatting for rendered announcement HTML (the * reset strips list padding) */
     .rich ul, .rich ol { padding-left: 1.4em; margin: 4px 0; }
     .rich a { text-decoration: underline; }
-    .rte-editor a, .preview-text a { color: #ff6b6b; }
+    .rte-editor a, .preview-text a { color: var(--red); }
     .ann-text a { color: var(--red); }
 
     .btn {
@@ -437,7 +437,7 @@
     }
     .preview-text {
       font-size: 0.88rem;
-      color: #ffffff;
+      color: #111111;
       line-height: 1.5;
     }
     .preview-empty {
