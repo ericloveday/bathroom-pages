@@ -696,8 +696,8 @@
     };
 
     // ---- Keep these in sync with the site widget ----
-    const MAX_ANNOUNCEMENTS = 5;
-    const MAX_ASSIGNMENTS = 8;
+    const MAX_ANNOUNCEMENTS = Infinity;   // Infinity = show every live announcement
+    const MAX_ASSIGNMENTS = 3;           // only the next 3 due
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
