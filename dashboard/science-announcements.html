@@ -827,6 +827,10 @@
     const startOf = a => a.startDate || a.date;
     const endOf = a => a.dueDate || a.endDate || startOf(a);
 
+    // Soonest due first; assignments with no due date go last
+    const byDue = (a, b) =>
+      (!!a.noDueDate - !!b.noDueDate) || endOf(a).localeCompare(endOf(b));
+
     let currentType = 'announcement';
 
     const TYPE_UI = {
@@ -1204,7 +1208,7 @@
         // Live: announcements first, then assignments by due date
         liveContainer.innerHTML = '';
         const liveAnn = groups.live.filter(a => !isAssignment(a));
-        const liveAsg = groups.live.filter(isAssignment).sort((a, b) => endOf(a).localeCompare(endOf(b)));
+        const liveAsg = groups.live.filter(isAssignment).sort(byDue);
 
         if (!liveAnn.length && !liveAsg.length) {
           liveContainer.innerHTML = '<p class="empty-msg">Nothing live right now.</p>';
@@ -1256,11 +1260,12 @@
         }
 
         let badgeHtml = asg ? '<span class="badge-scheduled badge-type">Assignment</span>' : '';
+        if (ann.source === 'classroom') badgeHtml += '<span class="badge-scheduled" style="background:#1e8e3e;">From Classroom</span>';
         if (status === 'scheduled') badgeHtml += '<span class="badge-scheduled">Scheduled</span>';
         if (status === 'expired') badgeHtml += '<span class="badge-scheduled" style="background:#555;">Expired</span>';
 
         const dateLine = asg
-          ? `Due ${longDate(endOf(ann))}${status === 'scheduled' ? ` · shows ${longDate(startOf(ann))}` : ''}`
+          ? `${ann.noDueDate ? `No due date · showing until ${longDate(endOf(ann))}` : `Due ${longDate(endOf(ann))}`}${status === 'scheduled' ? ` · shows ${longDate(startOf(ann))}` : ''}`
           : `${longDate(startOf(ann))} to ${longDate(endOf(ann))}`;
 
         div.innerHTML = `
@@ -1293,7 +1298,7 @@
 
         const liveAnn = live.filter(a => !isAssignment(a)).slice(0, MAX_ANNOUNCEMENTS);
         const liveAsg = live.filter(isAssignment)
-          .sort((a, b) => endOf(a).localeCompare(endOf(b)))
+          .sort(byDue)
           .slice(0, MAX_ASSIGNMENTS);
 
         container.innerHTML = '';
@@ -1327,7 +1332,7 @@
           container.insertAdjacentHTML('beforeend', '<p class="preview-empty">No assignments due right now.</p>');
         }
         liveAsg.forEach(asg => {
-          const due = dueLabel(endOf(asg));
+          const due = asg.noDueDate ? { text: 'No Due Date', cls: '' } : dueLabel(endOf(asg));
           const div = document.createElement('div');
           div.className = `preview-asg ${due.cls}`;
           div.innerHTML = `
