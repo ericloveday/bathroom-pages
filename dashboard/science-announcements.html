@@ -14,6 +14,7 @@
       --text: #111111;
       --muted: #666666;
       --radius: 12px;
+      --asg: #2b5fb8;
     }
     * {
       box-sizing: border-box;
@@ -139,6 +140,37 @@
       .form-row { grid-template-columns: 1fr 1fr; }
     }
 
+    /* ---------------- Type toggle ---------------- */
+    .type-toggle {
+      display: inline-flex;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .type-btn {
+      padding: 9px 18px;
+      border: none;
+      background: #fff;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #555;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .type-btn + .type-btn { border-left: 2px solid #ddd; }
+    .type-btn:hover { background: #f5f5f5; }
+    .type-btn:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; }
+    .type-btn[aria-pressed="true"][data-type="announcement"] { background: var(--red); color: #fff; }
+    .type-btn[aria-pressed="true"][data-type="assignment"] { background: var(--asg); color: #fff; }
+    .type-hint {
+      font-size: 0.75rem;
+      color: #888;
+      margin: -10px 0 16px;
+    }
+
     /* ---------------- Rich Text Editor ---------------- */
     .rte {
       border: 2px solid #ddd;
@@ -213,7 +245,6 @@
     }
     .rte-swatch:hover { transform: scale(1.15); }
     #rte-font { max-width: 150px; }
-    /* White editing surface */
     .rte-editor {
       min-height: 110px;
       max-height: 320px;
@@ -237,7 +268,6 @@
       margin: -8px 0 14px;
     }
 
-    /* Shared formatting for rendered announcement HTML (the * reset strips list padding) */
     .rich ul, .rich ol { padding-left: 1.4em; margin: 4px 0; }
     .rich a { text-decoration: underline; }
     .rte-editor a, .preview-text a { color: var(--red); }
@@ -307,6 +337,9 @@
     .announcement-item:hover {
       border-color: #ccc;
     }
+    .announcement-item.is-assignment {
+      border-left: 4px solid var(--asg);
+    }
     .announcement-item.editing {
       border-color: var(--red);
       background: #ffffff;
@@ -318,7 +351,6 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
-
     }
     .ann-text {
       font-size: 0.92rem;
@@ -371,6 +403,9 @@
       vertical-align: middle;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+    }
+    .badge-type {
+      background: var(--asg);
     }
     .announcement-item.scheduled {
       border-color: #e6a817;
@@ -433,6 +468,19 @@
       padding: 20px;
       margin-top: 8px;
     }
+    .preview-section-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #fff;
+      background: var(--red);
+      border-radius: 4px;
+      text-align: center;
+      padding: 5px 0;
+      margin: 0 0 12px;
+    }
+    .preview-section-title.second { margin-top: 20px; }
     .preview-item {
       border-left: 3px solid var(--red);
       padding: 10px 14px;
@@ -463,6 +511,37 @@
       text-align: center;
       padding: 12px 0;
     }
+    /* Assignment rows in preview mirror the site widget */
+    .preview-asg {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border: 1px solid #e6e6e6;
+      border-left: 4px solid #bbb;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .preview-asg.due-today { border-left-color: var(--red); }
+    .preview-asg.due-tomorrow { border-left-color: #e8705f; }
+    .preview-asg-due {
+      flex-shrink: 0;
+      min-width: 80px;
+      text-align: center;
+      font-size: 0.64rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      line-height: 1.3;
+      padding: 4px 8px;
+      border-radius: 20px;
+      background: #f0f0f0;
+      color: #444;
+    }
+    .due-today .preview-asg-due { background: var(--red); color: #fff; }
+    .due-tomorrow .preview-asg-due { background: #fde8e5; color: var(--red-dark); }
+    .preview-asg .preview-text { flex: 1; min-width: 0; }
+    .preview-asg .preview-link { margin-top: 0; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -494,7 +573,7 @@
   <header>
     <div>
       <h1>Science Announcement Manager</h1>
-      <p>Announcements update live on your Google Site</p>
+      <p>Announcements and assignments update live on your Google Site</p>
     </div>
     <button id="signout-btn" onclick="doSignOut()">Sign Out</button>
   </header>
@@ -502,13 +581,20 @@
   <!-- 1. Add / Edit form -->
   <div class="card" id="form-card">
     <h2 id="form-title">Add New Announcement</h2>
+
+    <div class="type-toggle" role="group" aria-label="Item type">
+      <button type="button" class="type-btn" data-type="announcement" aria-pressed="true">📢 Announcement</button>
+      <button type="button" class="type-btn" data-type="assignment" aria-pressed="false">📝 Assignment</button>
+    </div>
+    <p class="type-hint" id="type-hint">Shows in the rotating Announcements box.</p>
+
     <div class="form-row">
       <div>
-        <label>Start Date</label>
+        <label for="ann-start-date" id="start-label">Start Date</label>
         <input type="date" id="ann-start-date">
       </div>
       <div>
-        <label>End Date</label>
+        <label for="ann-end-date" id="end-label">End Date</label>
         <input type="date" id="ann-end-date">
       </div>
     </div>
@@ -560,37 +646,37 @@
     <p class="rte-hint">Highlight text, then use the toolbar. Pasted text keeps bold, italics, and links but drops outside colors and sizes.</p>
 
     <div style="margin-bottom:14px;">
-      <label>Link Button URL <span style="font-weight:500;text-transform:none;font-size:0.75rem;">(optional)</span></label>
+      <label for="ann-url">Link Button URL <span style="font-weight:500;text-transform:none;font-size:0.75rem;">(optional)</span></label>
       <input type="text" id="ann-url" placeholder="https://...">
-      
-      <label style="margin-top:-8px;">Link Button Text <span style="font-weight:500;text-transform:none;font-size:0.75rem;">(optional — defaults to "Click Here")</span></label>
+
+      <label for="ann-url-label" style="margin-top:-8px;">Link Button Text <span id="url-label-note" style="font-weight:500;text-transform:none;font-size:0.75rem;">(optional — defaults to "Click Here")</span></label>
       <input type="text" id="ann-url-label" placeholder="e.g. Fill Out the Form, Sign Up Here...">
     </div>
 
     <div style="display:flex; gap:10px;">
-      <button class="btn" onclick="saveAnnouncement()">Save Announcement</button>
+      <button class="btn" id="save-btn" onclick="saveAnnouncement()">Save Announcement</button>
       <button class="btn btn-outline" id="cancel-btn" onclick="cancelEdit()" style="display:none;">Cancel</button>
     </div>
   </div>
 
-  <!-- 2. Current (live) announcements -->
+  <!-- 2. Current (live) items -->
   <div class="card">
-    <h2 style="color:#22c55e;">✓ Current Announcements <span class="h2-note">(live on your site now)</span></h2>
-    <div id="live-list"><p class="empty-msg">No live announcements right now.</p></div>
+    <h2 style="color:#22c55e;">✓ Live Now <span class="h2-note">(on your site now)</span></h2>
+    <div id="live-list"><p class="empty-msg">Nothing live right now.</p></div>
   </div>
 
   <!-- 3. Live preview -->
   <div class="card" style="border-color:#333;">
     <h2 style="color:#888;">Live Preview <span class="h2-note">(how it looks on your site)</span></h2>
     <div class="preview-box" id="preview-box">
-      <p class="preview-empty">No active announcements to preview.</p>
+      <p class="preview-empty">Nothing active to preview.</p>
     </div>
   </div>
 
   <!-- 4. Scheduled & expired -->
   <div class="card" style="border-color:#ccc;">
     <h2 style="color:#888;">Scheduled &amp; Expired</h2>
-    <div id="other-list"><p class="empty-msg">No scheduled or expired announcements.</p></div>
+    <div id="other-list"><p class="empty-msg">No scheduled or expired items.</p></div>
   </div>
   </div><!-- /#app-content -->
 
@@ -608,6 +694,10 @@
       messagingSenderId: "385219454253",
       appId: "1:385219454253:web:970acbfe28672f73c45fa4"
     };
+
+    // ---- Keep these in sync with the site widget ----
+    const MAX_ANNOUNCEMENTS = 5;
+    const MAX_ASSIGNMENTS = 8;
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
@@ -633,8 +723,6 @@
 
     // =====================================================================
     //  HTML safety helpers
-    //  Announcements are stored as HTML, so everything is run through an
-    //  allowlist sanitizer before it's saved AND before it's displayed.
     // =====================================================================
     function escapeHTML(s) {
       return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -697,7 +785,6 @@
         if (DROP_TAGS.has(tag)) { el.remove(); continue; }
 
         if (tag === 'FONT') {
-          // Convert legacy <font color> into a styled span
           const span = document.createElement('span');
           const color = el.getAttribute('color');
           const face = el.getAttribute('face');
@@ -709,7 +796,6 @@
           el.replaceWith(span);
           el = span;
         } else if (!KEEP_TAGS.has(tag)) {
-          // Unknown tag: keep its (cleaned) contents, drop the tag itself
           cleanChildren(el, opts);
           el.replaceWith(...el.childNodes);
           continue;
@@ -727,13 +813,64 @@
       return tpl.innerHTML.trim();
     }
 
-    // Older announcements were plain text; keep them displaying correctly.
     function toDisplayHTML(text) {
       if (!text) return '';
       return /<[a-z][\s\S]*>/i.test(text)
         ? sanitizeHTML(text)
         : escapeHTML(text).replace(/\n/g, '<br>');
     }
+
+    // =====================================================================
+    //  Item type helpers (items saved before this field count as announcements)
+    // =====================================================================
+    const isAssignment = a => a.type === 'assignment';
+    const startOf = a => a.startDate || a.date;
+    const endOf = a => a.dueDate || a.endDate || startOf(a);
+
+    let currentType = 'announcement';
+
+    const TYPE_UI = {
+      announcement: {
+        title: 'Announcement',
+        hint: 'Shows in the rotating Announcements box.',
+        startLabel: 'Start Date',
+        endLabel: 'End Date',
+        textLabel: 'Announcement Text',
+        placeholder: 'Type your announcement here...',
+        defaultLink: 'Click Here',
+        linkPlaceholder: 'e.g. Fill Out the Form, Sign Up Here...'
+      },
+      assignment: {
+        title: 'Assignment',
+        hint: 'Shows in the Assignments list, sorted by due date. Disappears the day after it’s due.',
+        startLabel: 'Show Starting',
+        endLabel: 'Due Date',
+        textLabel: 'Assignment Name / Details',
+        placeholder: 'e.g. Cell Organelle CER — Google Classroom',
+        defaultLink: 'Open',
+        linkPlaceholder: 'e.g. Open, Start Quiz, Classroom...'
+      }
+    };
+
+    function setType(type) {
+      currentType = type;
+      const ui = TYPE_UI[type];
+      document.querySelectorAll('.type-btn').forEach(b =>
+        b.setAttribute('aria-pressed', String(b.dataset.type === type)));
+      document.getElementById('type-hint').textContent = ui.hint;
+      document.getElementById('start-label').textContent = ui.startLabel;
+      document.getElementById('end-label').textContent = ui.endLabel;
+      document.getElementById('ann-text-label').textContent = ui.textLabel;
+      document.getElementById('ann-text').dataset.placeholder = ui.placeholder;
+      document.getElementById('url-label-note').textContent = `(optional — defaults to "${ui.defaultLink}")`;
+      document.getElementById('ann-url-label').placeholder = ui.linkPlaceholder;
+      document.getElementById('save-btn').textContent = `Save ${ui.title}`;
+      const formTitle = document.getElementById('form-title');
+      formTitle.textContent = (formTitle.dataset.mode === 'edit' ? 'Edit ' : 'Add New ') + ui.title;
+    }
+
+    document.querySelectorAll('.type-btn').forEach(btn =>
+      btn.addEventListener('click', () => setType(btn.dataset.type)));
 
     // =====================================================================
     //  Rich text editor
@@ -804,7 +941,6 @@
       if (existing) {
         existing.setAttribute('href', url);
       } else if (window.getSelection().isCollapsed) {
-        // Nothing highlighted: insert the address itself as the link text
         const label = input.replace(/^mailto:/i, '');
         document.execCommand('insertHTML', false,
           `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(label)}</a>&nbsp;`);
@@ -818,7 +954,6 @@
       saveSelection();
     }
 
-    // Keep the text selection when toolbar buttons are clicked
     toolbar.addEventListener('mousedown', e => {
       if (e.target.closest('button')) e.preventDefault();
     });
@@ -857,10 +992,9 @@
     });
 
     editor.addEventListener('input', () => {
-      if (editor.innerHTML === '<br>') editor.innerHTML = ''; // bring the placeholder back
+      if (editor.innerHTML === '<br>') editor.innerHTML = '';
     });
 
-    // Clean up pasted content (Google Docs, websites, etc.)
     editor.addEventListener('paste', e => {
       e.preventDefault();
       const html = e.clipboardData.getData('text/html');
@@ -923,69 +1057,62 @@
       let announcements = [];
       let editingKey = null;
 
-      // Date string offset by days, in local time
       function getDateStringOffset(daysOffset = 0) {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + daysOffset);
         return localDateStr(targetDate);
       }
 
-      // Set defaults: Start = Today, End = 3 Days from Now
       const todayStr = getDateStringOffset(0);
       document.getElementById('ann-start-date').value = todayStr;
       document.getElementById('ann-end-date').value = getDateStringOffset(3);
+      setType('announcement');
 
-      // --- Load announcements ---
+      // --- Load items ---
       onValue(ref(db, 'announcements'), (snapshot) => {
         const data = snapshot.val() || {};
         announcements = Object.entries(data)
           .map(([k, v]) => ({ ...v, _key: k }))
-          .sort((a, b) => {
-            const aStart = a.startDate || a.date || '';
-            const bStart = b.startDate || b.date || '';
-            return bStart.localeCompare(aStart);
-          });
+          .sort((a, b) => (startOf(b) || '').localeCompare(startOf(a) || ''));
         renderList();
         renderPreview();
         loadingScreen.style.display = 'none';
       });
 
+      // Type stays as-is after saving, so entering several assignments in a row is quick
       function resetForm() {
         editor.innerHTML = '';
         savedRange = null;
         document.getElementById('ann-url').value = '';
         document.getElementById('ann-url-label').value = '';
         document.getElementById('ann-start-date').value = getDateStringOffset(0);
-        document.getElementById('ann-end-date').value = getDateStringOffset(7);
+        document.getElementById('ann-end-date').value = getDateStringOffset(currentType === 'assignment' ? 2 : 7);
         updateToolbarState();
       }
 
       // --- Save ---
       window.saveAnnouncement = async function() {
+        const ui = TYPE_UI[currentType];
         const startDate = document.getElementById('ann-start-date').value;
         const endDate = document.getElementById('ann-end-date').value;
         const text = sanitizeHTML(editor.innerHTML);
         const url = document.getElementById('ann-url').value.trim();
-        const urlLabel = document.getElementById('ann-url-label').value.trim() || 'Click Here';
+        const urlLabel = document.getElementById('ann-url-label').value.trim() || ui.defaultLink;
 
         if (!startDate || !endDate) {
-          showAlert('Please select both a Start Date and an End Date.');
+          showAlert(`Please select both a ${ui.startLabel} and a ${ui.endLabel}.`);
           return;
         }
-        if (new Date(endDate) < new Date(startDate)) {
-          showAlert('Error: End Date cannot be earlier than the Start Date!');
+        if (endDate < startDate) {
+          showAlert(`${ui.endLabel} can’t be earlier than ${ui.startLabel}.`);
           return;
         }
         if (!editor.textContent.trim()) {
-          showAlert('Please enter announcement text.');
+          showAlert(`Please enter the ${ui.title.toLowerCase()} text.`);
           return;
         }
 
-        const entry = { 
-          startDate, 
-          endDate, 
-          text 
-        };
+        const entry = { type: currentType, startDate, endDate, text };
 
         if (url) {
           entry.url = url;
@@ -994,11 +1121,11 @@
 
         if (editingKey) {
           await set(ref(db, `announcements/${editingKey}`), entry);
-          showAlert('Announcement updated!');
+          showAlert(`${ui.title} updated!`);
           cancelEdit();
         } else {
           await push(ref(db, 'announcements'), entry);
-          showAlert(startDate > todayStr ? `Announcement scheduled for ${startDate}!` : 'Announcement added!');
+          showAlert(startDate > todayStr ? `${ui.title} scheduled for ${startDate}!` : `${ui.title} added!`);
           resetForm();
         }
       };
@@ -1008,19 +1135,20 @@
         const ann = announcements.find(a => a._key === key);
         if (!ann) return;
         editingKey = key;
-        
-        // Fallback mechanics parse historical entries safely
-        document.getElementById('ann-start-date').value = ann.startDate || ann.date || todayStr;
-        document.getElementById('ann-end-date').value = ann.endDate || ann.startDate || ann.date || todayStr;
-        
+
+        document.getElementById('form-title').dataset.mode = 'edit';
+        setType(isAssignment(ann) ? 'assignment' : 'announcement');
+
+        document.getElementById('ann-start-date').value = startOf(ann) || todayStr;
+        document.getElementById('ann-end-date').value = endOf(ann) || todayStr;
+
         editor.innerHTML = toDisplayHTML(ann.text);
         savedRange = null;
         document.getElementById('ann-url').value = ann.url || '';
         document.getElementById('ann-url-label').value = ann.urlLabel || '';
-        document.getElementById('form-title').textContent = 'Edit Announcement';
         document.getElementById('cancel-btn').style.display = 'inline-block';
         document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
-        
+
         document.querySelectorAll('.announcement-item').forEach(el => el.classList.remove('editing'));
         const el = document.getElementById(`ann-${key}`);
         if (el) el.classList.add('editing');
@@ -1029,23 +1157,25 @@
       // --- Cancel edit ---
       window.cancelEdit = function() {
         editingKey = null;
+        document.getElementById('form-title').dataset.mode = 'add';
+        setType(currentType);
         resetForm();
-        document.getElementById('form-title').textContent = 'Add New Announcement';
         document.getElementById('cancel-btn').style.display = 'none';
         document.querySelectorAll('.announcement-item').forEach(el => el.classList.remove('editing'));
       };
 
       // --- Delete ---
       window.deleteAnnouncement = async function(key) {
-        if (!confirm('Delete this announcement? This cannot be undone.')) return;
+        if (!confirm('Delete this item? This cannot be undone.')) return;
         await remove(ref(db, `announcements/${key}`));
-        showAlert('Announcement deleted.');
+        showAlert('Deleted.');
       };
 
       function buttonLinkHtml(ann, cls) {
         const url = safeUrl(ann.url);
         if (!url) return '';
-        return `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" class="${cls}">${escapeHTML(ann.urlLabel || 'Click Here')}</a>`;
+        const fallback = isAssignment(ann) ? 'Open' : 'Click Here';
+        return `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" class="${cls}">${escapeHTML(ann.urlLabel || fallback)}</a>`;
       }
 
       function addGroupHeader(container, text, color) {
@@ -1056,80 +1186,86 @@
         container.appendChild(header);
       }
 
-      // --- Render lists (Current card + Scheduled & Expired card) ---
+      function statusOf(a, today) {
+        if (today < startOf(a)) return 'scheduled';
+        if (today <= endOf(a)) return 'live';
+        return 'expired';
+      }
+
+      // --- Render lists ---
       function renderList() {
         const liveContainer = document.getElementById('live-list');
         const otherContainer = document.getElementById('other-list');
         const today = localDateStr();
 
-        const scheduled = [];
-        const live = [];
-        const expired = [];
+        const groups = { scheduled: [], live: [], expired: [] };
+        announcements.forEach(a => groups[statusOf(a, today)].push(a));
 
-        announcements.forEach(a => {
-          const start = a.startDate || a.date;
-          const end = a.endDate || start;
-
-          if (today < start) {
-            scheduled.push(a);
-          } else if (today <= end) {
-            live.push(a);
-          } else {
-            expired.push(a);
-          }
-        });
-
-        // Current (live)
+        // Live: announcements first, then assignments by due date
         liveContainer.innerHTML = '';
-        if (live.length) {
-          live.forEach(ann => renderAnnItem(ann, liveContainer, 'live'));
+        const liveAnn = groups.live.filter(a => !isAssignment(a));
+        const liveAsg = groups.live.filter(isAssignment).sort((a, b) => endOf(a).localeCompare(endOf(b)));
+
+        if (!liveAnn.length && !liveAsg.length) {
+          liveContainer.innerHTML = '<p class="empty-msg">Nothing live right now.</p>';
         } else {
-          liveContainer.innerHTML = '<p class="empty-msg">No live announcements right now.</p>';
+          if (liveAnn.length) {
+            addGroupHeader(liveContainer, `📢 Announcements (${liveAnn.length}${liveAnn.length > MAX_ANNOUNCEMENTS ? `, only newest ${MAX_ANNOUNCEMENTS} show` : ''})`, '#ce1f07');
+            liveAnn.forEach(ann => renderAnnItem(ann, liveContainer, 'live'));
+          }
+          if (liveAsg.length) {
+            addGroupHeader(liveContainer, `📝 Assignments (${liveAsg.length}${liveAsg.length > MAX_ASSIGNMENTS ? `, only soonest ${MAX_ASSIGNMENTS} show` : ''})`, '#2b5fb8');
+            liveAsg.forEach(ann => renderAnnItem(ann, liveContainer, 'live'));
+          }
         }
 
         // Scheduled & Expired
         otherContainer.innerHTML = '';
-        if (!scheduled.length && !expired.length) {
-          otherContainer.innerHTML = '<p class="empty-msg">No scheduled or expired announcements.</p>';
+        if (!groups.scheduled.length && !groups.expired.length) {
+          otherContainer.innerHTML = '<p class="empty-msg">No scheduled or expired items.</p>';
           return;
         }
 
-        if (scheduled.length) {
+        if (groups.scheduled.length) {
           addGroupHeader(otherContainer, '⏰ Scheduled', '#e6a817');
-          scheduled.sort((a, b) => (a.startDate || a.date).localeCompare(b.startDate || b.date))
+          groups.scheduled.sort((a, b) => startOf(a).localeCompare(startOf(b)))
                    .forEach(ann => renderAnnItem(ann, otherContainer, 'scheduled'));
         }
 
-        if (expired.length) {
+        if (groups.expired.length) {
           addGroupHeader(otherContainer, '⌛ Expired (Hidden from Website)', '#666666');
-          expired.forEach(ann => renderAnnItem(ann, otherContainer, 'expired'));
+          groups.expired.forEach(ann => renderAnnItem(ann, otherContainer, 'expired'));
         }
       }
 
+      function longDate(s) {
+        return new Date(s + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+      }
+
       function renderAnnItem(ann, container, status) {
-        const start = ann.startDate || ann.date;
-        const end = ann.endDate || start;
-        
-        const dStart = new Date(start + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
-        const dEnd = new Date(end + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+        const asg = isAssignment(ann);
 
         const div = document.createElement('div');
-        div.className = `announcement-item${status === 'scheduled' ? ' scheduled' : ''}`;
+        div.className = `announcement-item${status === 'scheduled' ? ' scheduled' : ''}${asg ? ' is-assignment' : ''}`;
         div.id = `ann-${ann._key}`;
         if (ann._key === editingKey) div.classList.add('editing');
-        
+
         if (status === 'expired') {
           div.style.opacity = "0.65";
           div.style.backgroundColor = "#f9f9f9";
         }
 
-        let badgeHtml = '';
-        if (status === 'scheduled') badgeHtml = '<span class="badge-scheduled">Scheduled</span>';
-        if (status === 'expired') badgeHtml = '<span class="badge-scheduled" style="background:#555;">Expired</span>';
+        let badgeHtml = asg ? '<span class="badge-scheduled badge-type">Assignment</span>' : '';
+        if (status === 'scheduled') badgeHtml += '<span class="badge-scheduled">Scheduled</span>';
+        if (status === 'expired') badgeHtml += '<span class="badge-scheduled" style="background:#555;">Expired</span>';
+
+        const dateLine = asg
+          ? `Due ${longDate(endOf(ann))}${status === 'scheduled' ? ` · shows ${longDate(startOf(ann))}` : ''}`
+          : `${longDate(startOf(ann))} to ${longDate(endOf(ann))}`;
 
         div.innerHTML = `
           <div>
-            <div class="ann-date">${dStart} to ${dEnd} ${badgeHtml}</div>
+            <div class="ann-date">${dateLine} ${badgeHtml}</div>
             <div class="ann-text rich">${toDisplayHTML(ann.text)}</div>
             ${buttonLinkHtml(ann, 'ann-link')}
           </div>
@@ -1140,34 +1276,64 @@
         container.appendChild(div);
       }
 
-      // --- Render preview ---
+      function dueLabel(due) {
+        if (due === localDateStr()) return { text: 'Due Today', cls: 'due-today' };
+        if (due === getDateStringOffset(1)) return { text: 'Due Tomorrow', cls: 'due-tomorrow' };
+        const d = new Date(due + 'T12:00:00');
+        const day = d.toLocaleDateString([], { weekday: 'short' });
+        const md = d.toLocaleDateString([], { month: 'numeric', day: 'numeric' });
+        return { text: `Due ${day}<br>${md}`, cls: '' };
+      }
+
+      // --- Render preview (mirrors the site widget's rules) ---
       function renderPreview() {
         const container = document.getElementById('preview-box');
         const today = localDateStr();
-        
-        const liveItems = announcements.filter(a => {
-          const start = a.startDate || a.date;
-          const end = a.endDate || start;
-          return today >= start && today <= end;
-        });
+        const live = announcements.filter(a => statusOf(a, today) === 'live');
 
-        if (!liveItems.length) {
-          container.innerHTML = '<p class="preview-empty">No active announcements to preview.</p>';
-          return;
-        }
+        const liveAnn = live.filter(a => !isAssignment(a)).slice(0, MAX_ANNOUNCEMENTS);
+        const liveAsg = live.filter(isAssignment)
+          .sort((a, b) => endOf(a).localeCompare(endOf(b)))
+          .slice(0, MAX_ASSIGNMENTS);
 
         container.innerHTML = '';
-        liveItems.slice(0, 3).forEach(ann => {
-          const start = ann.startDate || ann.date;
-          const d = new Date(start + 'T12:00:00');
+
+        const annTitle = document.createElement('p');
+        annTitle.className = 'preview-section-title';
+        annTitle.textContent = 'Announcements';
+        container.appendChild(annTitle);
+
+        if (!liveAnn.length) {
+          container.insertAdjacentHTML('beforeend', '<p class="preview-empty">No announcements right now.</p>');
+        }
+        liveAnn.forEach(ann => {
+          const d = new Date(startOf(ann) + 'T12:00:00');
           const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-          
           const div = document.createElement('div');
           div.className = 'preview-item';
           div.innerHTML = `
             <div class="preview-date">${dateStr}</div>
             <div class="preview-text rich">${toDisplayHTML(ann.text)}</div>
             ${buttonLinkHtml(ann, 'preview-link')}`;
+          container.appendChild(div);
+        });
+
+        const asgTitle = document.createElement('p');
+        asgTitle.className = 'preview-section-title second';
+        asgTitle.textContent = 'Assignments';
+        container.appendChild(asgTitle);
+
+        if (!liveAsg.length) {
+          container.insertAdjacentHTML('beforeend', '<p class="preview-empty">No assignments due right now.</p>');
+        }
+        liveAsg.forEach(asg => {
+          const due = dueLabel(endOf(asg));
+          const div = document.createElement('div');
+          div.className = `preview-asg ${due.cls}`;
+          div.innerHTML = `
+            <div class="preview-asg-due">${due.text}</div>
+            <div class="preview-text rich">${toDisplayHTML(asg.text)}</div>
+            ${buttonLinkHtml(asg, 'preview-link')}`;
           container.appendChild(div);
         });
       }
