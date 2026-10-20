@@ -93,7 +93,8 @@
     }
     #signout-btn:hover { background: rgba(255,255,255,0.1); }
 
-    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 15px; align-items: start; max-width: 1120px; width: 100%; margin: 0 auto; }
+    /* align-items: stretch makes every panel in a row the same height (the check-out panels set it) */
+    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 15px; align-items: stretch; max-width: 1120px; width: 100%; margin: 0 auto; }
     .panel { background: var(--card-bg); border-radius: var(--radius); border: none; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow); }
 
     .panel-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center; }
@@ -116,8 +117,13 @@
     .panel.waiting-panel .panel-title, .panel.waiting-panel .panel-count { color: var(--gray-700); }
     .panel.waiting-panel .panel-count { background: var(--gray-500); color: #fff; }
 
-    .panel-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .panel-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
     .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--gray-700); letter-spacing: 0.4px; margin-bottom: 4px; }
+
+    /* Waiting list box fills whatever height the row gives it; its contents scroll inside
+       (absolutely positioned) so a long list never makes the panel taller than the others. */
+    .waiting-box { position: relative; flex: 1; min-height: 140px; padding: 0; display: block; }
+    .waiting-scroll { position: absolute; inset: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
     
     .teacher-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .teacher-group { margin-bottom: 10px; }
@@ -176,6 +182,35 @@
     .btn-sm { width: auto; padding: 5px 10px; font-size: 0.75rem; border-radius: 5px; }
     .boy-btn { background: var(--boy-primary); }
     .girl-btn { background: var(--girl-primary); }
+
+    /* ---------------- Lunch & Recess Locations ---------------- */
+    .lr-panel { max-width: 1120px; width: 100%; margin: 0 auto; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); border-top: 4px solid var(--red); overflow: hidden; }
+    .lr-header { padding: 12px 18px; border-bottom: 1px solid var(--gray-100); background: var(--gray-50); }
+    .lr-header .panel-title { color: var(--black); }
+    .lr-grid { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(280px, 1.2fr); gap: 18px; padding: 16px 18px; }
+    @media (max-width: 720px) { .lr-grid { grid-template-columns: 1fr; } }
+    .lr-form { display: flex; flex-direction: column; gap: 12px; }
+
+    .lr-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .lr-chip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .lr-choice { background: var(--white); border: 1.5px solid var(--gray-300); color: var(--black); border-radius: 7px; padding: 10px 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; min-height: 42px; line-height: 1.2; transition: background 0.12s ease, border-color 0.12s ease; }
+    .lr-choice:hover { border-color: var(--gray-500); }
+    .lr-choice.active { background: var(--black); border-color: var(--black); color: var(--white); }
+    .lr-chip-grid .lr-choice.active { background: var(--red); border-color: var(--red); }
+    .lr-choice:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+    .lr-other-input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-300); border-radius: 7px; font-size: 0.9rem; font-family: 'Montserrat', sans-serif; outline: none; }
+    .lr-other-input:focus { border-color: var(--red); }
+    .lr-save { background: var(--red); }
+
+    .lr-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; }
+    @media (max-width: 480px) { .lr-lists { grid-template-columns: 1fr; } }
+    .lr-list { background: var(--gray-50); border: 1px solid var(--gray-100); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 330px; overflow-y: auto; }
+    .lr-entry { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--white); border: 1px solid var(--gray-100); border-left: 3px solid var(--red); border-radius: 6px; padding: 7px 10px; }
+    .lr-entry .who { font-weight: 700; font-size: 0.88rem; }
+    .lr-entry .where { font-size: 0.78rem; color: var(--gray-700); margin-top: 1px; }
+    .lr-remove { background: none; border: none; color: var(--gray-500); font-size: 1.05rem; font-weight: 700; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    .lr-remove:hover { color: var(--red); background: #fdf1ef; }
 
     .history-panel { background: var(--card-bg); border-radius: var(--radius); border: none; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; max-width: 1120px; width: 100%; margin-left: auto; margin-right: auto; }
     .history-header { padding: 14px 18px; border-bottom: 1px solid var(--gray-100); background: var(--gray-50); display: flex; justify-content: space-between; align-items: center; }
@@ -265,8 +300,10 @@
         <div class="panel-count" id="wait-count-boy">0</div>
       </div>
       <div class="panel-body">
-        <div class="status-area" id="waiting-list-boy" style="min-height: 290px; justify-content: start; gap: 8px;">
-          <p class="empty-msg">No boys waiting.</p>
+        <div class="status-area waiting-box">
+          <div class="waiting-scroll" id="waiting-list-boy">
+            <p class="empty-msg">No boys waiting.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -346,12 +383,62 @@
         <div class="panel-count" id="wait-count-girl">0</div>
       </div>
       <div class="panel-body">
-        <div class="status-area" id="waiting-list-girl" style="min-height: 290px; justify-content: start; gap: 8px;">
-          <p class="empty-msg">No girls waiting.</p>
+        <div class="status-area waiting-box">
+          <div class="waiting-scroll" id="waiting-list-girl">
+            <p class="empty-msg">No girls waiting.</p>
+          </div>
         </div>
       </div>
     </div>
 
+  </div>
+
+  <!-- ---------------- Lunch & Recess Locations ---------------- -->
+  <div class="lr-panel">
+    <div class="lr-header">
+      <div class="panel-title">Lunch &amp; Recess Locations</div>
+      <div class="panel-meta">Going somewhere other than where the class is? Tell us where.</div>
+    </div>
+    <div class="lr-grid">
+      <div class="lr-form">
+        <div>
+          <div class="section-label">Your Name</div>
+          <div class="select-wrapper">
+            <select id="lr-select">
+              <option value="">-- Select your name --</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label">When</div>
+          <div class="lr-toggle" id="lr-period">
+            <button type="button" class="lr-choice active" data-period="Lunch" onclick="setLRPeriod('Lunch')">Lunch</button>
+            <button type="button" class="lr-choice" data-period="Recess" onclick="setLRPeriod('Recess')">Recess</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label">Where are you going?</div>
+          <div class="lr-chip-grid" id="lr-dest-grid"></div>
+        </div>
+
+        <input type="text" id="lr-other" class="lr-other-input" maxlength="40" placeholder="Where? (e.g. Nurse, Front Office)" style="display:none;">
+
+        <button class="btn lr-save" onclick="saveLunchRecess()">Save My Location</button>
+      </div>
+
+      <div class="lr-lists">
+        <div>
+          <div class="section-label">Today · Lunch</div>
+          <div class="lr-list" id="lr-list-Lunch"><p class="empty-msg">No one yet.</p></div>
+        </div>
+        <div>
+          <div class="section-label">Today · Recess</div>
+          <div class="lr-list" id="lr-list-Recess"><p class="empty-msg">No one yet.</p></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="history-panel">
@@ -438,6 +525,14 @@
       // Returns a YYYY-MM-DD key for grouping history entries by calendar day
       function getDayKey(date = new Date()) {
         return date.toISOString().split('T')[0];
+      }
+
+      // Local-time YYYY-MM-DD (used for Lunch & Recess so the day never flips early in the evening)
+      function getLocalDayKey(date = new Date()) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
       }
 
       // Pass-counting window: trips are only deducted from a student's daily limit if they
@@ -932,6 +1027,127 @@
         await remove(ref(db, `bathroom/waiting/${key}`));
       };
 
+      // ================= Lunch & Recess Locations =================
+      // Stored at bathroom/lunchRecess/{YYYY-MM-DD}/{safeName}_{Lunch|Recess}
+      // One entry per student per period per day — saving again just overwrites it.
+      const LR_DESTINATIONS = ['Mr. C', 'Mrs. Cobb', 'Band', 'Theater', 'Chorus', 'Student Government', 'Art', 'Library', 'Other'];
+      let lrPeriod = 'Lunch';
+      let lrDest = '';
+
+      function renderLRDestinations() {
+        const grid = document.getElementById('lr-dest-grid');
+        grid.innerHTML = LR_DESTINATIONS.map(d =>
+          `<button type="button" class="lr-choice ${lrDest === d ? 'active' : ''}" onclick="setLRDest('${jsAttr(d)}')">${escapeHtml(d)}</button>`
+        ).join('');
+        const other = document.getElementById('lr-other');
+        other.style.display = lrDest === 'Other' ? 'block' : 'none';
+      }
+
+      window.setLRPeriod = function(period) {
+        lrPeriod = period;
+        document.querySelectorAll('#lr-period .lr-choice').forEach(b => {
+          b.classList.toggle('active', b.dataset.period === period);
+        });
+      };
+
+      window.setLRDest = function(dest) {
+        lrDest = dest;
+        renderLRDestinations();
+        if (dest === 'Other') document.getElementById('lr-other').focus();
+      };
+
+      // Grade filter for Lunch & Recess: the detected teacher, or whichever teacher is picked in
+      // either check-out panel. No teacher/grade known → show every student.
+      function getLRGrade() {
+        const rec = getSelectedTeacherRecord('b') || getSelectedTeacherRecord('g');
+        return rec && rec.grade ? rec.grade : null;
+      }
+
+      function renderLRDropdown() {
+        const sel = document.getElementById('lr-select');
+        if (!sel) return;
+        const current = sel.value;
+        const grade = getLRGrade();
+        sel.innerHTML = `<option value="">-- Select your name --</option>`;
+        STUDENTS.filter(s => !grade || s.grade === grade)
+          .forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.name;
+            opt.textContent = s.name;
+            sel.appendChild(opt);
+          });
+        if (current) sel.value = current;
+      }
+
+      function renderLunchRecessLists() {
+        const today = lastBathroomData.lunchRecess?.[getLocalDayKey()] || {};
+        const grade = getLRGrade();
+        const entries = Object.entries(today)
+          .map(([k, v]) => ({ ...v, _key: k }))
+          .filter(e => !grade || !e.grade || e.grade === grade)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        ['Lunch', 'Recess'].forEach(period => {
+          const list = document.getElementById(`lr-list-${period}`);
+          const rows = entries.filter(e => e.period === period);
+          if (!rows.length) { list.innerHTML = '<p class="empty-msg">No one yet.</p>'; return; }
+          list.innerHTML = rows.map(e => `
+            <div class="lr-entry">
+              <div>
+                <div class="who">${escapeHtml(e.name)}</div>
+                <div class="where">${escapeHtml(e.destination)}</div>
+              </div>
+              <button class="lr-remove" title="Remove" aria-label="Remove ${escapeHtml(e.name)}" onclick="removeLunchRecess('${jsAttr(e._key)}')">✕</button>
+            </div>`).join('');
+        });
+      }
+
+      window.saveLunchRecess = async function() {
+        const sel = document.getElementById('lr-select');
+        const otherInput = document.getElementById('lr-other');
+        const name = sel.value;
+        if (!name) { showAlert('Please select your name.'); return; }
+        if (!lrDest) { showAlert('Tap where you are going.'); return; }
+
+        let destination = lrDest;
+        if (lrDest === 'Other') {
+          const typed = otherInput.value.trim();
+          if (!typed) { showAlert('Type where you are going.'); otherInput.focus(); return; }
+          destination = typed;
+        }
+
+        const student = STUDENTS.find(s => s.name === name) || {};
+        const safeName = name.replace(/[.#$/\[\]]/g, '_');
+        const key = `${safeName}_${lrPeriod}`;
+        const teacherRec = getSelectedTeacherRecord('b') || getSelectedTeacherRecord('g');
+
+        try {
+          await set(ref(db, `bathroom/lunchRecess/${getLocalDayKey()}/${key}`), {
+            name,
+            grade: student.grade || null,
+            gender: student.gender || null,
+            teacher: teacherRec ? teacherRec.name : null,
+            period: lrPeriod,
+            destination,
+            addedAt: Date.now() // ordering only — not shown or timed
+          });
+          showAlert(`${name}: ${destination} for ${lrPeriod}. Saved!`);
+          sel.value = '';
+          otherInput.value = '';
+          lrDest = '';
+          renderLRDestinations();
+        } catch (e) {
+          console.error(e);
+          showAlert('Could not save — try again.');
+        }
+      };
+
+      window.removeLunchRecess = async function(key) {
+        await remove(ref(db, `bathroom/lunchRecess/${getLocalDayKey()}/${key}`));
+      };
+
+      renderLRDestinations();
+
       // --- Core Master Rendering Layer Controls ---
       function renderAll() {
         renderCurrentlyOut();
@@ -1045,6 +1261,9 @@
         ]);
         renderDropdown('b', allOut);
         renderDropdown('g', allOut);
+        // Lunch & Recess shares the same grade context, so refresh it alongside
+        renderLRDropdown();
+        renderLunchRecessLists();
       }
 
       function renderDropdown(gender, taken) {
