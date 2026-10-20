@@ -371,12 +371,34 @@
     color: var(--amber);
   }
 
+  /* --- Lunch & Recess tab --- */
+  .lr-print-title { display: none; font-size: 1.1rem; font-weight: 800; margin-bottom: 12px; }
+  .lr-period-section { margin-bottom: 28px; }
+  .lr-period-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--black); }
+  .lr-period-head h2 { font-size: 1.05rem; font-weight: 800; }
+  .lr-period-head .lr-count { font-size: 0.82rem; font-weight: 600; color: var(--gray-700); }
+  .lr-dest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .lr-dest-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border-top: 4px solid var(--red); padding: 14px 16px; break-inside: avoid; }
+  .lr-dest-card.other { border-top-color: var(--amber); }
+  .lr-dest-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 8px; }
+  .lr-dest-name { font-weight: 800; font-size: 0.95rem; }
+  .lr-dest-num { font-weight: 800; font-size: 0.95rem; color: var(--red); }
+  .lr-student-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--gray-100); font-size: 0.86rem; }
+  .lr-student-row:last-child { border-bottom: none; }
+  .lr-student-row .lr-who { font-weight: 600; }
+  .lr-student-row .lr-meta { font-size: 0.72rem; color: var(--gray-500); font-weight: 600; margin-left: 6px; }
+  .lr-x { background: none; border: none; color: var(--gray-500); cursor: pointer; font-weight: 800; font-size: 0.95rem; padding: 2px 6px; border-radius: 4px; }
+  .lr-x:hover { color: var(--red); background: #fdf1ef; }
+
   /* Print styles */
   @media print {
     body { background: white; padding: 10px; }
     .topbar, .subtitle-bar, .controls, .tab-btns, .btn, .no-print { display: none !important; }
     .table-card { border: 1px solid #ccc; box-shadow: none; }
     .summary-card { border: 1px solid #ccc; box-shadow: none; }
+    .lr-print-title { display: block; }
+    .lr-dest-card { border: 1px solid #ccc; border-top: 4px solid #000; box-shadow: none; }
+    .lr-x { display: none; }
   }
 </style>
 </head>
@@ -419,6 +441,7 @@
 <!-- MAIN VIEW TABS -->
 <div class="tab-btns no-print">
   <button class="tab-btn active" id="tab-view-reports" onclick="switchMainTab('reports')">📊 Reports</button>
+  <button class="tab-btn" id="tab-view-lunch" onclick="switchMainTab('lunch')">🍽 Lunch &amp; Recess</button>
   <button class="tab-btn" id="tab-view-management" onclick="switchMainTab('management')">👥 Student Management</button>
   <button class="tab-btn" id="tab-view-teachers" onclick="switchMainTab('teachers')">👩‍🏫 Teachers</button>
   <button class="tab-btn" id="tab-view-conflicts" onclick="switchMainTab('conflicts')">🚫 Conflict Groups</button>
@@ -594,6 +617,70 @@
     <h2>🚫 Daily Pass Usage - Today</h2>
     <div class="card-desc">Students who are close to or over their allocated daily bathroom limit. Only counts trips checked out between 8:00 AM and 12:15 PM - trips outside that window are logged but don't use a pass.</div>
     <div id="pass-usage-container"><p class="no-data">Loading...</p></div>
+  </div>
+</div>
+
+<!-- =============== LUNCH & RECESS VIEW =============== -->
+<div id="view-lunch" style="display:none;">
+  <div class="controls">
+    <div class="control-group">
+      <label>Date</label>
+      <input type="date" id="lr-date" onchange="renderLunchRecess()">
+    </div>
+    <div class="control-group">
+      <button class="btn btn-outline" onclick="shiftLRDate(-1)">← Prev Day</button>
+    </div>
+    <div class="control-group">
+      <button class="btn btn-outline" onclick="shiftLRDate(1)">Next Day →</button>
+    </div>
+    <div class="control-group">
+      <label>Grade</label>
+      <select id="lr-grade-filter" onchange="renderLunchRecess()">
+        <option value="">All Grades</option>
+        <option value="6">6th</option>
+        <option value="7">7th</option>
+        <option value="8">8th</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>When</label>
+      <select id="lr-period-filter" onchange="renderLunchRecess()">
+        <option value="">Lunch &amp; Recess</option>
+        <option value="Lunch">Lunch only</option>
+        <option value="Recess">Recess only</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Destination</label>
+      <select id="lr-dest-filter" onchange="renderLunchRecess()"></select>
+    </div>
+    <div class="control-group">
+      <label>Teacher</label>
+      <select id="lr-teacher-filter" onchange="renderLunchRecess()">
+        <option value="">All Teachers</option>
+      </select>
+    </div>
+    <button class="btn btn-outline" onclick="window.print()">🖨 Print</button>
+  </div>
+
+  <div class="lr-print-title" id="lr-print-title"></div>
+
+  <div class="summary-grid" id="lr-summary"></div>
+
+  <div id="lr-container"><p class="no-data">Loading...</p></div>
+
+  <div class="section-panel accent-amber no-print" style="margin-top:12px;">
+    <h2 style="color: var(--amber);">🧹 Clean Up Old Entries</h2>
+    <div class="card-desc">Lunch &amp; Recess entries are saved by date and aren't needed long-term. This permanently deletes every day older than the number of days you choose.</div>
+    <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <div class="control-group">
+        <label>Keep the last</label>
+        <input type="number" id="lr-keep-days" value="7" min="1" style="width:100px;">
+      </div>
+      <span style="font-size:0.85rem; color:var(--gray-700); padding-bottom:10px;">days</span>
+      <button class="btn" onclick="cleanupLunchRecess()">Delete Older Entries</button>
+      <span id="lr-days-stored" class="selected-count" style="padding-bottom:10px;"></span>
+    </div>
   </div>
 </div>
 
@@ -1085,11 +1172,12 @@
     }
 
     window.switchMainTab = function(view) {
-      const views = ['reports', 'management', 'teachers', 'conflicts', 'history'];
+      const views = ['reports', 'lunch', 'management', 'teachers', 'conflicts', 'history'];
       views.forEach(v => {
         document.getElementById('tab-view-' + v).classList.toggle('active', v === view);
         document.getElementById('view-' + v).style.display = v === view ? 'block' : 'none';
       });
+      if (view === 'lunch') renderLunchRecess();
     };
 
     onValue(ref(db, 'bathroom/roster'), (snapshot) => {
@@ -1101,6 +1189,7 @@
       renderPassUsage();
       renderConflictGroups();
       updateConflictRosterStatus();
+      renderLunchRecess();
     });
 
     onValue(ref(db, 'bathroom/history'), (snapshot) => {
@@ -1143,6 +1232,7 @@
         applyDetectedGradeDefaults();
         gradeDefaultsApplied = true;
       }
+      renderLunchRecess();
     }, (err) => {
       console.error('bathroom/teachers read failed:', err);
       const container = document.getElementById('teacher-list-container');
@@ -1283,7 +1373,7 @@
     // instead of the old hardcoded 4-name option list.
     function populateTeacherFilterDropdowns() {
       const names = Object.values(teachersData).map(t => t.name).sort((a,b) => a.localeCompare(b));
-      ['weekly-teacher-filter', 'monthly-teacher-filter', 'custom-teacher-filter'].forEach(id => {
+      ['weekly-teacher-filter', 'monthly-teacher-filter', 'custom-teacher-filter', 'lr-teacher-filter'].forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
         const current = sel.value;
@@ -1301,7 +1391,7 @@
       const match = Object.values(teachersData).find(t => t.email && t.email.toLowerCase() === currentUserEmail);
       if (!match || !match.grade) return;
       const gradeStr = String(match.grade);
-      ['daily-grade-filter', 'weekly-grade-filter', 'monthly-grade-filter', 'custom-grade-filter', 'compare-grade-filter'].forEach(id => {
+      ['daily-grade-filter', 'weekly-grade-filter', 'monthly-grade-filter', 'custom-grade-filter', 'compare-grade-filter', 'lr-grade-filter'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = gradeStr;
       });
@@ -1314,6 +1404,186 @@
       if (currentTab === 'custom') return document.getElementById('custom-grade-filter')?.value || '';
       return '';
     }
+
+    // ================= Lunch & Recess Locations =================
+    // Written by the kiosk to bathroom/lunchRecess/{YYYY-MM-DD local}/{safeName}_{Lunch|Recess}.
+    // Each entry: { name, grade, gender, teacher, period, destination, addedAt }.
+    const LR_DESTINATIONS = ['Mr. C', 'Mrs. Cobb', 'Band', 'Theater', 'Chorus', 'Student Government', 'Art', 'Library'];
+    let lunchRecessData = {};
+
+    function localIso(date = new Date()) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // Initial control setup
+    (function initLunchRecessControls() {
+      const dateEl = document.getElementById('lr-date');
+      if (dateEl && !dateEl.value) dateEl.value = localIso();
+      const destEl = document.getElementById('lr-dest-filter');
+      if (destEl) {
+        destEl.innerHTML = '<option value="">All Destinations</option>' +
+          LR_DESTINATIONS.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('') +
+          '<option value="__other">Other (typed in)</option>';
+      }
+    })();
+
+    onValue(ref(db, 'bathroom/lunchRecess'), (snapshot) => {
+      lunchRecessData = snapshot.val() || {};
+      renderLunchRecess();
+    }, (err) => {
+      console.error('bathroom/lunchRecess read failed:', err);
+      const c = document.getElementById('lr-container');
+      if (c) c.innerHTML = `<p class="no-data" style="color:var(--red);">Couldn't load Lunch &amp; Recess data: ${escapeHtml(err.message)}</p>`;
+    });
+
+    window.shiftLRDate = function(delta) {
+      const input = document.getElementById('lr-date');
+      const d = new Date((input.value || localIso()) + 'T12:00:00');
+      d.setDate(d.getDate() + delta);
+      input.value = localIso(d);
+      renderLunchRecess();
+    };
+
+    function lrEntryGrade(e) {
+      if (e.grade) return String(e.grade);
+      const s = STUDENTS.find(x => x.name === e.name);
+      return s && s.grade ? String(s.grade) : '';
+    }
+
+    window.renderLunchRecess = function() {
+      const container = document.getElementById('lr-container');
+      const summary = document.getElementById('lr-summary');
+      const daysStoredEl = document.getElementById('lr-days-stored');
+      if (!container) return;
+
+      const storedDays = Object.keys(lunchRecessData).length;
+      if (daysStoredEl) daysStoredEl.textContent = `${storedDays} day${storedDays !== 1 ? 's' : ''} currently stored`;
+
+      const dateVal = document.getElementById('lr-date').value || localIso();
+      const gradeF = document.getElementById('lr-grade-filter').value;
+      const periodF = document.getElementById('lr-period-filter').value;
+      const destF = document.getElementById('lr-dest-filter').value;
+      const teacherF = document.getElementById('lr-teacher-filter').value;
+
+      const dayData = lunchRecessData[dateVal] || {};
+      let entries = Object.entries(dayData).map(([k, v]) => ({ ...v, _key: k }));
+
+      if (gradeF) entries = entries.filter(e => lrEntryGrade(e) === gradeF);
+      if (periodF) entries = entries.filter(e => e.period === periodF);
+      if (teacherF) entries = entries.filter(e => e.teacher === teacherF);
+      if (destF === '__other') entries = entries.filter(e => !LR_DESTINATIONS.includes(e.destination));
+      else if (destF) entries = entries.filter(e => e.destination === destF);
+
+      // Print header so a printed sheet says what it is
+      const dateLabel = new Date(dateVal + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+      const filterBits = [
+        gradeF ? `${gradeF}th Grade` : 'All Grades',
+        periodF || 'Lunch & Recess',
+        destF === '__other' ? 'Other destinations' : (destF || null),
+        teacherF ? `Teacher: ${teacherF}` : null
+      ].filter(Boolean).join(', ');
+      document.getElementById('lr-print-title').textContent = `Lunch & Recess Locations: ${dateLabel} (${filterBits})`;
+
+      // Summary cards
+      const lunchCount = entries.filter(e => e.period === 'Lunch').length;
+      const recessCount = entries.filter(e => e.period === 'Recess').length;
+      const destCounts = {};
+      entries.forEach(e => { destCounts[e.destination] = (destCounts[e.destination] || 0) + 1; });
+      const topDest = Object.entries(destCounts).sort((a, b) => b[1] - a[1])[0];
+      summary.innerHTML = `
+        <div class="summary-card"><div class="val">${entries.length}</div><div class="lbl">Logged</div></div>
+        <div class="summary-card"><div class="val">${lunchCount}</div><div class="lbl">Lunch</div></div>
+        <div class="summary-card"><div class="val">${recessCount}</div><div class="lbl">Recess</div></div>
+        <div class="summary-card"><div class="val" style="font-size:${topDest ? '1.2rem' : '2rem'}; line-height:1.3;">${topDest ? escapeHtml(topDest[0]) : '-'}</div><div class="lbl">Most Popular${topDest ? ` (${topDest[1]})` : ''}</div></div>`;
+
+      if (!entries.length) {
+        const isToday = dateVal === localIso();
+        container.innerHTML = `<p class="no-data">${isToday ? 'No one has logged a lunch or recess location yet today.' : 'No lunch or recess locations logged for this day and filter.'}</p>`;
+        return;
+      }
+
+      const periods = periodF ? [periodF] : ['Lunch', 'Recess'];
+      container.innerHTML = periods.map(period => {
+        const pEntries = entries.filter(e => e.period === period);
+        if (!pEntries.length) {
+          return `<div class="lr-period-section">
+            <div class="lr-period-head"><h2>${period}</h2><span class="lr-count">0 students</span></div>
+            <p class="empty-msg">No one logged for ${period.toLowerCase()}.</p>
+          </div>`;
+        }
+
+        const groups = {};
+        pEntries.forEach(e => { (groups[e.destination] = groups[e.destination] || []).push(e); });
+        const destOrder = Object.keys(groups).sort((a, b) => {
+          const ia = LR_DESTINATIONS.indexOf(a), ib = LR_DESTINATIONS.indexOf(b);
+          if (ia !== -1 && ib !== -1) return ia - ib;
+          if (ia !== -1) return -1;
+          if (ib !== -1) return 1;
+          return a.localeCompare(b);
+        });
+
+        const cards = destOrder.map(dest => {
+          const list = groups[dest].sort((a, b) => a.name.localeCompare(b.name));
+          const isOther = !LR_DESTINATIONS.includes(dest);
+          const rows = list.map(e => {
+            const g = lrEntryGrade(e);
+            const meta = [g ? `Gr ${g}` : null, teacherF ? null : (e.teacher || null)].filter(Boolean).join(', ');
+            return `<div class="lr-student-row">
+              <div><span class="lr-who">${escapeHtml(e.name)}</span>${meta ? `<span class="lr-meta">${escapeHtml(meta)}</span>` : ''}</div>
+              <button class="lr-x" title="Remove entry" aria-label="Remove ${escapeHtml(e.name)}" onclick="window.removeLREntry('${jsAttr(dateVal)}','${jsAttr(e._key)}','${jsAttr(e.name)}','${jsAttr(period)}')">✕</button>
+            </div>`;
+          }).join('');
+          return `<div class="lr-dest-card${isOther ? ' other' : ''}">
+            <div class="lr-dest-top">
+              <span class="lr-dest-name">${escapeHtml(dest)}${isOther ? ' <span class="lr-meta">(other)</span>' : ''}</span>
+              <span class="lr-dest-num">${list.length}</span>
+            </div>
+            ${rows}
+          </div>`;
+        }).join('');
+
+        return `<div class="lr-period-section">
+          <div class="lr-period-head"><h2>${period}</h2><span class="lr-count">${pEntries.length} student${pEntries.length !== 1 ? 's' : ''}</span></div>
+          <div class="lr-dest-grid">${cards}</div>
+        </div>`;
+      }).join('');
+    };
+
+    window.removeLREntry = async function(dateKey, key, name, period) {
+      if (!confirm(`Remove ${name}'s ${period.toLowerCase()} location?`)) return;
+      try {
+        await remove(ref(db, `bathroom/lunchRecess/${dateKey}/${key}`));
+      } catch (e) {
+        console.error(e);
+        alert('Error removing entry: ' + (e && e.message ? e.message : e));
+      }
+    };
+
+    window.cleanupLunchRecess = async function() {
+      const keep = parseInt(document.getElementById('lr-keep-days').value, 10);
+      if (!keep || keep < 1) { alert('Enter how many days to keep (1 or more).'); return; }
+
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - (keep - 1));
+      const cutoffKey = localIso(cutoff);
+      const oldDays = Object.keys(lunchRecessData).filter(k => k < cutoffKey);
+
+      if (!oldDays.length) { alert(`Nothing to delete - there are no entries older than ${keep} day${keep !== 1 ? 's' : ''}.`); return; }
+      if (!confirm(`Permanently delete Lunch & Recess entries for ${oldDays.length} day${oldDays.length !== 1 ? 's' : ''} before ${cutoffKey}? This cannot be undone.`)) return;
+
+      try {
+        const deletions = {};
+        oldDays.forEach(k => { deletions[k] = null; });
+        await update(ref(db, 'bathroom/lunchRecess'), deletions);
+        alert(`Deleted ${oldDays.length} day${oldDays.length !== 1 ? 's' : ''} of old entries.`);
+      } catch (e) {
+        console.error(e);
+        alert('Error cleaning up: ' + (e && e.message ? e.message : e));
+      }
+    };
 
     // ---------------- Compare Students ----------------
     window.handleCompareSearchInput = function(value) {
