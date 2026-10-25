@@ -257,6 +257,22 @@
       outline: none;
       word-wrap: break-word;
     }
+    .rte-hl-label { font-size: 0.95rem; margin: 0 2px 0 4px; }
+.rte-hl {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid #bbb;
+  cursor: pointer;
+  padding: 0;
+  margin: 0 2px;
+  transition: transform 0.1s;
+}
+.rte-hl:hover { transform: scale(1.15); }
+.rte-hl:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
+.rte-hl-none {
+  background: linear-gradient(135deg, #fff 45%, var(--red) 45%, var(--red) 55%, #fff 55%);
+}
     .rte-editor:empty::before {
       content: attr(data-placeholder);
       color: #999;
@@ -631,7 +647,16 @@
         <button type="button" class="rte-swatch" data-color="#ffd600" style="background:#ffd600;" title="Yellow"></button>
         <button type="button" class="rte-swatch" data-color="#00c853" style="background:#00c853;" title="Green"></button>
         <button type="button" class="rte-swatch" data-color="#2979ff" style="background:#2979ff;" title="Blue"></button>
-        <button type="button" class="rte-swatch" data-color="#aa00ff" style="background:#aa00ff;" title="Purple"></button>
+                <button type="button" class="rte-swatch" data-color="#aa00ff" style="background:#aa00ff;" title="Purple"></button>
+        <button type="button" class="rte-swatch" data-color="#ff1493" style="background:#ff1493;" title="Hot Pink"></button>
+        <span class="rte-sep"></span>
+        <span class="rte-hl-label" title="Highlighter">🖍️</span>
+        <button type="button" class="rte-hl" data-highlight="#fff176" style="background:#fff176;" title="Yellow highlight"></button>
+        <button type="button" class="rte-hl" data-highlight="#b9f6ca" style="background:#b9f6ca;" title="Green highlight"></button>
+        <button type="button" class="rte-hl" data-highlight="#b3e5fc" style="background:#b3e5fc;" title="Blue highlight"></button>
+        <button type="button" class="rte-hl" data-highlight="#ffc1e3" style="background:#ffc1e3;" title="Pink highlight"></button>
+        <button type="button" class="rte-hl" data-highlight="#ffe0b2" style="background:#ffe0b2;" title="Orange highlight"></button>
+        <button type="button" class="rte-hl rte-hl-none" data-highlight="transparent" title="Remove highlight"></button>
         <span class="rte-sep"></span>
         <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
         <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
