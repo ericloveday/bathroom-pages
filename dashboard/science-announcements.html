@@ -987,13 +987,14 @@
       if (e.target.closest('button')) e.preventDefault();
     });
 
-    toolbar.addEventListener('click', e => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      if (btn.dataset.cmd) exec(btn.dataset.cmd);
-      else if (btn.dataset.color) exec('foreColor', btn.dataset.color);
-      else if (btn.dataset.action === 'link') insertLink();
-    });
+toolbar.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  if (btn.dataset.cmd) exec(btn.dataset.cmd);
+  else if (btn.dataset.color) exec('foreColor', btn.dataset.color);
+  else if (btn.dataset.highlight) exec('hiliteColor', btn.dataset.highlight);
+  else if (btn.dataset.action === 'link') insertLink();
+});
 
     fontSelect.addEventListener('change', () => {
       if (fontSelect.value) exec('fontName', fontSelect.value);
