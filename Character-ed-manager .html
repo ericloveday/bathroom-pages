@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Character Ed Lesson Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root { --red:#ce1f07; --black:#000; --white:#fff; --gray:#f2f2f2; --line:#d9d9d9; --muted:#555; --green:#1a7f37; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Montserrat', Arial, sans-serif; background:var(--gray); color:var(--black); }
+  .wrap { max-width:1100px; margin:0 auto; padding:0 20px; }
+  header.top { background:var(--black); color:var(--white); border-bottom:5px solid var(--red); }
+  header.top .wrap { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-top:16px; padding-bottom:16px; flex-wrap:wrap; }
+  header.top h1 { margin:0; font-size:1.4rem; font-weight:800; }
+  #who { font-size:.85rem; display:flex; gap:12px; align-items:center; }
+  main { padding-top:24px; padding-bottom:48px; }
+  .panel { background:var(--white); border:1px solid var(--line); border-radius:10px; padding:20px 22px; margin-bottom:20px; }
+  .panel h2 { margin:0 0 6px; font-size:1.1rem; font-weight:800; }
+  .hint { margin:0 0 14px; color:var(--muted); font-size:.9rem; line-height:1.5; max-width:75ch; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  input[type=text], input[type=email], input[type=password], input[type=date], input[type=url], textarea {
+    font-family:inherit; font-size:.95rem; padding:9px 11px; border:1.5px solid #bbb; border-radius:7px; background:var(--white);
+  }
+  textarea { width:100%; resize:vertical; margin-bottom:10px; }
+  input:focus, textarea:focus { outline:none; border-color:var(--red); box-shadow:0 0 0 3px rgba(206,31,7,.18); }
+  .btn { font-family:inherit; font-weight:700; font-size:.9rem; padding:10px 16px; border-radius:7px; border:2px solid var(--black); background:var(--black); color:var(--white); cursor:pointer; display:inline-block; }
+  .btn:hover { background:#333; border-color:#333; }
+  .btn.red { background:var(--red); border-color:var(--red); }
+  .btn.red:hover { background:#a51905; border-color:#a51905; }
+  .btn.ghost { background:var(--white); color:var(--black); }
+  .btn.ghost:hover { background:var(--gray); }
+  .btn.small { padding:5px 10px; font-size:.8rem; }
+  .btn:focus-visible { outline:3px solid var(--red); outline-offset:2px; }
+  .linkbtn { background:none; border:none; color:var(--white); text-decoration:underline; font-family:inherit; cursor:pointer; font-size:.85rem; }
+  .msg { margin:10px 0 0; font-size:.9rem; font-weight:600; min-height:1.2em; }
+  .msg.ok { color:var(--green); } .msg.err { color:var(--red); }
+
+  /* Showing now */
+  .now { border:3px solid var(--red); }
+  .now .when { font-size:.9rem; font-weight:600; color:var(--muted); margin:0 0 4px; }
+  .now .title { font-size:1.5rem; font-weight:800; margin:0 0 12px; line-height:1.25; }
+  .now .title a { color:var(--black); text-decoration-color:var(--red); text-underline-offset:4px; }
+  .now .next { font-size:.9rem; margin:0; color:var(--muted); }
+  .now .next strong { color:var(--black); }
+
+  /* Missed list */
+  .chips { list-style:none; padding:0; margin:14px 0 0; display:flex; flex-wrap:wrap; gap:8px; }
+  .chips li { background:var(--gray); border:1px solid var(--line); border-radius:999px; padding:5px 6px 5px 14px; font-size:.85rem; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .chips button { border:none; background:var(--black); color:var(--white); border-radius:999px; font-family:inherit; font-size:.75rem; font-weight:700; padding:4px 10px; cursor:pointer; }
+
+  /* Tables */
+  .tablewrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th { text-align:left; font-weight:700; padding:8px 10px; border-bottom:2px solid var(--black); white-space:nowrap; }
+  td { padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.num { color:var(--muted); font-weight:600; width:2.5em; }
+  td a { color:var(--black); }
+  tr.current td { background:#fdecea; }
+  tr.current td:first-child { box-shadow:inset 4px 0 0 var(--red); }
+  tr.done td { color:#777; }
+  tr.done td a { color:#777; }
+  .moved { display:block; font-size:.78rem; color:var(--red); font-weight:600; }
+  .status { font-weight:700; white-space:nowrap; }
+  .warn { color:var(--red); font-size:.8rem; font-weight:600; }
+  #preview table input { width:100%; min-width:120px; padding:6px 8px; font-size:.85rem; }
+  #preview .actions { margin-top:14px; }
+  .empty { color:var(--muted); font-style:italic; margin:0; }
+
+  /* Sign in */
+  #signin { max-width:420px; margin:40px auto; }
+  #signin form { display:grid; gap:10px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Character Ed Lessons</h1>
+    <div id="who"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="signin" class="panel" hidden>
+    <h2>Sign in</h2>
+    <form id="signinForm">
+      <input type="email" id="email" placeholder="Email" autocomplete="username" required>
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password" required>
+      <button class="btn red" type="submit">Sign in</button>
+      <p id="signinMsg" class="msg err"></p>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+    <section class="panel now" id="nowPanel"></section>
+
+    <section class="panel">
+      <h2>No school on a lesson day</h2>
+      <p class="hint">Pick the Wednesday you missed. That lesson moves to the next school Wednesday, and every lesson after it moves back one week.</p>
+      <div class="row">
+        <input type="date" id="missDate" aria-label="Missed Wednesday">
+        <button id="missBtn" class="btn red">Mark as no school</button>
+      </div>
+      <p id="missMsg" class="msg"></p>
+      <ul id="missedList" class="chips"></ul>
+    </section>
+
+    <section class="panel">
+      <h2>This year’s schedule</h2>
+      <div class="tablewrap"><table id="schedTable"></table></div>
+    </section>
+
+    <section class="panel">
+      <h2>Import a new year</h2>
+      <p class="hint">Copy the rows from the principal’s spreadsheet and paste them below, or upload it as a CSV. Each row needs a date and a link; the lesson name is optional. You’ll get a preview to check before anything is saved.</p>
+      <textarea id="pasteBox" rows="6" placeholder="Paste spreadsheet rows here"></textarea>
+      <div class="row">
+        <button id="parseBtn" class="btn">Preview pasted rows</button>
+        <label class="btn ghost" for="csvFile">Upload CSV</label>
+        <input type="file" accept=".csv,text/csv" id="csvFile" hidden>
+      </div>
+      <p id="importMsg" class="msg"></p>
+      <div id="preview"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+/* ===== Firebase config: paste the same block your other bathroom-check-out tools use ===== */
+const firebaseConfig = {
+  apiKey: "PASTE_YOUR_API_KEY",
+  authDomain: "bathroom-check-out.firebaseapp.com",
+  databaseURL: "https://bathroom-check-out-default-rtdb.firebaseio.com",
+  projectId: "bathroom-check-out"
+};
+const NODE = 'charEdLessons';
+const DEFAULT_TEXT = 'Character Ed lesson';
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+/* ===== Date helpers (local time, stored as YYYY-MM-DD) ===== */
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseYmd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+const todayStr = () => ymd(new Date());
+const isWed = s => parseYmd(s).getDay() === 3;
+const fmtShort = s => parseYmd(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const fmtLong = s => parseYmd(s).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+/* ===== Core rule (same in the widget) =====
+   Planned dates are the "slots." Missed dates are removed from the slots,
+   lessons fill the remaining slots in order, and any overflow lands on the
+   Wednesdays after the last planned date. */
+function computeSchedule(lessons, missed) {
+  const missedSet = new Set(Object.keys(missed || {}));
+  const slots = lessons.map(l => l.date).filter(d => !missedSet.has(d));
+  let next = lessons.length ? addDays(lessons[lessons.length - 1].date, 7) : null;
+  while (slots.length < lessons.length) {
+    if (!missedSet.has(next)) slots.push(next);
+    next = addDays(next, 7);
+  }
+  return lessons.map((l, i) => ({ ...l, actual: slots[i] }));
+}
+function currentIndex(schedule) {
+  const t = todayStr();
+  let idx = -1;
+  schedule.forEach((l, i) => { if (l.actual <= t) idx = i; });
+  return idx;
+}
+
+/* ===== Utilities ===== */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '#';
+function setMsg(el, text, kind) { el.textContent = text; el.className = 'msg' + (kind ? ' ' + kind : ''); }
+function normalizeLessons(raw) {
+  const arr = Array.isArray(raw) ? raw : Object.values(raw || {});
+  return arr.filter(l => l && l.date).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/* ===== State ===== */
+let data = { lessons: [], missed: {} };
+let previewRows = [];
+let dbRef = null;
+
+/* ===== Auth ===== */
+auth.onAuthStateChanged(user => {
+  const who = document.getElementById('who');
+  if (user) {
+    document.getElementById('signin').hidden = true;
+    document.getElementById('app').hidden = false;
+    who.innerHTML = `<span>${esc(user.email)}</span><button class="linkbtn" id="signOutBtn">Sign out</button>`;
+    document.getElementById('signOutBtn').onclick = () => auth.signOut();
+    dbRef = db.ref(NODE);
+    dbRef.on('value', snap => {
+      const v = snap.val() || {};
+      data = { lessons: normalizeLessons(v.lessons), missed: v.missed || {} };
+      renderAll();
+    }, err => setMsg(document.getElementById('missMsg'), 'Couldn’t read the schedule: ' + err.message, 'err'));
+  } else {
+    if (dbRef) dbRef.off();
+    document.getElementById('signin').hidden = false;
+    document.getElementById('app').hidden = true;
+    who.innerHTML = '';
+  }
+});
+document.getElementById('signinForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const msg = document.getElementById('signinMsg');
+  setMsg(msg, '', 'err');
+  auth.signInWithEmailAndPassword(
+    document.getElementById('email').value.trim(),
+    document.getElementById('password').value
+  ).catch(err => setMsg(msg, 'Sign-in failed: ' + err.message, 'err'));
+});
+
+/* ===== Render ===== */
+function renderAll() {
+  const schedule = computeSchedule(data.lessons, data.missed);
+  const cur = currentIndex(schedule);
+  renderNow(schedule, cur);
+  renderMissed();
+  renderSchedule(schedule, cur);
+  const missInput = document.getElementById('missDate');
+  if (!missInput.value) missInput.value = cur >= 0 ? schedule[cur].actual : todayStr();
+}
+
+function renderNow(schedule, cur) {
+  const el = document.getElementById('nowPanel');
+  if (!schedule.length) {
+    el.innerHTML = `<h2>Nothing scheduled yet</h2><p class="hint" style="margin:0">Import the principal’s spreadsheet below to get started.</p>`;
+    return;
+  }
+  const shown = cur >= 0 ? schedule[cur] : schedule[0];
+  const nextL = cur >= 0 ? schedule[cur + 1] : null;
+  const when = cur >= 0
+    ? `Showing on the website now · lesson ${cur + 1} of ${schedule.length} · ${fmtLong(shown.actual)}`
+    : `First lesson, showing until it starts · ${fmtLong(shown.actual)}`;
+  el.innerHTML = `
+    <p class="when">${esc(when)}</p>
+    <p class="title"><a href="${esc(safeUrl(shown.url))}" target="_blank" rel="noopener">${esc(shown.text || DEFAULT_TEXT)}</a></p>
+    <p class="next">${nextL ? `Next up: <strong>${esc(nextL.text || DEFAULT_TEXT)}</strong> on ${esc(fmtLong(nextL.actual))}` : (cur >= 0 ? 'This is the last lesson of the year.' : '')}</p>`;
+}
+
+function renderMissed() {
+  const list = document.getElementById('missedList');
+  const dates = Object.keys(data.missed).sort();
+  if (!dates.length) { list.innerHTML = ''; return; }
+  list.innerHTML = dates.map(d => `<li>No school ${esc(fmtShort(d))}<button data-undo="${d}" aria-label="Undo no school on ${esc(fmtShort(d))}">Undo</button></li>`).join('');
+  list.querySelectorAll('[data-undo]').forEach(b => b.onclick = () => {
+    db.ref(`${NODE}/missed/${b.dataset.undo}`).remove()
+      .then(() => setMsg(document.getElementById('missMsg'), `Undid ${fmtShort(b.dataset.undo)}. Lessons moved back.`, 'ok'))
+      .catch(err => setMsg(document.getElementById('missMsg'), 'Couldn’t undo: ' + err.message, 'err'));
+  });
+}
+
+function renderSchedule(schedule, cur) {
+  const table = document.getElementById('schedTable');
+  if (!schedule.length) { table.innerHTML = '<tr><td class="empty">No lessons imported yet.</td></tr>'; return; }
+  table.innerHTML = `<thead><tr><th>#</th><th>Lesson</th><th>Date</th><th>Status</th></tr></thead><tbody>` +
+    schedule.map((l, i) => {
+      const cls = i === cur ? 'current' : (i < cur ? 'done' : '');
+      const status = i === cur ? 'Showing now' : (i < cur ? 'Done' : 'Upcoming');
+      const moved = l.actual !== l.date ? `<span class="moved">Moved from ${esc(fmtShort(l.date))}</span>` : '';
+      return `<tr class="${cls}">
+        <td class="num">${i + 1}</td>
+        <td><a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.text || DEFAULT_TEXT)}</a></td>
+        <td>${esc(fmtShort(l.actual))}${moved}</td>
+        <td class="status">${status}</td>
+      </tr>`;
+    }).join('') + '</tbody>';
+}
+
+/* ===== Mark a missed Wednesday ===== */
+document.getElementById('missBtn').onclick = () => {
+  const msg = document.getElementById('missMsg');
+  const d = document.getElementById('missDate').value;
+  if (!d) return setMsg(msg, 'Pick a date first.', 'err');
+  if (!isWed(d)) return setMsg(msg, `${fmtLong(d)} isn’t a Wednesday. Pick the Wednesday you missed.`, 'err');
+  if (data.missed[d]) return setMsg(msg, `${fmtShort(d)} is already marked as no school.`, 'err');
+  const schedule = computeSchedule(data.lessons, data.missed);
+  const hit = schedule.find(l => l.actual === d);
+  if (!hit) return setMsg(msg, `No lesson is scheduled for ${fmtShort(d)}, so nothing needs to move.`, 'err');
+  db.ref(`${NODE}/missed/${d}`).set(true)
+    .then(() => setMsg(msg, `Marked ${fmtShort(d)} as no school. “${hit.text || DEFAULT_TEXT}” moved to the next Wednesday.`, 'ok'))
+    .catch(err => setMsg(msg, 'Couldn’t save: ' + err.message, 'err'));
+};
+
+/* ===== Import: parsing ===== */
+const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+function schoolYearStart() {
+  const t = new Date();               // July or later = planning the coming year
+  return t.getMonth() >= 6 ? t.getFullYear() : t.getFullYear() - 1;
+}
+function makeDate(y, mo, d) {
+  if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
+  if (!y) { const s = schoolYearStart(); y = mo >= 7 ? s : s + 1; }
+  if (y < 100) y += 2000;
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getMonth() !== mo - 1) return null;
+  return ymd(dt);
+}
+function parseDateFlexible(raw) {
+  const s = (raw || '').trim();
+  if (!s) return null;
+  let m;
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return makeDate(+m[1], +m[2], +m[3]);
+  if ((m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?$/))) return makeDate(m[3] ? +m[3] : null, +m[1], +m[2]);
+  if ((m = s.toLowerCase().match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?/)))
+    return makeDate(m[3] ? +m[3] : null, MONTHS.indexOf(m[1]) + 1, +m[2]);
+  return null;
+}
+function parseCSV(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (c !== '\r') cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function textToRows(text) {
+  if (text.includes('\t')) return text.split(/\r?\n/).map(line => line.split('\t'));
+  return parseCSV(text);
+}
+function rowsToLessons(rows) {
+  const out = [];
+  rows.forEach(cells => {
+    cells = cells.map(c => (c || '').trim());
+    let url = '', date = null, urlIdx = -1, dateIdx = -1;
+    cells.forEach((c, i) => {
+      const u = c.match(/https?:\/\/\S+/i);
+      if (u && !url) { url = u[0]; urlIdx = i; }
+    });
+    cells.forEach((c, i) => {
+      if (i === urlIdx || date) return;
+      const d = parseDateFlexible(c);
+      if (d) { date = d; dateIdx = i; }
+    });
+    if (!date && !url) return;            // header or blank row
+    const text = cells
+      .filter((c, i) => i !== urlIdx && i !== dateIdx && c && !/^\d+$/.test(c))
+      .sort((a, b) => b.length - a.length)[0] || '';
+    out.push({ date: date || '', text, url });
+  });
+  return out.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+}
+
+/* ===== Import: preview & save ===== */
+/* Google Sheets puts an HTML copy of the cells on the clipboard; linked text keeps its href there */
+function cleanLink(href) {
+  try {
+    const u = new URL(href);
+    if (/(^|\.)google\.com$/.test(u.hostname) && u.pathname === '/url' && u.searchParams.get('q')) return u.searchParams.get('q');
+  } catch (e) {}
+  return href;
+}
+function htmlToRows(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return Array.from(doc.querySelectorAll('tr')).map(tr => {
+    const cells = Array.from(tr.querySelectorAll('td,th')).map(td => td.textContent.trim());
+    tr.querySelectorAll('a[href]').forEach(a => cells.push(cleanLink(a.getAttribute('href'))));
+    return cells;
+  });
+}
+function startPreview(text) { startPreviewRows(textToRows(text)); }
+function startPreviewRows(rows) {
+  const msg = document.getElementById('importMsg');
+  previewRows = rowsToLessons(rows);
+  if (!previewRows.length) {
+    document.getElementById('preview').innerHTML = '';
+    return setMsg(msg, 'No rows with a date or link were found. Check that the paste includes the date and link columns.', 'err');
+  }
+  setMsg(msg, `Found ${previewRows.length} lessons. Check them over, fix anything flagged, then save.`, 'ok');
+  renderPreview();
+}
+function rowWarnings(r, i, rows) {
+  const w = [];
+  if (!r.date) w.push('Needs a date');
+  else if (!isWed(r.date)) w.push('Not a Wednesday');
+  if (r.date && rows.some((o, j) => j !== i && o.date === r.date)) w.push('Duplicate date');
+  if (!/^https?:\/\//i.test(r.url)) w.push('Needs a link');
+  return w;
+}
+function renderPreview() {
+  const box = document.getElementById('preview');
+  box.innerHTML = `<div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Date</th><th>Link text</th><th>Link</th><th></th><th></th></tr></thead>
+    <tbody>${previewRows.map((r, i) => {
+      const w = rowWarnings(r, i, previewRows);
+      return `<tr>
+        <td class="num">${i + 1}</td>
+        <td><input type="date" data-i="${i}" data-f="date" value="${esc(r.date)}" aria-label="Date for row ${i + 1}"></td>
+        <td><input type="text" data-i="${i}" data-f="text" value="${esc(r.text)}" placeholder="${DEFAULT_TEXT}" aria-label="Link text for row ${i + 1}"></td>
+        <td><input type="url" data-i="${i}" data-f="url" value="${esc(r.url)}" placeholder="https://" aria-label="Link for row ${i + 1}"></td>
+        <td class="warn">${w.join('<br>')}</td>
+        <td><button class="btn ghost small" data-del="${i}">Remove</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>
+    <div class="row actions">
+      <button class="btn red" id="saveImport">Save as this year’s schedule</button>
+      <button class="btn ghost" id="cancelImport">Cancel</button>
+    </div>`;
+  box.querySelectorAll('input[data-f]').forEach(inp => inp.addEventListener('change', () => {
+    previewRows[+inp.dataset.i][inp.dataset.f] = inp.value.trim();
+    if (inp.dataset.f === 'date') previewRows.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+    renderPreview();
+  }));
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { previewRows.splice(+b.dataset.del, 1); renderPreview(); });
+  document.getElementById('cancelImport').onclick = () => { previewRows = []; box.innerHTML = ''; setMsg(document.getElementById('importMsg'), ''); };
+  document.getElementById('saveImport').onclick = saveImport;
+}
+function saveImport() {
+  const msg = document.getElementById('importMsg');
+  const blocking = previewRows.some(r => !r.date || !/^https?:\/\//i.test(r.url));
+  if (blocking) return setMsg(msg, 'Every row needs a date and a link that starts with https://. Fix or remove the flagged rows.', 'err');
+  const dates = previewRows.map(r => r.date);
+  if (new Set(dates).size !== dates.length) return setMsg(msg, 'Two rows share a date. Each Wednesday can have only one lesson.', 'err');
+  if (data.lessons.length && !confirm('This replaces the current schedule and clears all no-school days. Continue?')) return;
+  const lessons = previewRows.map(r => ({ date: r.date, text: r.text || DEFAULT_TEXT, url: r.url }));
+  db.ref(NODE).set({ lessons, missed: null, updatedAt: Date.now() })
+    .then(() => {
+      setMsg(msg, `Saved ${lessons.length} lessons.`, 'ok');
+      previewRows = []; document.getElementById('preview').innerHTML = '';
+      document.getElementById('pasteBox').value = '';
+      document.getElementById('missDate').value = '';
+    })
+    .catch(err => setMsg(msg, 'Couldn’t save: ' + err.message, 'err'));
+}
+document.getElementById('pasteBox').addEventListener('paste', e => {
+  const html = e.clipboardData && e.clipboardData.getData('text/html');
+  if (!html || !/<tr/i.test(html) || !/<a\s[^>]*href/i.test(html)) return;   // no hidden links: normal paste
+  e.preventDefault();
+  e.target.value = e.clipboardData.getData('text/plain');
+  startPreviewRows(htmlToRows(html));
+});
+document.getElementById('parseBtn').onclick = () => startPreview(document.getElementById('pasteBox').value);
+document.getElementById('csvFile').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => startPreview(reader.result);
+  reader.readAsText(f);
+  e.target.value = '';
+});
+</script>
+</body>
+</html>
