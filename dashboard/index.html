@@ -944,6 +944,36 @@
     let dmSortCol = 'checkedOutAt';
     let dmSortAsc = false;
 
+    // ---------------- Display names: first name + first 4 letters of last name ----------------
+    // "Riley Galiotti" -> "Riley Gali.", "Riley Gaiser" -> "Riley Gais.", "Ava Lee" -> "Ava Lee".
+    // If two students would still look the same, both get their full last name.
+    // Display only: the stored roster `name` stays each student's ID in history, slots,
+    // conflict groups and lunch/recess, so no data changes. Names of students no longer on
+    // the roster (old history) fall back to the stored name.
+    const LAST_NAME_LETTERS = 4;
+    let DISPLAY_BY_NAME = {};
+    function rebuildDisplayNames(students) {
+      const shortFor = (s) => {
+        const first = (s.firstName || '').trim();
+        const last = (s.lastName || '').trim();
+        if (!first || !last) return s.name || '';
+        return last.length <= LAST_NAME_LETTERS ? `${first} ${last}` : `${first} ${last.slice(0, LAST_NAME_LETTERS)}.`;
+      };
+      const out = {};
+      const counts = {};
+      students.forEach(s => {
+        if (!s || !s.name) return;
+        out[s.name] = shortFor(s);
+        counts[out[s.name]] = (counts[out[s.name]] || 0) + 1;
+      });
+      students.forEach(s => {
+        if (!s || !s.name) return;
+        if (counts[out[s.name]] > 1 && s.firstName && s.lastName) out[s.name] = `${s.firstName.trim()} ${s.lastName.trim()}`;
+      });
+      DISPLAY_BY_NAME = out;
+    }
+    function disp(name) { return DISPLAY_BY_NAME[name] || name || ''; }
+
     // Pass-counting window: mirrors the kiosk's rule that passes are only deducted for trips
     // checked out between 8:00 AM and 12:15 PM. Kept here too so the "Daily Pass Usage" report
     // matches what the kiosk actually enforces, instead of counting every trip of the day.
@@ -990,7 +1020,7 @@
 
       el.innerHTML = entries.map(([key, val]) => {
         const isObj = val && typeof val === 'object';
-        const label = isObj ? (val.name || val.student || val.who || key) : key;
+        const label = disp(isObj ? (val.name || val.student || val.who || key) : key);
         const teacher = isObj && val.teacher ? ` <span style="color:var(--gray-500); font-size:0.78rem;">- ${escapeHtml(val.teacher)}</span>` : '';
         const rawTime = isObj ? (val.checkedOutAt || val.time || val.timestamp) : null;
         const since = rawTime ? ` <span style="color:var(--gray-500); font-size:0.78rem;">since ${new Date(rawTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>` : '';
@@ -1071,6 +1101,8 @@
     // Starts at "First L." (just the last initial, for privacy) and reveals more of the
     // last name only if needed to stay unique. Falls back to "(2)", "(3)" etc. for the
     // rare case of two students with the truly identical first+last name.
+    // NOTE: this stored name is now the student's internal ID only - what people see on
+    // screen comes from disp() above.
     function buildUniqueName(firstName, lastName, existingNamesLower) {
       const tryName = (suffixLen) => {
         if (suffixLen >= lastName.length) return `${firstName} ${lastName}`;
@@ -1184,12 +1216,17 @@
       const data = snapshot.val();
       rosterKeyed = data || {};
       STUDENTS = data ? Object.values(data).sort((a,b) => (a.name || '').localeCompare(b.name || '')) : [];
+      rebuildDisplayNames(STUDENTS);
       renderReport();
       window.renderRosterManager();
       renderPassUsage();
       renderConflictGroups();
       updateConflictRosterStatus();
       renderLunchRecess();
+      populateStudentFilter();
+      renderDataManager();
+      renderConflictBlocksLog();
+      renderLiveOutList();
     });
 
     onValue(ref(db, 'bathroom/history'), (snapshot) => {
@@ -1529,14 +1566,14 @@
         });
 
         const cards = destOrder.map(dest => {
-          const list = groups[dest].sort((a, b) => a.name.localeCompare(b.name));
+          const list = groups[dest].sort((a, b) => disp(a.name).localeCompare(disp(b.name)));
           const isOther = !LR_DESTINATIONS.includes(dest);
           const rows = list.map(e => {
             const g = lrEntryGrade(e);
             const meta = [g ? `Gr ${g}` : null, teacherF ? null : (e.teacher || null)].filter(Boolean).join(', ');
             return `<div class="lr-student-row">
-              <div><span class="lr-who">${escapeHtml(e.name)}</span>${meta ? `<span class="lr-meta">${escapeHtml(meta)}</span>` : ''}</div>
-              <button class="lr-x" title="Remove entry" aria-label="Remove ${escapeHtml(e.name)}" onclick="window.removeLREntry('${jsAttr(dateVal)}','${jsAttr(e._key)}','${jsAttr(e.name)}','${jsAttr(period)}')">✕</button>
+              <div><span class="lr-who">${escapeHtml(disp(e.name))}</span>${meta ? `<span class="lr-meta">${escapeHtml(meta)}</span>` : ''}</div>
+              <button class="lr-x" title="Remove entry" aria-label="Remove ${escapeHtml(disp(e.name))}" onclick="window.removeLREntry('${jsAttr(dateVal)}','${jsAttr(e._key)}','${jsAttr(disp(e.name))}','${jsAttr(period)}')">✕</button>
             </div>`;
           }).join('');
           return `<div class="lr-dest-card${isOther ? ' other' : ''}">
@@ -1598,9 +1635,9 @@
       let matches = STUDENTS
         .filter(s => !compareSelectedNames.has(s.name))
         .filter(s => !gradeFilter || String(s.grade) === gradeFilter)
-        .filter(s => (s.name || '').toLowerCase().includes(q));
+        .filter(s => disp(s.name).toLowerCase().includes(q) || (s.name || '').toLowerCase().includes(q));
 
-      matches.sort((a, b) => a.name.localeCompare(b.name));
+      matches.sort((a, b) => disp(a.name).localeCompare(disp(b.name)));
       const totalMatches = matches.length;
       matches = matches.slice(0, 25);
 
@@ -1610,7 +1647,7 @@
         resultsEl.innerHTML = matches.map(s => {
           const gradeLabel = s.grade ? `Gr ${s.grade}` : 'Gr -';
           return `<div class="search-result-item" onclick="window.addCompareStudent('${jsAttr(s.name)}')">
-            <span>${escapeHtml(s.name)}</span>
+            <span>${escapeHtml(disp(s.name))}</span>
             <span class="sr-grade">${gradeLabel}</span>
           </div>`;
         }).join('');
@@ -1644,11 +1681,11 @@
         box.innerHTML = '<div class="empty-members">No students selected yet - search above to add.</div>';
         return;
       }
-      box.innerHTML = [...compareSelectedNames].sort().map(name => {
+      box.innerHTML = [...compareSelectedNames].sort((a, b) => disp(a).localeCompare(disp(b))).map(name => {
         const s = STUDENTS.find(x => x.name === name);
         const gradeLabel = s && s.grade ? `Gr ${s.grade}` : 'Gr -';
         return `<span class="member-chip">
-          <span class="grade-tag">${gradeLabel}</span> ${escapeHtml(name)}
+          <span class="grade-tag">${gradeLabel}</span> ${escapeHtml(disp(name))}
           <span class="remove-x" onclick="window.removeCompareStudent('${jsAttr(name)}')">&times;</span>
         </span>`;
       }).join('');
@@ -1729,7 +1766,7 @@
         return;
       }
 
-      const thead = `<thead><tr><th class="nosort">Date</th>${names.map(n => `<th class="nosort">${escapeHtml(n)}</th>`).join('')}</tr></thead>`;
+      const thead = `<thead><tr><th class="nosort">Date</th>${names.map(n => `<th class="nosort">${escapeHtml(disp(n))}</th>`).join('')}</tr></thead>`;
 
       const rowsHtml = dayKeys.map(dk => {
         const dayData = byDay[dk];
@@ -1803,8 +1840,8 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${dateStr}, ${timeStr}</td>
-          <td class="student-name-cell">${escapeHtml(b.name || '')}</td>
-          <td>${escapeHtml(b.blockedGroupmate || '-')}</td>
+          <td class="student-name-cell">${escapeHtml(disp(b.name))}</td>
+          <td>${b.blockedGroupmate ? escapeHtml(disp(b.blockedGroupmate)) : '-'}</td>
           <td>${escapeHtml(b.teacher || '')}</td>`;
         tbody.appendChild(tr);
       });
@@ -1959,14 +1996,11 @@
 
       try {
         await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
-        if (name !== `${firstName} ${lastName.charAt(0).toUpperCase()}.`) {
-          alert(`Saved as "${name}" - another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
-        }
         document.getElementById('roster-new-first').value = '';
         document.getElementById('roster-new-last').value = '';
         document.getElementById('roster-new-grade').value = '';
         document.getElementById('roster-new-gender').value = 'g';
-        document.getElementById('roster-new-limit').value = '5';
+        document.getElementById('roster-new-limit').value = '2';
       } catch(e) {
         console.error(e);
         alert("Error saving student: " + (e && e.message ? e.message : e));
@@ -2004,9 +2038,6 @@
 
       try {
         await set(ref(db, `bathroom/roster/${newKey}`), { firstName, lastName, name, grade, gender, limit });
-        if (name !== `${firstName} ${lastName.charAt(0).toUpperCase()}.` && name !== originalName) {
-          alert(`Saved as "${name}" - another student already used "${firstName} ${lastName.charAt(0).toUpperCase()}.", so more of the last name was added to tell them apart.`);
-        }
 
         if (newKey !== oldKey) {
           await remove(ref(db, `bathroom/roster/${oldKey}`));
@@ -2037,7 +2068,7 @@
     };
 
     window.removeStudent = async function(name) {
-      if (!confirm(`Are you completely sure you want to delete ${name} from the roster? This removes their profile config.`)) return;
+      if (!confirm(`Are you completely sure you want to delete ${disp(name)} from the roster? This removes their profile config.`)) return;
       const key = name.replace(/[.#$/\[\]]/g, "_");
       await remove(ref(db, `bathroom/roster/${key}`));
 
@@ -2098,7 +2129,6 @@
           let successCount = 0;
           let genderGuessedCount = 0;
           let genderUnknownCount = 0;
-          let adjustedNameCount = 0;
           const unknownNames = [];
           const errorLines = [];
           const updates = {};
@@ -2123,10 +2153,8 @@
 
             const firstName = firstNameRaw.charAt(0).toUpperCase() + firstNameRaw.slice(1).toLowerCase();
             const lastName = lastNameRaw.charAt(0).toUpperCase() + lastNameRaw.slice(1).toLowerCase();
-            const defaultName = `${firstName} ${lastName.charAt(0).toUpperCase()}.`;
             const name = buildUniqueName(firstName, lastName, usedNames);
             usedNames.add(name.toLowerCase());
-            if (name !== defaultName) adjustedNameCount++;
 
             let gender = 'unk';
             const explicitGender = (genderRaw || '').trim().toLowerCase();
@@ -2140,7 +2168,7 @@
             } else {
               gender = 'unk';
               genderUnknownCount++;
-              unknownNames.push(name);
+              unknownNames.push(`${firstName} ${lastName}`);
             }
 
             const limit = parseInt(limitRaw, 10);
@@ -2161,9 +2189,6 @@
           setStatus(`✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''}${errorLines.length ? `, ${errorLines.length} skipped` : ''}.`, errorLines.length ? '#c98a00' : '#1a7a1a');
 
           let summary = `✅ Uploaded ${successCount} student${successCount !== 1 ? 's' : ''} from CSV.\n\n`;
-          if (adjustedNameCount > 0) {
-            summary += `• ${adjustedNameCount} name${adjustedNameCount !== 1 ? 's' : ''} auto-adjusted to include more of the last name, since "First L." was already taken by someone else - no one was overwritten.\n`;
-          }
           summary += `• Gender guessed from first name: ${genderGuessedCount}\n`;
           summary += `• Gender not recognized (marked Unknown): ${genderUnknownCount}\n`;
           if (unknownNames.length) {
@@ -2203,6 +2228,8 @@
         container.innerHTML = '<p class="no-data">No students match this filter.</p>';
         return;
       }
+
+      filtered = filtered.slice().sort((a, b) => disp(a.name).localeCompare(disp(b.name)));
 
       const table = document.createElement('table');
       table.innerHTML = `
@@ -2254,10 +2281,11 @@
               <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="cancelInlineEdit()">Cancel</button>
             </td>`;
         } else {
+          const fullName = (s.firstName && s.lastName) ? `${s.firstName} ${s.lastName}` : '';
           tr.innerHTML = `
             <td class="check-cell"><input type="checkbox" class="rm-check" data-key="${key}" onclick="updateStudentSelectedCount()"></td>
             <td class="student-name-cell">
-              <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(s.name)}
+              <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(disp(s.name))}${fullName && fullName !== disp(s.name) ? ` <span style="color:var(--gray-500); font-weight:500; font-size:0.78rem;">${escapeHtml(fullName)}</span>` : ''}
             </td>
             <td>${s.grade ? s.grade + 'th' : '-'}</td>
             <td style="text-transform: capitalize;">${genderInfo(s.gender).label}</td>
@@ -2544,7 +2572,7 @@
       const studentMap = {};
       STUDENTS.forEach(s => {
         if (gradeFilter && String(s.grade) !== gradeFilter) return;
-        studentMap[s.name] = { name: s.name, gender: s.gender, trips: 0, totalMins: 0, days: {}, teacherCounts: {}, autoCount: 0 };
+        studentMap[s.name] = { name: s.name, display: disp(s.name), gender: s.gender, trips: 0, totalMins: 0, days: {}, teacherCounts: {}, autoCount: 0 };
       });
 
       filtered.forEach(h => {
@@ -2565,7 +2593,8 @@
       let rows = Object.values(studentMap).filter(s => s.trips > 0);
 
       rows.sort((a, b) => {
-        const av = a[sortCol], bv = b[sortCol];
+        const key = sortCol === 'name' ? 'display' : sortCol;
+        const av = a[key], bv = b[key];
         return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
       });
 
@@ -2588,7 +2617,7 @@
       const tbody = `<tbody>${rows.map(s => `
         <tr>
           <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(s.display)}
           </td>
           <td style="color:var(--gray-500); font-weight:500;">${Object.entries(s.teacherCounts).sort((a, b) => b[1] - a[1]).map(([name, count]) => `${escapeHtml(name)}${count > 1 ? ` (${count})` : ''}`).join(', ')}</td>
           <td class="trips-cell">${s.trips}${s.autoCount > 0 ? ` <span class="auto-badge" title="${s.autoCount} of these trip${s.autoCount !== 1 ? 's were' : ' was'} auto checked-in by the kiosk after 20 minutes - the student never signed back in, so this duration is a cutoff, not their real time.">⏱ ${s.autoCount} auto</span>` : ''}</td>
@@ -2643,7 +2672,7 @@
         const distinctB = new Set(b.trips.map(t => t.teacher)).size;
         if (distinctB !== distinctA) return distinctB - distinctA;
         if (b.trips.length !== a.trips.length) return b.trips.length - a.trips.length;
-        return a.name.localeCompare(b.name);
+        return disp(a.name).localeCompare(disp(b.name));
       });
 
       if (!rows.length) {
@@ -2672,7 +2701,7 @@
         return `
         <tr>
           <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(r.gender).cls}"></span>${escapeHtml(r.name)}
+            <span class="gender-dot ${genderInfo(r.gender).cls}"></span>${escapeHtml(disp(r.name))}
           </td>
           <td style="text-align:center;">
             <span class="distinct-badge">${distinct}</span>
@@ -2728,7 +2757,7 @@
         const d = new Date(h.checkedOutAt);
         const student = STUDENTS.find(s => s.name === h.name);
         rows.push([
-          h.name,
+          disp(h.name),
           student ? (genderInfo(student.gender).label) : '',
           h.teacher || 'Loveday',
           isoDate(d),
@@ -2737,7 +2766,7 @@
         ]);
       });
 
-      const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -2795,7 +2824,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${s.name}
+            <span class="gender-dot ${genderInfo(s.gender).cls}"></span>${escapeHtml(disp(s.name))}
           </td>
           <td class="trips-cell">${s.used} / ${s.limit}</td>
           <td class="val-cell">${Math.max(0, s.remaining)}</td>
@@ -2812,12 +2841,12 @@
       const sel = document.getElementById('dm-student-filter');
       if(!sel) return;
       const prev = sel.value;
-      const names = [...new Set(allHistory.map(h => h.name))].sort();
+      const names = [...new Set(allHistory.map(h => h.name))].sort((a, b) => disp(a).localeCompare(disp(b)));
       sel.innerHTML = '<option value="">-- All Students --</option>';
       names.forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
-        opt.textContent = name;
+        opt.textContent = disp(name);
         sel.appendChild(opt);
       });
       sel.value = prev;
@@ -2874,7 +2903,7 @@
       }
 
       const getSortVal = (h, col) => {
-        if (col === 'name') return (h.name || '').toLowerCase();
+        if (col === 'name') return disp(h.name).toLowerCase();
         if (col === 'teacher') return (h.teacher || 'Loveday').toLowerCase();
         if (col === 'checkedOutAt') return h.checkedOutAt;
         if (col === 'duration') return h.duration || 0;
@@ -2916,14 +2945,14 @@
         tr.innerHTML = `
           <td class="check-cell"><input type="checkbox" class="dm-check" data-key="${h._key}" onclick="updateSelectedCount()"></td>
           <td class="student-name-cell">
-            <span class="gender-dot ${genderInfo(h.gender).cls}"></span>${h.name}
+            <span class="gender-dot ${genderInfo(h.gender).cls}"></span>${escapeHtml(disp(h.name))}
           </td>
           <td>${h.teacher || 'Loveday'}</td>
           <td>${dateStr}</td>
           <td>${timeStr}</td>
           <td class="val-cell">${dur < 1 ? '<1m' : dur + 'm'}</td>
           <td>
-            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${jsAttr(h.name)}', '${timeStr} on ${dateStr}')">Delete</button>
+            <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="deleteEntry('${h._key}', '${jsAttr(disp(h.name))}', '${timeStr} on ${dateStr}')">Delete</button>
           </td>`;
         tbody.appendChild(tr);
       });
