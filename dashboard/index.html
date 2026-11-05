@@ -944,31 +944,39 @@
     let dmSortCol = 'checkedOutAt';
     let dmSortAsc = false;
 
-    // ---------------- Display names: first name + first 4 letters of last name ----------------
-    // "Riley Galiotti" -> "Riley Gali.", "Riley Gaiser" -> "Riley Gais.", "Ava Lee" -> "Ava Lee".
-    // If two students would still look the same, both get their full last name.
-    // Display only: the stored roster `name` stays each student's ID in history, slots,
-    // conflict groups and lunch/recess, so no data changes. Names of students no longer on
-    // the roster (old history) fall back to the stored name.
+    // --- Display names: "First L." unless that would collide ---
+    // Most students show as "Riley G." Students who'd share a name get 4 letters of their last
+    // name, all of them matching ("Riley Gali." / "Riley Gais."). If 4 letters still collide,
+    // those students get their full last name. Display only: the stored roster `name` stays each
+    // student's ID (slots, waiting list, history, conflict groups, lunch/recess), so no data changes.
     const LAST_NAME_LETTERS = 4;
     let DISPLAY_BY_NAME = {};
     function rebuildDisplayNames(students) {
-      const shortFor = (s) => {
+      const list = students.filter(s => s && s.name);
+      const idOf = (s) => s.name;
+      const fmt = (s, n) => {
         const first = (s.firstName || '').trim();
         const last = (s.lastName || '').trim();
         if (!first || !last) return s.name || '';
-        return last.length <= LAST_NAME_LETTERS ? `${first} ${last}` : `${first} ${last.slice(0, LAST_NAME_LETTERS)}.`;
+        return last.length <= n ? `${first} ${last}` : `${first} ${last.slice(0, n)}.`;
+      };
+      const countLabels = (labels) => {
+        const c = {};
+        Object.values(labels).forEach(l => { const k = l.toLowerCase(); c[k] = (c[k] || 0) + 1; });
+        return c;
       };
       const out = {};
-      const counts = {};
-      students.forEach(s => {
-        if (!s || !s.name) return;
-        out[s.name] = shortFor(s);
-        counts[out[s.name]] = (counts[out[s.name]] || 0) + 1;
-      });
-      students.forEach(s => {
-        if (!s || !s.name) return;
-        if (counts[out[s.name]] > 1 && s.firstName && s.lastName) out[s.name] = `${s.firstName.trim()} ${s.lastName.trim()}`;
+      // Step 1: first initial for everyone
+      list.forEach(s => { out[idOf(s)] = fmt(s, 1); });
+      // Step 2: anyone sharing a name gets 4 letters
+      let counts = countLabels(out);
+      list.forEach(s => { if (counts[out[idOf(s)].toLowerCase()] > 1) out[idOf(s)] = fmt(s, LAST_NAME_LETTERS); });
+      // Step 3: still sharing after 4 letters -> full last name
+      counts = countLabels(out);
+      list.forEach(s => {
+        if (counts[out[idOf(s)].toLowerCase()] > 1 && s.firstName && s.lastName) {
+          out[idOf(s)] = `${s.firstName.trim()} ${s.lastName.trim()}`;
+        }
       });
       DISPLAY_BY_NAME = out;
     }
