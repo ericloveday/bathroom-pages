@@ -132,7 +132,7 @@
 <script>
 /* ===== Firebase config: paste the same block your other bathroom-check-out tools use ===== */
 const firebaseConfig = {
-  apiKey: "AIzaSyBsja7ruNaLkTDTxyga9qd9TZG2Zz5AjHA",
+  apiKey: "PASTE_YOUR_API_KEY",
   authDomain: "bathroom-check-out.firebaseapp.com",
   databaseURL: "https://bathroom-check-out-default-rtdb.firebaseio.com",
   projectId: "bathroom-check-out"
@@ -178,6 +178,23 @@ function currentIndex(schedule) {
 /* ===== Utilities ===== */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '#';
+
+/* Readable lesson name: use the text unless it's blank or a URL, then build one from the link */
+function nameFromUrl(u) {
+  try {
+    const segs = new URL(u).pathname.split('/').filter(Boolean);
+    let s = decodeURIComponent(segs[segs.length - 1] || '');
+    s = s.replace(/^grade-\d+-/i, '').replace(/[-_]+/g, ' ').trim();
+    if (!s) return '';
+    const small = new Set(['and', 'or', 'of', 'the', 'a', 'an', 'to', 'in', 'for', 'on', 'with']);
+    return s.split(' ').map((w, i) => (i > 0 && small.has(w.toLowerCase())) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  } catch (e) { return ''; }
+}
+function lessonName(l) {
+  const t = (l.text || '').trim();
+  if (t && !/^https?:\/\//i.test(t)) return t;
+  return nameFromUrl(l.url) || DEFAULT_TEXT;
+}
 function setMsg(el, text, kind) { el.textContent = text; el.className = 'msg' + (kind ? ' ' + kind : ''); }
 function normalizeLessons(raw) {
   const arr = Array.isArray(raw) ? raw : Object.values(raw || {});
@@ -244,8 +261,8 @@ function renderNow(schedule, cur) {
     : `First lesson, showing until it starts · ${fmtLong(shown.actual)}`;
   el.innerHTML = `
     <p class="when">${esc(when)}</p>
-    <p class="title"><a href="${esc(safeUrl(shown.url))}" target="_blank" rel="noopener">${esc(shown.text || DEFAULT_TEXT)}</a></p>
-    <p class="next">${nextL ? `Next up: <strong>${esc(nextL.text || DEFAULT_TEXT)}</strong> on ${esc(fmtLong(nextL.actual))}` : (cur >= 0 ? 'This is the last lesson of the year.' : '')}</p>`;
+    <p class="title"><a href="${esc(safeUrl(shown.url))}" target="_blank" rel="noopener">${esc(lessonName(shown))}</a></p>
+    <p class="next">${nextL ? `Next up: <strong>${esc(lessonName(nextL))}</strong> on ${esc(fmtLong(nextL.actual))}` : (cur >= 0 ? 'This is the last lesson of the year.' : '')}</p>`;
 }
 
 function renderMissed() {
@@ -270,7 +287,7 @@ function renderSchedule(schedule, cur) {
       const moved = l.actual !== l.date ? `<span class="moved">Moved from ${esc(fmtShort(l.date))}</span>` : '';
       return `<tr class="${cls}">
         <td class="num">${i + 1}</td>
-        <td><a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.text || DEFAULT_TEXT)}</a></td>
+        <td><a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(lessonName(l))}</a></td>
         <td>${esc(fmtShort(l.actual))}${moved}</td>
         <td class="status">${status}</td>
       </tr>`;
@@ -288,7 +305,7 @@ document.getElementById('missBtn').onclick = () => {
   const hit = schedule.find(l => l.actual === d);
   if (!hit) return setMsg(msg, `No lesson is scheduled for ${fmtShort(d)}, so nothing needs to move.`, 'err');
   db.ref(`${NODE}/missed/${d}`).set(true)
-    .then(() => setMsg(msg, `Marked ${fmtShort(d)} as no school. “${hit.text || DEFAULT_TEXT}” moved to the next Wednesday.`, 'ok'))
+    .then(() => setMsg(msg, `Marked ${fmtShort(d)} as no school. “${lessonName(hit)}” moved to the next Wednesday.`, 'ok'))
     .catch(err => setMsg(msg, 'Couldn’t save: ' + err.message, 'err'));
 };
 
@@ -351,8 +368,8 @@ function rowsToLessons(rows) {
     });
     if (!date && !url) return;            // header or blank row
     const text = cells
-      .filter((c, i) => i !== urlIdx && i !== dateIdx && c && !/^\d+$/.test(c))
-      .sort((a, b) => b.length - a.length)[0] || '';
+      .filter((c, i) => i !== urlIdx && i !== dateIdx && c && !/^\d+$/.test(c) && !/https?:\/\//i.test(c))
+      .sort((a, b) => b.length - a.length)[0] || nameFromUrl(url);
     out.push({ date: date || '', text, url });
   });
   return out.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
@@ -429,7 +446,7 @@ function saveImport() {
   const dates = previewRows.map(r => r.date);
   if (new Set(dates).size !== dates.length) return setMsg(msg, 'Two rows share a date. Each Wednesday can have only one lesson.', 'err');
   if (data.lessons.length && !confirm('This replaces the current schedule and clears all no-school days. Continue?')) return;
-  const lessons = previewRows.map(r => ({ date: r.date, text: r.text || DEFAULT_TEXT, url: r.url }));
+  const lessons = previewRows.map(r => ({ date: r.date, text: lessonName(r), url: r.url }));
   db.ref(NODE).set({ lessons, missed: null, updatedAt: Date.now() })
     .then(() => {
       setMsg(msg, `Saved ${lessons.length} lessons.`, 'ok');
@@ -443,8 +460,9 @@ document.getElementById('pasteBox').addEventListener('paste', e => {
   const html = e.clipboardData && e.clipboardData.getData('text/html');
   if (!html || !/<tr/i.test(html) || !/<a\s[^>]*href/i.test(html)) return;   // no hidden links: normal paste
   e.preventDefault();
-  e.target.value = e.clipboardData.getData('text/plain');
   startPreviewRows(htmlToRows(html));
+  /* Show date, name and link in the box so clicking Preview again keeps the links */
+  e.target.value = previewRows.map(r => [r.date, r.text, r.url].join('\t')).join('\n');
 });
 document.getElementById('parseBtn').onclick = () => startPreview(document.getElementById('pasteBox').value);
 document.getElementById('csvFile').addEventListener('change', e => {
