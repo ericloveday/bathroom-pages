@@ -585,6 +585,35 @@
       let TEACHER_RECORDS = []; // [{name, grade}, ...] — grade used to group the kiosk picker
       let lastBathroomData = {}; // most recent raw snapshot of the 'bathroom' node, re-applied whenever the teacher list changes
 
+      // --- Display names: first name + first 4 letters of last name ---
+      // "Riley Galiotti" -> "Riley Gali.", "Riley Gaiser" -> "Riley Gais.", "Ava Lee" -> "Ava Lee".
+      // If two students would still look the same, both get their full last name.
+      // Display only: the stored roster `name` stays the student's ID everywhere (slots,
+      // waiting list, history, conflict groups, lunch/recess), so nothing in the database changes.
+      const LAST_NAME_LETTERS = 4;
+      let DISPLAY_BY_NAME = {};
+      function rebuildDisplayNames(students) {
+        const shortFor = (s) => {
+          const first = (s.firstName || '').trim();
+          const last = (s.lastName || '').trim();
+          if (!first || !last) return s.name || '';
+          return last.length <= LAST_NAME_LETTERS ? `${first} ${last}` : `${first} ${last.slice(0, LAST_NAME_LETTERS)}.`;
+        };
+        const out = {};
+        const counts = {};
+        students.forEach(s => {
+          if (!s || !s.name) return;
+          out[s.name] = shortFor(s);
+          counts[out[s.name]] = (counts[out[s.name]] || 0) + 1;
+        });
+        students.forEach(s => {
+          if (!s || !s.name) return;
+          if (counts[out[s.name]] > 1 && s.firstName && s.lastName) out[s.name] = `${s.firstName.trim()} ${s.lastName.trim()}`;
+        });
+        DISPLAY_BY_NAME = out;
+      }
+      function disp(name) { return DISPLAY_BY_NAME[name] || name || ''; }
+
       // --- Clock Component Runtime ---
       function updateClock() {
         const now = new Date();
@@ -762,7 +791,8 @@
         const data = snapshot.val() || {};
         rosterKeyed = data;
         STUDENTS = Object.values(data).sort((a,b) => a.name.localeCompare(b.name));
-        renderDropdowns();
+        rebuildDisplayNames(STUDENTS);
+        renderAll();
       });
 
       // --- Conflict Groups Pull (managed on the Student Management dashboard) ---
@@ -944,7 +974,7 @@
           const limit = studentData?.limit || 2;
 
           if (used >= limit) {
-            showAlert(`${name} has used all ${limit} passes for today.`);
+            showAlert(`${disp(name)} has used all ${limit} passes for today.`);
             playBlockedSound();
             return;
           }
@@ -953,7 +983,7 @@
         // Conflict Groups check: block if a groupmate (any grade, any teacher) is currently out
         const blockingGroupmate = findBlockingGroupmate(name, getOutNamesFromSlots(state.slots));
         if (blockingGroupmate) {
-          showAlert(`${name}, someone in your group is currently out. Please wait until they return.`);
+          showAlert(`${disp(name)}, someone in your group is currently out. Please wait until they return.`);
           playBlockedSound();
           // Logged for the dashboard's Blocked Attempts report — the groupmate's name is recorded
           // here for that report only, never shown to the student on this screen.
@@ -972,14 +1002,14 @@
 
         const alreadyOut = Object.values(slots).some(s => s && s.name === name);
         const alreadyWaiting = waiting.find(s => s.name === name);
-        if (alreadyOut || alreadyWaiting) { showAlert(`${name} is already out or waiting.`); sel.value=''; return; }
+        if (alreadyOut || alreadyWaiting) { showAlert(`${disp(name)} is already out or waiting.`); sel.value=''; return; }
 
         const slotKey = `${teacher}_${gender}`;
         if (!slots[slotKey]) {
           await set(ref(db, `bathroom/slots/${slotKey}`), { name, gender, teacher, checkoutTime: Date.now() });
         } else {
           await push(ref(db, 'bathroom/waiting'), { name, gender, teacher, addedTime: Date.now() });
-          showAlert(`${teacher}'s ${gender === 'b' ? 'boys' : 'girls'} spot is taken. ${name} added to the waiting list!`);
+          showAlert(`${teacher}'s ${gender === 'b' ? 'boys' : 'girls'} spot is taken. ${disp(name)} added to the waiting list!`);
         }
         sel.value = '';
         const indicator = document.getElementById(`${prefix}-pass-indicator`);
@@ -1019,7 +1049,7 @@
         if (next) {
           await set(ref(db, `bathroom/slots/${slotKey}`), { name: next.name, gender, teacher, checkoutTime: Date.now() });
           await remove(ref(db, `bathroom/waiting/${next._key}`));
-          showAlert(`${next.name} — it's your turn! You've been checked out.`);
+          showAlert(`${disp(next.name)} — it's your turn! You've been checked out.`);
         }
       };
 
@@ -1070,10 +1100,11 @@
         const grade = getLRGrade();
         sel.innerHTML = `<option value="">-- Select your name --</option>`;
         STUDENTS.filter(s => !grade || s.grade === grade)
+          .sort((a,b) => disp(a.name).localeCompare(disp(b.name)))
           .forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.name;
-            opt.textContent = s.name;
+            opt.textContent = disp(s.name);
             sel.appendChild(opt);
           });
         if (current) sel.value = current;
@@ -1085,7 +1116,7 @@
         const entries = Object.entries(today)
           .map(([k, v]) => ({ ...v, _key: k }))
           .filter(e => !grade || !e.grade || e.grade === grade)
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .sort((a, b) => disp(a.name).localeCompare(disp(b.name)));
 
         ['Lunch', 'Recess'].forEach(period => {
           const list = document.getElementById(`lr-list-${period}`);
@@ -1094,10 +1125,10 @@
           list.innerHTML = rows.map(e => `
             <div class="lr-entry">
               <div>
-                <div class="who">${escapeHtml(e.name)}</div>
+                <div class="who">${escapeHtml(disp(e.name))}</div>
                 <div class="where">${escapeHtml(e.destination)}</div>
               </div>
-              <button class="lr-remove" title="Remove" aria-label="Remove ${escapeHtml(e.name)}" onclick="removeLunchRecess('${jsAttr(e._key)}')">✕</button>
+              <button class="lr-remove" title="Remove" aria-label="Remove ${escapeHtml(disp(e.name))}" onclick="removeLunchRecess('${jsAttr(e._key)}')">✕</button>
             </div>`).join('');
         });
       }
@@ -1131,7 +1162,7 @@
             destination,
             addedAt: Date.now() // ordering only — not shown or timed
           });
-          showAlert(`${name}: ${destination} for ${lrPeriod}. Saved!`);
+          showAlert(`${disp(name)}: ${destination} for ${lrPeriod}. Saved!`);
           sel.value = '';
           otherInput.value = '';
           lrDest = '';
@@ -1189,7 +1220,7 @@
           container.innerHTML = `
             <div class="student-card ${cls}">
               <div>
-                <div class="student-name">${entry.name}</div>
+                <div class="student-name">${escapeHtml(disp(entry.name))}</div>
                 <div style="font-size:0.75rem;color:var(--muted);margin-top:2px;">${teacher}</div>
               </div>
               <div class="student-card-right">
@@ -1224,7 +1255,7 @@
           div.className = 'student-card wait';
           div.innerHTML = `
             <div>
-              <div class="student-name">#${i+1} ${escapeHtml(entry.name)}</div>
+              <div class="student-name">#${i+1} ${escapeHtml(disp(entry.name))}</div>
               <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">${escapeHtml(entry.teacher)}</div>
             </div>
             <div class="student-card-right">
@@ -1246,7 +1277,7 @@
           div.className = 'history-item';
           div.innerHTML = `
             <div>
-              <div class="name">${h.name}</div>
+              <div class="name">${escapeHtml(disp(h.name))}</div>
               <div class="ts">${timeStr} on ${dateStr} · ${h.teacher || 'Loveday'}</div>
             </div>
             <div class="dur">${formatDuration(h.duration)}</div>`;
@@ -1279,11 +1310,11 @@
 
         sel.innerHTML = `<option value="">-- Select your name --</option>`;
         STUDENTS.filter(s => s.gender === gender && !taken.has(s.name) && (!teacherRecord.grade || s.grade === teacherRecord.grade))
-          .sort((a,b) => a.name.localeCompare(b.name))
+          .sort((a,b) => disp(a.name).localeCompare(disp(b.name)))
           .forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.name;
-            opt.textContent = s.name;
+            opt.textContent = disp(s.name);
             sel.appendChild(opt);
           });
         if (current && !taken.has(current)) sel.value = current;
